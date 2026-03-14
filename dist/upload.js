@@ -55,6 +55,30 @@ export class FormUploader {
             return override;
         return this.deepMerge(definition.control, override);
     }
+    static resolveDimension(value, scalar, fallback) {
+        if (typeof value === "number")
+            return `${value / scalar}px`;
+        if (typeof value === "string" && value.trim() !== "")
+            return value;
+        return fallback;
+    }
+    static resolveVector2(value, scalar, fallback) {
+        return [
+            this.resolveDimension(value?.[0], scalar, fallback[0]),
+            this.resolveDimension(value?.[1], scalar, fallback[1]),
+        ];
+    }
+    static resolveControlPath(path, args) {
+        if (!path)
+            return undefined;
+        if (this.workspaceDefinitions.has(path))
+            return path;
+        const namespace = args?.[1]?.namespace;
+        if (namespace && this.workspaceDefinitions.has(`${namespace}.${path}`)) {
+            return `${namespace}.${path}`;
+        }
+        return path;
+    }
     static isValid(form) {
         try {
             const parsed = FormUploader.parseJsonWithComments(form);
@@ -174,17 +198,21 @@ export const tagNameToCreateClassElementFunc = new Map([
             const id = StringUtil.generateRandomString(15);
             const panel = new DraggablePanel(id, parentClassElement.getMainHTMLElement());
             GLOBAL_ELEMENT_MAP.set(id, panel);
-            const size = json.size;
-            const offset = json.offset;
-            panel.panel.style.width = `${size[0] / UI_SCALAR}px`;
-            panel.panel.style.height = `${size[1] / UI_SCALAR}px`;
+            const [width, height] = FormUploader.resolveVector2(json.size, UI_SCALAR, [panel.panel.style.width, panel.panel.style.height]);
+            const [left, top] = FormUploader.resolveVector2(json.offset, UI_SCALAR, ["0px", "0px"]);
+            panel.panel.style.width = width;
+            panel.panel.style.height = height;
             ElementSharedFuncs.updateCenterCirclePosition(panel);
-            panel.panel.style.left = `${offset[0] / UI_SCALAR}px`;
-            panel.panel.style.top = `${offset[1] / UI_SCALAR}px`;
-            panel.panel.style.zIndex = `${json.layer}`;
+            panel.panel.style.left = left;
+            panel.panel.style.top = top;
+            panel.panel.style.zIndex = `${json.layer ?? 0}`;
             if (json.bindings.length > 0)
                 panel.bindings = JSON.stringify(json.bindings, null, config.magicNumbers.textEditor.indentation);
-            return { element: panel, instructions: { ContinuePath: true } };
+            const runeUiObject = json["$runeui"];
+            const followPath = FormUploader.resolveControlPath(runeUiObject?.panel_control);
+            const directFollowPath = FormUploader.resolveControlPath(json.$runeui_panel_control);
+            const runeUiPanelControl = FormUploader.resolveControlPath(json["$runeui:panel_control"] ?? directFollowPath);
+            return { element: panel, instructions: { ContinuePath: true, FollowPath: runeUiPanelControl ?? followPath } };
         },
     ],
     [
@@ -204,7 +232,8 @@ export const tagNameToCreateClassElementFunc = new Map([
             ElementSharedFuncs.updateCenterCirclePosition(panel);
             if (json.bindings.length > 0)
                 panel.bindings = JSON.stringify(json.bindings, null, config.magicNumbers.textEditor.indentation);
-            return { element: panel, instructions: { ContinuePath: true } };
+            const followPath = FormUploader.resolveControlPath(json["$runeui:panel_control"] ?? json.$runeui_panel_control);
+            return { element: panel, instructions: { ContinuePath: true, FollowPath: followPath } };
         },
     ],
     [
@@ -224,7 +253,8 @@ export const tagNameToCreateClassElementFunc = new Map([
             ElementSharedFuncs.updateCenterCirclePosition(panel);
             if (json.bindings.length > 0)
                 panel.bindings = JSON.stringify(json.bindings, null, config.magicNumbers.textEditor.indentation);
-            return { element: panel, instructions: { ContinuePath: true } };
+            const gridTemplate = FormUploader.resolveControlPath(json.grid_item_template);
+            return { element: panel, instructions: { ContinuePath: true, FollowPath: gridTemplate } };
         },
     ],
     [
@@ -262,7 +292,7 @@ export const tagNameToCreateClassElementFunc = new Map([
                 textAlign: json.text_alignment,
             });
             GLOBAL_ELEMENT_MAP.set(id, label);
-            const offset = json.offset;
+            const offset = json.offset ?? [0, 0];
             const getFontScaledOffsetY = config.magicNumbers.getFontScaledOffsetY;
             label.shadow(json.shadow);
             const fontType = json.font_type;
@@ -274,7 +304,7 @@ export const tagNameToCreateClassElementFunc = new Map([
             label.shadowLabel.style.fontFamily = fontType;
             label.mirror.style.fontFamily = fontType;
             label.label.style.fontFamily = fontType;
-            label.label.style.zIndex = `${json.layer}`;
+            label.label.style.zIndex = `${json.layer ?? 0}`;
             label.updateSize(true);
             label.label.dispatchEvent(new Event("input"));
             if (json.bindings.length > 0)
@@ -301,13 +331,13 @@ export const tagNameToCreateClassElementFunc = new Map([
             const id = StringUtil.generateRandomString(15);
             const canvas = new DraggableCanvas(id, parentClassElement.getMainHTMLElement(), imageData.png, texturePath, imageData.json);
             GLOBAL_ELEMENT_MAP.set(id, canvas);
-            const size = json.size;
-            const offset = json.offset;
+            const size = json.size ?? [imageData.png?.width ?? 16, imageData.png?.height ?? 16];
+            const offset = json.offset ?? [0, 0];
             canvas.drawImage(size[0] / UI_SCALAR, size[1] / UI_SCALAR);
             ElementSharedFuncs.updateCenterCirclePosition(canvas);
             canvas.canvasHolder.style.left = `${offset[0] / UI_SCALAR}px`;
             canvas.canvasHolder.style.top = `${offset[1] / UI_SCALAR}px`;
-            canvas.canvasHolder.style.zIndex = `${json.layer}`;
+            canvas.canvasHolder.style.zIndex = `${json.layer ?? 0}`;
             if (json.bindings.length > 0)
                 canvas.bindings = JSON.stringify(json.bindings, null, config.magicNumbers.textEditor.indentation);
             return { element: canvas, instructions: { ContinuePath: true } };
@@ -320,8 +350,8 @@ export const tagNameToCreateClassElementFunc = new Map([
             const id = StringUtil.generateRandomString(15);
             const collectionPanel = new DraggableCollectionPanel(id, parentClassElement.getMainHTMLElement());
             GLOBAL_ELEMENT_MAP.set(id, collectionPanel);
-            const size = json.size;
-            const offset = json.offset;
+            const size = json.size ?? [100, 100];
+            const offset = json.offset ?? [0, 0];
             if (!json.collection_name) {
                 new Notification(`Collection name not found`, 2000, "warning");
             }
@@ -331,10 +361,11 @@ export const tagNameToCreateClassElementFunc = new Map([
             ElementSharedFuncs.updateCenterCirclePosition(collectionPanel);
             collectionPanel.panel.style.left = `${offset[0] / UI_SCALAR}px`;
             collectionPanel.panel.style.top = `${offset[1] / UI_SCALAR}px`;
-            collectionPanel.panel.style.zIndex = `${json.layer}`;
+            collectionPanel.panel.style.zIndex = `${json.layer ?? 0}`;
             if (json.bindings.length > 0)
                 collectionPanel.bindings = JSON.stringify(json.bindings, null, config.magicNumbers.textEditor.indentation);
-            return { element: collectionPanel, instructions: { ContinuePath: true } };
+            const followPath = FormUploader.resolveControlPath(json.factory?.control_name);
+            return { element: collectionPanel, instructions: { ContinuePath: true, FollowPath: followPath } };
         },
     ],
     [
@@ -347,8 +378,8 @@ export const tagNameToCreateClassElementFunc = new Map([
             // Iterate twice to get to the from the current node to the node ahead
             const controls1 = FormUploader.getJsonControlsAndType(nextNodes);
             const scrollingLinkerPanel = FormUploader.getJsonControlsAndType(controls1[0]?.control)[0]?.control;
-            const size = json.size;
-            const offset = scrollingLinkerPanel.$scrolling_pane_offset;
+            const size = json.size ?? [100, 100];
+            const offset = scrollingLinkerPanel?.$scrolling_pane_offset ?? [0, 0];
             scrollingPanel.panel.style.width = `${size[0] / UI_SCALAR}px`;
             scrollingPanel.panel.style.height = `${size[1] / UI_SCALAR}px`;
             scrollingPanel.basePanel.style.width = scrollingPanel.panel.style.width;
@@ -356,10 +387,16 @@ export const tagNameToCreateClassElementFunc = new Map([
             scrollingPanel.basePanel.style.left = `${(offset[0] - config.magicNumbers.scrolling_panel_offsets.scrolling_pane_right_offset) / UI_SCALAR}px`;
             scrollingPanel.basePanel.style.top = `${offset[1] / UI_SCALAR}px`;
             scrollingPanel.slider.updateHandle();
-            scrollingPanel.panel.style.zIndex = `${json.layer}`;
-            if (scrollingLinkerPanel.bindings.length > 0)
+            scrollingPanel.panel.style.zIndex = `${json.layer ?? 0}`;
+            if (scrollingLinkerPanel?.bindings?.length > 0)
                 scrollingPanel.bindings = JSON.stringify(scrollingLinkerPanel.bindings, null, config.magicNumbers.textEditor.indentation);
-            return { element: scrollingPanel, instructions: { ContinuePath: true, FollowPath: scrollingLinkerPanel.$scrolling_content } };
+            return {
+                element: scrollingPanel,
+                instructions: {
+                    ContinuePath: true,
+                    FollowPath: FormUploader.resolveControlPath(scrollingLinkerPanel?.$scrolling_content),
+                },
+            };
         },
     ],
     [

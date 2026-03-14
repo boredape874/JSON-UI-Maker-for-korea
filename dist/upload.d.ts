@@ -23,6 +23,9 @@ export declare class FormUploader {
     };
     static deepMerge(base: any, override: any): any;
     static resolveReferencedControl(reference: string | undefined, override: StringObjectMap): StringObjectMap;
+    static resolveDimension(value: string | number | undefined, scalar: number, fallback: string): string;
+    static resolveVector2(value: [string | number, string | number] | undefined, scalar: number, fallback: [string, string]): [string, string];
+    static resolveControlPath(path: string | undefined, args?: any): string | undefined;
     static isValid(form: string): boolean;
     static isValidParsed(parsed: StringObjectMap): boolean;
     static getJsonControlsAndType(json: StringObjectMap): {
