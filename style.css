@@ -373,7 +373,9 @@ input[type="file"] {
     border-radius: 10px;
     color: white;
     min-height: 50px;
+    min-width: 320px;
     overflow-x: auto;
+    box-sizing: border-box;
 }
 
 .propertyInput {
@@ -410,6 +412,9 @@ input[type="file"] {
     background-color: rgb(39, 39, 39);
     border-radius: 10px;
     margin: 10px;
+    flex: 0 0 220px;
+    min-width: 220px;
+    box-sizing: border-box;
 }
 
 /* The Modal (background) */
@@ -631,7 +636,9 @@ input[type="file"] {
     display: flex;
     flex-wrap: nowrap;
     align-items: flex-start;
+    width: max-content;
     min-width: max-content;
+    gap: 0;
 }
 
 .scripter {
@@ -642,10 +649,12 @@ input[type="file"] {
     gap: 10px;
     text-align: center;
     color: white;
-    flex: 1;
+    flex: 0 0 400px;
+    min-width: 400px;
     height: calc(1510px / 1.7777777);
     background-color: rgb(39, 39, 39);
     border-radius: 10px;
+    box-sizing: border-box;
 }
 
 .scripter_text {
@@ -705,6 +714,7 @@ input[type="file"] {
 .bindings {
     height: 260px;
     width: calc(100% - 20px);
+    min-width: 0;
     border-radius: 10px;
     margin: 10px;
     align-self: center;
@@ -718,6 +728,7 @@ input[type="file"] {
     overflow-x: auto;
     font-size: 20px;
     scrollbar-color: rgb(0, 0, 0) rgb(73, 73, 73);
+    box-sizing: border-box;
 }
 
 .gridable {
