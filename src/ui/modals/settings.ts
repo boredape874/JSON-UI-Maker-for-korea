@@ -1,5 +1,6 @@
 import { Builder } from "../../index.js";
 import { config } from "../../CONFIG.js";
+import { translateText } from "../../i18n.js";
 
 const modal: HTMLElement = document.getElementById("modalSettings")!;
 const openBtn: HTMLElement = document.getElementById("modalSettingsBtn")!;
@@ -64,7 +65,7 @@ openBtn.onclick = () => {
         // Label
         const label = document.createElement("label");
         label.className = "modalOptionLabel";
-        label.innerText = `${settingInfo?.displayName!}: `;
+        label.innerText = `${translateText(settingInfo?.displayName ?? "")}: `;
         label.htmlFor = setting;
 
         // Adds the elements

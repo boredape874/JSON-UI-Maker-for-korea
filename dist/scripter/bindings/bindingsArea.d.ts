@@ -16,6 +16,7 @@ export declare class BindingsArea {
     static editable(isEditable: boolean): void;
     static saveBindings(): void;
     static updateWarningLabel(): boolean;
+    private static ensureHelpBox;
     static handleKeyboardInput(e: KeyboardEvent): void;
     static checkForDeletedChars(char: string): void;
     static filterSourcePropertyNames(): void;

@@ -4,6 +4,7 @@ import { TextPrompt } from "../../ui/textPrompt.js";
 import { GeneralUtil } from "../../util/generalUtil.js";
 import { binding_keys } from "./binding_keys.js";
 import { collectSourcePropertyNames } from "./source_property_name.js";
+import { translateText } from "../../i18n.js";
 export class BindingsArea {
     static placeHolderBindings = `[
   {
@@ -11,8 +12,8 @@ export class BindingsArea {
   },
   {
     "binding_type": "view",
-    "source_property_name": "(#title_text - 'example_text')",
-    "target_property_name": "#text"
+    "source_property_name": "(not (#title_text = ''))",
+    "target_property_name": "#visible"
   }
 ]`;
     static bindingsTextArea = document.getElementById("bindings");
@@ -32,6 +33,7 @@ export class BindingsArea {
     static init() {
         this.bindingsTextArea.value = "";
         this.bindingsTextArea.placeholder = this.placeHolderBindings;
+        this.ensureHelpBox();
         this.bindingsTextArea.addEventListener("focus", () => {
             this.isBindingsTextAreaFocused = true;
         });
@@ -137,9 +139,63 @@ export class BindingsArea {
             if (this.bindingsTextArea.value === "")
                 return false;
             this.errorMessage.style.visibility = "visible";
-            this.errorMessage.title = "Invalid JSON";
+            this.errorMessage.title = translateText("Invalid JSON. Check commas, quotes, and brackets.");
             return false;
         }
+    }
+    static ensureHelpBox() {
+        if (document.getElementById("bindingsHelpBox"))
+            return;
+        const helpBox = document.createElement("div");
+        helpBox.id = "bindingsHelpBox";
+        helpBox.style.margin = "10px 0 14px";
+        helpBox.style.padding = "12px";
+        helpBox.style.border = "1px solid rgba(255, 255, 255, 0.15)";
+        helpBox.style.borderRadius = "8px";
+        helpBox.style.background = "rgba(255, 255, 255, 0.05)";
+        helpBox.style.color = "#d7d7d7";
+        helpBox.style.fontSize = "12px";
+        helpBox.style.lineHeight = "1.5";
+        const title = document.createElement("div");
+        title.textContent = translateText("Bindings Quick Guide");
+        title.style.color = "white";
+        title.style.fontWeight = "700";
+        title.style.marginBottom = "8px";
+        const line1 = document.createElement("div");
+        line1.textContent = translateText('1. Use "binding_name" to receive a value such as "#title_text".');
+        const line2 = document.createElement("div");
+        line2.textContent = translateText('2. Use "binding_type": "view" when you want to control visibility or other view properties.');
+        line2.style.marginTop = "4px";
+        const line3 = document.createElement("div");
+        line3.textContent = translateText('"source_property_name" is the condition or source expression, and "target_property_name" is the property to change.');
+        line3.style.marginTop = "4px";
+        const tips = document.createElement("div");
+        tips.textContent = translateText('Tips: Type # for source property suggestions, and type " inside a key to see available binding keys.');
+        tips.style.marginTop = "8px";
+        tips.style.color = "#9dd1ff";
+        const exampleLabel = document.createElement("div");
+        exampleLabel.textContent = translateText("Example:");
+        exampleLabel.style.marginTop = "8px";
+        exampleLabel.style.color = "white";
+        exampleLabel.style.fontWeight = "600";
+        const example = document.createElement("pre");
+        example.textContent = this.placeHolderBindings;
+        example.style.margin = "6px 0 0";
+        example.style.padding = "10px";
+        example.style.borderRadius = "6px";
+        example.style.background = "rgba(0, 0, 0, 0.35)";
+        example.style.color = "#bfe7ff";
+        example.style.whiteSpace = "pre-wrap";
+        example.style.wordBreak = "break-word";
+        example.style.fontSize = "11px";
+        helpBox.appendChild(title);
+        helpBox.appendChild(line1);
+        helpBox.appendChild(line2);
+        helpBox.appendChild(line3);
+        helpBox.appendChild(tips);
+        helpBox.appendChild(exampleLabel);
+        helpBox.appendChild(example);
+        this.bindingsTextArea.parentElement?.insertBefore(helpBox, this.errorMessage);
     }
     static handleKeyboardInput(e) {
         const start = this.bindingsTextArea.selectionStart;

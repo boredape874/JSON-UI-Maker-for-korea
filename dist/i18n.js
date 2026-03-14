@@ -174,6 +174,7 @@ const EXACT_TRANSLATIONS = {
     "Failed to delete preset": "프리셋을 삭제하지 못했습니다.",
     "Are you sure you want to delete this preset? This action cannot be undone.": "이 프리셋을 정말 삭제할까요? 이 작업은 되돌릴 수 없습니다.",
     "No display image or display text found for button": "버튼에 표시 이미지나 표시 텍스트가 없습니다.",
+    "Invalid JSON. Check commas, quotes, and brackets.": "유효하지 않은 JSON입니다. 쉼표, 따옴표, 괄호를 확인해 주세요.",
     "Username and password are required": "사용자 이름과 비밀번호를 입력해 주세요.",
     "Username must be at least 3 characters": "사용자 이름은 3자 이상이어야 합니다.",
     "Password must be at least 6 characters": "비밀번호는 6자 이상이어야 합니다.",
@@ -199,6 +200,12 @@ const EXACT_TRANSLATIONS = {
     "Collection Panel": "컬렉션 패널",
     Label: "라벨",
     "Scrolling Panel": "스크롤 패널",
+    "Bindings Quick Guide": "바인딩 빠른 설명",
+    '1. Use "binding_name" to receive a value such as "#title_text".': '1. "binding_name"은 "#title_text" 같은 값을 전달받을 때 사용합니다.',
+    '2. Use "binding_type": "view" when you want to control visibility or other view properties.': '2. 표시 여부나 화면 속성을 제어하고 싶다면 "binding_type": "view"를 사용하세요.',
+    '"source_property_name" is the condition or source expression, and "target_property_name" is the property to change.': '"source_property_name"은 조건식 또는 원본 표현식이고, "target_property_name"은 실제로 바꿀 속성입니다.',
+    'Tips: Type # for source property suggestions, and type " inside a key to see available binding keys.': '팁: # 을 입력하면 source property 후보가 뜨고, 키 이름 안에서 " 를 입력하면 사용 가능한 binding key 후보가 뜹니다.',
+    "Example:": "예시:",
 };
 const PATTERN_TRANSLATORS = [
     {
