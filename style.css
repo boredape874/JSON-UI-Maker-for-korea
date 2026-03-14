@@ -357,6 +357,19 @@ input[type="file"] {
     font-weight: 500;
 }
 
+.modalHelpCode {
+    margin: 0;
+    padding: 12px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.35);
+    color: #bfe7ff;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+}
+
 .modalOptionInput {
     margin-left: 5px;
     margin-right: 5px;

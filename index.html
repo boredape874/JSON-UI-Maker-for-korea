@@ -114,7 +114,7 @@
 
     <!-- The Help Menu Modal -->
     <div id="modalHelpMenu" class="modal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 640px; max-height: 80vh; overflow-y: auto;">
             <span id="modalHelpMenuClose" class="modalClose">&times;</span>
             <h2 class="modalHeader">Help</h2>
             <div class="modalHelpMenuForm">
@@ -129,6 +129,25 @@
                     Tab | Enter: <b>Autocomplete</b><br>
                     Arrow Keys: <b>Move</b>
                 </label><br><br><br>
+
+                <label style="font-weight: 500; color: rgb(255, 255, 255); font-size: 20px;">Bindings Quick Guide</label><br><br>
+
+                <label class="modalOptionLabel">1. Use "binding_name" to receive a value such as "#title_text".</label><br><br>
+                <label class="modalOptionLabel">2. Use "binding_type": "view" when you want to control visibility or other view properties.</label><br><br>
+                <label class="modalOptionLabel">"source_property_name" is the condition or source expression, and "target_property_name" is the property to change.</label><br><br>
+                <label class="modalOptionLabel" style="color: #9dd1ff;">Tips: Type # for source property suggestions, and type " inside a key to see available binding keys.</label><br><br>
+
+                <label style="font-weight: 500; color: rgb(255, 255, 255);">Example:</label><br><br>
+                <pre class="modalHelpCode">[
+  {
+    "binding_name": "#title_text"
+  },
+  {
+    "binding_type": "view",
+    "source_property_name": "(not (#title_text = ''))",
+    "target_property_name": "#visible"
+  }
+]</pre><br><br>
 
                 <label style="font-weight: 500; color: rgb(255, 255, 255); font-size: 20px;">General
                     Issues:</label><br><br>
