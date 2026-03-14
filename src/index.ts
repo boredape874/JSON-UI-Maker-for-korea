@@ -30,6 +30,7 @@ import { chooseImageModal } from "./ui/modals/chooseImage.js";
 import { saveFormsModal } from "./ui/modals/saveForms.js";
 import { pasteFormModal } from "./ui/modals/pasteFormModal.js";
 import { uiWorkspaceModal } from "./ui/modals/uiWorkspaceModal.js";
+import { glyphEditorModal } from "./ui/modals/glyphEditorModal.js";
 import "./ui/modals/settings.js";
 import { authModal } from "./ui/modals/authModal.js";
 import { uploadPresetModal } from "./ui/modals/uploadPresetModal.js";
@@ -347,6 +348,10 @@ export class Builder {
         new Notification("UI workspace imported. Some advanced controls may appear partially.", 3500, "notif");
 
         if (input) input.value = "";
+    }
+
+    public static async openGlyphEditorModal(): Promise<void> {
+        await glyphEditorModal();
     }
 
     public static formatBindingsArea(): void {

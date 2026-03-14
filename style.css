@@ -229,6 +229,108 @@ input[type="file"] {
     outline: rgb(162, 0, 255) 2px solid;
 }
 
+.glyphEditorModalContent {
+    max-width: 1180px;
+    max-height: 88vh;
+    overflow: auto;
+}
+
+.glyphEditorLayout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    color: white;
+}
+
+.glyphEditorSidebar {
+    width: 320px;
+    min-width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.glyphEditorButtonRow,
+.glyphEditorButtonColumn {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.glyphEditorButtonColumn .propertyInputButton,
+.glyphEditorButtonRow .propertyInputButton {
+    flex: 1 1 140px;
+}
+
+.glyphEditorCanvasPanel {
+    flex: 1 1 auto;
+    min-width: 360px;
+}
+
+.glyphEditorCanvasHeader {
+    margin-bottom: 10px;
+    color: #d5d8e2;
+    line-height: 1.5;
+}
+
+.glyphEditorCanvas {
+    width: min(68vw, 512px);
+    height: auto;
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #0f1420, #090d15);
+    outline: 1px solid rgba(255, 255, 255, 0.18);
+    image-rendering: pixelated;
+    cursor: crosshair;
+}
+
+.glyphEditorMetaCard {
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(17, 22, 34, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glyphEditorMetaTitle {
+    font-size: 12px;
+    color: #9fb4dd;
+    text-transform: uppercase;
+    margin-top: 10px;
+}
+
+.glyphEditorMetaTitle:first-child {
+    margin-top: 0;
+}
+
+.glyphEditorMetaValue,
+.glyphEditorStatus {
+    color: #ffffff;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.glyphEditorStatus {
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 960px) {
+    .glyphEditorLayout {
+        flex-direction: column;
+    }
+
+    .glyphEditorSidebar,
+    .glyphEditorCanvasPanel {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .glyphEditorCanvas {
+        width: min(100%, 512px);
+    }
+}
+
 .draggable-panel {
     position: absolute;
     width: 150px;

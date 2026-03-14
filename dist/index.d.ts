@@ -33,6 +33,7 @@ export declare class Builder {
     static uploadForm(): void;
     static openPasteFormModal(): Promise<void>;
     static importUiWorkspace(): Promise<void>;
+    static openGlyphEditorModal(): Promise<void>;
     static formatBindingsArea(): void;
     static downloadServerForm(type: "copy" | "download"): void;
     static handleUiTexturesUpload(): void;

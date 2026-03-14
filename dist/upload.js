@@ -79,9 +79,68 @@ export class FormUploader {
         }
         return path;
     }
+    static collectRenderableTopLevelKeys(parsed) {
+        return Object.entries(parsed)
+            .filter(([key, value]) => {
+            if (key === "namespace" || key === "config")
+                return false;
+            return typeof value === "object" && value !== null && ("type" in value || "controls" in value);
+        })
+            .map(([key]) => key);
+    }
+    static createWorkspaceDefinitionsFromParsed(parsed, sourceFile = "workspace.json") {
+        const namespace = typeof parsed.namespace === "string" && parsed.namespace.trim() !== ""
+            ? parsed.namespace
+            : StringUtil.toSafeNamespace(sourceFile);
+        const definitions = new Map();
+        for (const key of this.collectRenderableTopLevelKeys(parsed)) {
+            const control = parsed[key];
+            const parsedKey = this.parseControlKey(key);
+            const id = `${namespace}.${parsedKey.baseKey}`;
+            definitions.set(id, {
+                id,
+                namespace,
+                key: parsedKey.baseKey,
+                rawKey: key,
+                control,
+                sourceFile,
+            });
+        }
+        return definitions;
+    }
+    static normalizeParsedForm(parsed, uploadedFileName) {
+        const normalized = structuredClone(parsed);
+        if (typeof normalized.namespace !== "string" || normalized.namespace.trim() === "") {
+            normalized.namespace = StringUtil.toSafeNamespace(uploadedFileName ?? "workspace.json");
+        }
+        const namespace = normalized.namespace;
+        if (normalized[namespace])
+            return normalized;
+        const renderableKeys = this.collectRenderableTopLevelKeys(normalized);
+        if (renderableKeys.length === 0)
+            return normalized;
+        const preferredKey = renderableKeys.find((key) => this.parseControlKey(key).baseKey === namespace) ??
+            renderableKeys.find((key) => ["root", "screen", "main", "element", "dialog"].includes(this.parseControlKey(key).baseKey)) ??
+            renderableKeys[0];
+        if (renderableKeys.length === 1 && preferredKey) {
+            normalized[namespace] = structuredClone(normalized[preferredKey]);
+            return normalized;
+        }
+        normalized[namespace] = {
+            type: "panel",
+            size: ["100%", "100%"],
+            controls: renderableKeys.map((key) => {
+                const parsedKey = this.parseControlKey(key);
+                return {
+                    [`${parsedKey.baseKey}@${namespace}.${parsedKey.baseKey}`]: {},
+                };
+            }),
+        };
+        return normalized;
+    }
     static isValid(form) {
         try {
-            const parsed = FormUploader.parseJsonWithComments(form);
+            const parsed = FormUploader.normalizeParsedForm(FormUploader.parseJsonWithComments(form));
             return FormUploader.isValidParsed(parsed);
         }
         catch (e) {
@@ -117,6 +176,7 @@ export class FormUploader {
         return jsonControls;
     }
     static uploadParsedForm(parsed, uploadedFileName, workspaceDefinitions) {
+        parsed = FormUploader.normalizeParsedForm(parsed, uploadedFileName);
         if (!FormUploader.isValidParsed(parsed))
             return;
         const namespace = parsed.namespace;
@@ -126,15 +186,18 @@ export class FormUploader {
             ? StringUtil.toSafeFileName(uploadedFileName)
             : StringUtil.toSafeFileName(namespace);
         syncJsonTypeNamespaces(config.nameSpace);
-        this.workspaceDefinitions = workspaceDefinitions ?? new Map();
+        this.workspaceDefinitions =
+            workspaceDefinitions && workspaceDefinitions.size > 0
+                ? workspaceDefinitions
+                : this.createWorkspaceDefinitionsFromParsed(parsed, uploadedFileName ?? `${namespace}.json`);
         const mainPanel = GeneralUtil.elementToClassElement(config.rootElement);
         FormUploader.tree(parsed[namespace], mainPanel, [parsed["config"], parsed]);
         new Notification("Form uploaded successfully", 2000, "notif");
     }
     static uploadForm(form, uploadedFileName, workspaceDefinitions) {
-        if (!FormUploader.isValid(form))
+        const parsed = FormUploader.normalizeParsedForm(FormUploader.parseJsonWithComments(form), uploadedFileName);
+        if (!FormUploader.isValidParsed(parsed))
             return;
-        const parsed = FormUploader.parseJsonWithComments(form);
         FormUploader.uploadParsedForm(parsed, uploadedFileName, workspaceDefinitions);
     }
     static tree(rootJson, parentClassElement, args) {

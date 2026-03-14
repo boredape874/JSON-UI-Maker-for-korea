@@ -31,6 +31,7 @@
                 </label>
 
                 <button type="button" class="propertyInputButton" onclick="Builder.openPasteFormModal()">Paste Form Code</button>
+                <button type="button" class="propertyInputButton" onclick="Builder.openGlyphEditorModal()">Glyph Editor</button>
             </div>
         </div>
 
@@ -135,6 +136,16 @@
             <span id="modalUiWorkspaceClose" class="modalClose">&times;</span>
             <h2 class="modalHeader">Import UI Folder</h2>
             <div class="modalUiWorkspaceForm"></div>
+        </div>
+    </div>
+    <!--------------->
+
+    <!-- The Glyph Editor Modal -->
+    <div id="modalGlyphEditor" class="modal">
+        <div class="modal-content glyphEditorModalContent">
+            <span id="modalGlyphEditorClose" class="modalClose">&times;</span>
+            <h2 class="modalHeader">Glyph Editor</h2>
+            <div class="modalGlyphEditorForm"></div>
         </div>
     </div>
     <!--------------->

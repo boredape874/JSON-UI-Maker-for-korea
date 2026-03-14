@@ -275,6 +275,33 @@ const EXACT_TRANSLATIONS = {
     "Could not prepare the selected UI control.": "\uc120\ud0dd\ud55c UI \ucee8\ud2b8\ub864\uc744 \ubd88\ub7ec\uc624\uae30 \uc900\ube44\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.",
     "UI workspace imported. Some advanced controls may appear partially.": "UI \uc6cc\ud06c\uc2a4\ud398\uc774\uc2a4\ub97c \ubd88\ub7ec\uc654\uc2b5\ub2c8\ub2e4. \uc77c\ubd80 \uace0\uae09 \ucee8\ud2b8\ub864\uc740 \ubd80\ubd84\uc801\uc73c\ub85c\ub9cc \ud45c\uc2dc\ub420 \uc218 \uc788\uc2b5\ub2c8\ub2e4.",
     "Unsupported control type:": "\uc9c0\uc6d0\ud558\uc9c0 \uc54a\ub294 \ucee8\ud2b8\ub864 \ud0c0\uc785:",
+    "Glyph Editor": "\uae00\ub9ac\ud504 \ud3b8\uc9d1\uae30",
+    "Built-in Glyph Sheets": "\uae30\ubcf8 \uae00\ub9ac\ud504 \uc2dc\ud2b8",
+    "Load Built-in Sheet": "\uae30\ubcf8 \uc2dc\ud2b8 \ubd88\ub7ec\uc624\uae30",
+    "Upload Edited Glyph Sheet": "\uc218\uc815\ud55c \uae00\ub9ac\ud504 \uc2dc\ud2b8 \uc5c5\ub85c\ub4dc",
+    "Insert Image": "\uc774\ubbf8\uc9c0 \uc0bd\uc785",
+    "Choose Image To Insert": "\uc0bd\uc785\ud560 \uc774\ubbf8\uc9c0 \uc120\ud0dd",
+    "Selected Cell": "\uc120\ud0dd\ud55c \uce78",
+    "Slot": "\uc2ac\ub86f",
+    "Unicode": "\uc720\ub2c8\ucf54\ub4dc",
+    "No image selected yet.": "\uc544\uc9c1 \uc120\ud0dd\ud55c \uc774\ubbf8\uc9c0\uac00 \uc5c6\uc2b5\ub2c8\ub2e4.",
+    "Insert Into Selected Cell": "\uc120\ud0dd\ud55c \uce78\uc5d0 \uc0bd\uc785",
+    "Clear Selected Cell": "\uc120\ud0dd\ud55c \uce78 \ube44\uc6b0\uae30",
+    "Download Glyph Sheet": "\uae00\ub9ac\ud504 \uc2dc\ud2b8 \ub2e4\uc6b4\ub85c\ub4dc",
+    "Load a built-in glyph sheet, upload an edited sheet to continue working, then insert your image into any slot.": "\uae30\ubcf8 \uae00\ub9ac\ud504 \uc2dc\ud2b8\ub97c \ubd88\ub7ec\uc624\uac70\ub098 \uc218\uc815\ud55c \uc2dc\ud2b8\ub97c \ub2e4\uc2dc \uc5c5\ub85c\ub4dc\ud55c \ub4a4, \uc6d0\ud558\ub294 \uce78\uc5d0 \uc774\ubbf8\uc9c0\ub97c \uc0bd\uc785\ud558\uc138\uc694.",
+    "Choose a built-in glyph sheet or upload an edited sheet to begin.": "\uc2dc\uc791\ud558\ub824\uba74 \uae30\ubcf8 \uae00\ub9ac\ud504 \uc2dc\ud2b8\ub97c \uace0\ub974\uac70\ub098 \uc218\uc815\ud55c \uc2dc\ud2b8\ub97c \uc5c5\ub85c\ub4dc\ud558\uc138\uc694.",
+    "Click a cell in the grid to choose where the next image should be inserted.": "\uadf8\ub9ac\ub4dc\uc5d0\uc11c \uce78\uc744 \ud074\ub9ad\ud574 \ub2e4\uc74c \uc774\ubbf8\uc9c0\ub97c \ub123\uc744 \uc704\uce58\ub97c \uace0\ub974\uc138\uc694.",
+    "Please load a glyph sheet first.": "\uba3c\uc800 \uae00\ub9ac\ud504 \uc2dc\ud2b8\ub97c \ubd88\ub7ec\uc624\uc138\uc694.",
+    "Please choose an image to insert.": "\uc0bd\uc785\ud560 \uc774\ubbf8\uc9c0\ub97c \uba3c\uc800 \uc120\ud0dd\ud558\uc138\uc694.",
+    "Loaded built-in glyph sheet:": "\uae30\ubcf8 \uae00\ub9ac\ud504 \uc2dc\ud2b8\ub97c \ubd88\ub7ec\uc654\uc2b5\ub2c8\ub2e4:",
+    "Loaded edited glyph sheet:": "\uc218\uc815\ud55c \uae00\ub9ac\ud504 \uc2dc\ud2b8\ub97c \ubd88\ub7ec\uc654\uc2b5\ub2c8\ub2e4:",
+    "Inserted image into glyph slot.": "\uc774\ubbf8\uc9c0\ub97c \uae00\ub9ac\ud504 \uce78\uc5d0 \uc0bd\uc785\ud588\uc2b5\ub2c8\ub2e4.",
+    "Cleared glyph slot.": "\uc120\ud0dd\ud55c \uae00\ub9ac\ud504 \uce78\uc744 \ube44\uc6e0\uc2b5\ub2c8\ub2e4.",
+    "Could not load the glyph sheet.": "\uae00\ub9ac\ud504 \uc2dc\ud2b8\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.",
+    "Could not load the image to insert.": "\uc0bd\uc785\ud560 \uc774\ubbf8\uc9c0\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.",
+    "Find Empty Slot": "\ube48 \uce78 \ucc3e\uae30",
+    "Selected the next empty glyph slot.": "\ub2e4\uc74c \ube48 \uae00\ub9ac\ud504 \uce78\uc744 \uc120\ud0dd\ud588\uc2b5\ub2c8\ub2e4.",
+    "No empty glyph slots were found in this sheet.": "\uc774 \uc2dc\ud2b8\uc5d0\uc11c\ub294 \ube48 \uae00\ub9ac\ud504 \uce78\uc744 \ucc3e\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.",
 };
 const PATTERN_TRANSLATORS = [
     {
@@ -348,6 +375,14 @@ const PATTERN_TRANSLATORS = [
     {
         pattern: /^Unsupported control type:\s*(.+)$/u,
         translate: (match) => `\uc9c0\uc6d0\ud558\uc9c0 \uc54a\ub294 \ucee8\ud2b8\ub864 \ud0c0\uc785: ${match[1]}`,
+    },
+    {
+        pattern: /^Loaded built-in glyph sheet:\s*(.+)$/u,
+        translate: (match) => `\uae30\ubcf8 \uae00\ub9ac\ud504 \uc2dc\ud2b8\ub97c \ubd88\ub7ec\uc654\uc2b5\ub2c8\ub2e4: ${match[1]}`,
+    },
+    {
+        pattern: /^Loaded edited glyph sheet:\s*(.+)$/u,
+        translate: (match) => `\uc218\uc815\ud55c \uae00\ub9ac\ud504 \uc2dc\ud2b8\ub97c \ubd88\ub7ec\uc654\uc2b5\ub2c8\ub2e4: ${match[1]}`,
     },
 ];
 function normalizeText(text) {

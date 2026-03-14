@@ -26,6 +26,9 @@ export declare class FormUploader {
     static resolveDimension(value: string | number | undefined, scalar: number, fallback: string): string;
     static resolveVector2(value: [string | number, string | number] | undefined, scalar: number, fallback: [string, string]): [string, string];
     static resolveControlPath(path: string | undefined, args?: any): string | undefined;
+    static collectRenderableTopLevelKeys(parsed: StringObjectMap): string[];
+    static createWorkspaceDefinitionsFromParsed(parsed: StringObjectMap, sourceFile?: string): Map<string, WorkspaceDefinition>;
+    static normalizeParsedForm(parsed: StringObjectMap, uploadedFileName?: string): StringObjectMap;
     static isValid(form: string): boolean;
     static isValidParsed(parsed: StringObjectMap): boolean;
     static getJsonControlsAndType(json: StringObjectMap): {
