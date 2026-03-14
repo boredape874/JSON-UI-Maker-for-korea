@@ -212,6 +212,7 @@ const EXACT_TRANSLATIONS = {
     "Used for the exported file name and namespace": "\ub0b4\ubcf4\ub0b4\ub294 \ud30c\uc77c \uc774\ub984\uacfc namespace\uc5d0 \uc0ac\uc6a9\ub429\ub2c8\ub2e4.",
     "Adjust the form name before copying or downloading.": "\ubcf5\uc0ac\ud558\uac70\ub098 \ub2e4\uc6b4\ub85c\ub4dc\ud558\uae30 \uc804\uc5d0 \ud3fc \uc774\ub984\uc744 \uc870\uc815\ud558\uc138\uc694.",
     "This updates the exported file name and namespace together.": "\ub0b4\ubcf4\ub0b4\ub294 \ud30c\uc77c \uc774\ub984\uacfc namespace\uac00 \ud568\uaed8 \ubcc0\uacbd\ub429\ub2c8\ub2e4.",
+    "This updates the form file name and namespace together. Server-Form stays server_form.json.": "\ud3fc \ud30c\uc77c \uc774\ub984\uacfc namespace\ub9cc \ud568\uaed8 \ubcc0\uacbd\ub429\ub2c8\ub2e4. \uc11c\ubc84 \ud3fc\uc740 \ud56d\uc0c1 server_form.json\uc744 \uc720\uc9c0\ud569\ub2c8\ub2e4.",
     "Copy or download the standard form JSON.": "\uc77c\ubc18 \ud3fc JSON\uc744 \ubcf5\uc0ac\ud558\uac70\ub098 \ub2e4\uc6b4\ub85c\ub4dc\ud569\ub2c8\ub2e4.",
     "Copy or download the server form that points to this form.": "\uc774 \ud3fc\uc744 \ucc38\uc870\ud558\ub294 \uc11c\ubc84 \ud3fc\uc744 \ubcf5\uc0ac\ud558\uac70\ub098 \ub2e4\uc6b4\ub85c\ub4dc\ud569\ub2c8\ub2e4.",
     Download: "\ub2e4\uc6b4\ub85c\ub4dc",

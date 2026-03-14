@@ -285,7 +285,7 @@ export class Builder {
         return StringUtil.toSafeFileName(config.formFileName || config.nameSpace || "form_ui");
     }
     static getServerFormDownloadName() {
-        return `${this.getDownloadBaseName()}_server_form.json`;
+        return "server_form.json";
     }
     static isValidPath(parent, childType) {
         const convertionFunction = classToJsonUI.get(parent?.classList[0]);

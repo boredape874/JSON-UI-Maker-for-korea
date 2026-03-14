@@ -83,7 +83,7 @@ export function saveFormsModal(): void {
 
     const helper = document.createElement("label");
     helper.className = "modalOptionBody";
-    helper.textContent = translateText("This updates the exported file name and namespace together.");
+    helper.textContent = translateText("This updates the form file name and namespace together. Server-Form stays server_form.json.");
 
     const previewBox = document.createElement("div");
     previewBox.className = "saveFormsPreviewBox";
@@ -108,7 +108,7 @@ export function saveFormsModal(): void {
 
         namespaceValue.textContent = safeNamespace;
         formValue.textContent = `${safeFileName}.json`;
-        serverFormValue.textContent = `${safeFileName}_server_form.json`;
+        serverFormValue.textContent = "server_form.json";
     };
 
     const runAction = (action: () => void): void => {

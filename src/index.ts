@@ -347,7 +347,7 @@ export class Builder {
     }
 
     private static getServerFormDownloadName(): string {
-        return `${this.getDownloadBaseName()}_server_form.json`;
+        return "server_form.json";
     }
 
     public static isValidPath(parent: HTMLElement, childType?: "scrolling_panel" | "collection_panel" | "label" | "button" | "canvas" | "panel"): boolean {
