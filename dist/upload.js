@@ -269,7 +269,7 @@ export const tagNameToCreateClassElementFunc = new Map([
             }
             const id = StringUtil.generateRandomString(15);
             const button = new DraggableButton(id, parentClassElement.getMainHTMLElement(), {
-                buttonText: "Example Text",
+                buttonText: "예시 텍스트",
                 defaultTexture: imageNames[0],
                 hoverTexture: imageNames[1],
                 pressedTexture: imageNames[2],

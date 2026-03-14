@@ -356,6 +356,7 @@ export async function addUserPresetsSection(form: HTMLElement, userId: number) {
 
                 const label = document.createElement("label");
                 label.textContent = preset.name;
+                label.dataset.noTranslate = "true";
                 label.style.color = "white";
                 label.style.flex = "1";
                 presetDiv.appendChild(label);
@@ -404,6 +405,7 @@ export async function addUserPresetsSection(form: HTMLElement, userId: number) {
 
                 const label = document.createElement("label");
                 label.textContent = preset.name;
+                label.dataset.noTranslate = "true";
                 label.style.color = "white";
                 label.style.flex = "1";
                 presetDiv.appendChild(label);

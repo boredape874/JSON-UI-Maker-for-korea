@@ -31,9 +31,11 @@ import { authManager } from "./auth.js";
 import { presetManager } from "./presetManager.js";
 import { loadSqlJs } from "./database.js";
 import { dbManager } from "./database.js";
+import { initI18n } from "./i18n.js";
 import "./elements/groupedEventlisteners.js";
 import "./ui/scale.js";
 import { undoRedoManager } from "./keyboard/undoRedo.js";
+initI18n();
 console.log("Script Loaded");
 initDefaultImages();
 console.log("Image-Files Loaded");
@@ -295,7 +297,7 @@ export class Builder {
         if (!config.rootElement)
             return;
         const id = StringUtil.generateRandomString(15);
-        const label = new DraggableLabel(id, selectedElement ?? config.rootElement, { text: "Label", includeTextPrompt: true });
+        const label = new DraggableLabel(id, selectedElement ?? config.rootElement, { text: "라벨", includeTextPrompt: true });
         GLOBAL_ELEMENT_MAP.set(id, label);
         // Record add operation for undo/redo
         undoRedoManager.push({
@@ -304,7 +306,7 @@ export class Builder {
             elementData: {
                 type: 'draggable-label',
                 id: id,
-                text: "Label",
+                text: "라벨",
                 left: 0,
                 top: 0,
                 width: 100,

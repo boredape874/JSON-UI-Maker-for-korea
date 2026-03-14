@@ -49,7 +49,7 @@ export class ScriptGenerator {
     static getButtonInfo(element: HTMLElement): FormButtonData {
         const buttonClass = GeneralUtil.elementToClassElement(element) as DraggableButton;
 
-        const text = buttonClass.displayText?.mirror?.textContent ?? "Label";
+        const text = buttonClass.displayText?.mirror?.textContent ?? "라벨";
 
         return {
             texture: `textures/${element.dataset.displayImagePath ?? "ui/blank"}`,

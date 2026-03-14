@@ -13,6 +13,7 @@ class ChooseImageFileTree {
         const textDiv = document.createElement("div");
         textDiv.classList.add("explorerText");
         textDiv.textContent = text;
+        textDiv.dataset.noTranslate = "true";
 
         if (hasChildren) {
             const arrowDiv = document.createElement("img") as HTMLImageElement;

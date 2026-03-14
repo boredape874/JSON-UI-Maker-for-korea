@@ -1,6 +1,7 @@
 import { presetManager } from "../../presetManager.js";
 import { authManager } from "../../auth.js";
 import { Notification } from "../../ui/notifs/noficationMaker.js";
+import { confirmLocalized } from "../../i18n.js";
 
 export class PresetManagementModal {
   private modal: HTMLElement | null = null;
@@ -212,14 +213,15 @@ export class PresetManagementModal {
     const visibilityClass = preset.is_public ? 'public' : 'private';
     const visibilityText = preset.is_public ? 'Public' : 'Private';
     const visibilityAction = preset.is_public ? 'Make Private' : 'Make Public';
+    const createdDate = new Date(preset.created_at).toLocaleDateString("ko-KR");
 
     return `
       <div class="preset-item" data-preset-id="${preset.id}">
         <div class="preset-info">
-          <div class="preset-name" id="presetName_${preset.id}">${preset.name}</div>
+          <div class="preset-name" id="presetName_${preset.id}" data-no-translate="true">${preset.name}</div>
           <div class="preset-details">
             <span class="preset-visibility ${visibilityClass}">${visibilityText}</span>
-            <span> • Uploaded: ${new Date(preset.created_at).toLocaleDateString()}</span>
+            <span>업로드일: ${createdDate}</span>
           </div>
         </div>
         <div class="preset-actions">
@@ -304,7 +306,7 @@ export class PresetManagementModal {
   }
 
   public async deletePreset(presetId: number): Promise<void> {
-    if (!confirm('Are you sure you want to delete this preset? This action cannot be undone.')) {
+    if (!confirmLocalized('Are you sure you want to delete this preset? This action cannot be undone.')) {
       return;
     }
 

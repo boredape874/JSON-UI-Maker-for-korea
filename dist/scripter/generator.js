@@ -38,7 +38,7 @@ export class ScriptGenerator {
      */
     static getButtonInfo(element) {
         const buttonClass = GeneralUtil.elementToClassElement(element);
-        const text = buttonClass.displayText?.mirror?.textContent ?? "Label";
+        const text = buttonClass.displayText?.mirror?.textContent ?? "라벨";
         return {
             texture: `textures/${element.dataset.displayImagePath ?? "ui/blank"}`,
             text: text,

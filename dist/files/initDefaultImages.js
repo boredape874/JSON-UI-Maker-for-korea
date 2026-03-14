@@ -21,10 +21,10 @@ export async function loadPresetTextureSets(textureSet) {
         const isNineslice = imageInfo.nineslice;
         const imageFile = await FileUploader.getAssetAsFile(`presets/textures/${textureSet}/${image}.png`, `${image}.png`);
         // Properly set relative path for saving to assets folder
-        imageFile._webkitRelativePath = `assets/${image}.png`;
+        imageFile._webkitRelativePath = `presets/textures/${textureSet}/${image}.png`;
         if (isNineslice) {
             const imageJson = await FileUploader.getAssetAsFile(`presets/textures/${textureSet}/${image}.json`, `${image}.json`);
-            imageJson._webkitRelativePath = `assets/${image}.json`;
+            imageJson._webkitRelativePath = `presets/textures/${textureSet}/${image}.json`;
             await FileUploader.processFileUpload([imageFile, imageJson]);
             // Also save the files to the actual assets folder structure
             await saveTextureToAssetsFolder(imageFile, imageJson);

@@ -148,7 +148,7 @@ export class DraggableButton {
         document.body.appendChild(this.outlineDiv);
 
         this.initEvents();
-        this.setDisplayText(buttonText ?? "Label");
+        this.setDisplayText(buttonText ?? "라벨");
         this.grid(false);
 
         if (this.displayTexture) this.setDisplayImage(this.displayTexture);
