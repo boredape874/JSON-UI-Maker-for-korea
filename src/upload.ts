@@ -1,5 +1,6 @@
 import { config } from "./CONFIG.js";
 import { SavedConfig, StringObjectMap } from "./converter.js";
+import { syncJsonTypeNamespaces } from "./converterTypes/jsonUITypes.js";
 import { DraggableButton } from "./elements/button.js";
 import { DraggableCanvas } from "./elements/canvas.js";
 import { DraggableCollectionPanel } from "./elements/collectionPanel.js";
@@ -81,6 +82,7 @@ export class FormUploader {
             config.formFileName = uploadedFileName
                 ? StringUtil.toSafeFileName(uploadedFileName)
                 : StringUtil.toSafeFileName(namespace);
+            syncJsonTypeNamespaces(config.nameSpace);
 
             const mainPanel: GlobalElementMapValue = GeneralUtil.elementToClassElement(config.rootElement!)!;
             FormUploader.tree(parsed[namespace] as StringObjectMap, mainPanel, [parsed["config"], parsed]);

@@ -100,6 +100,18 @@
     </div>
     <!--------------->
 
+    <!-- The Save Forms Modal -->
+    <div id="modalSaveForms" class="modal">
+        <div class="modal-content modalSaveFormsContent">
+            <span id="modalSaveFormsClose" class="modalClose">&times;</span>
+            <h2 class="modalHeader">Save Forms</h2>
+            <div class="modalSaveFormsForm">
+
+            </div>
+        </div>
+    </div>
+    <!--------------->
+
     <!-- The Load Texture Presets Modal -->
     <div id="modalLoadTexturePresets" class="modal">
         <div class="modal-content">
@@ -201,27 +213,11 @@
                         style="width: 20px; top: 3px; position: relative; filter: drop-shadow(0px 0px 5px #000000);"
                         src="icons/bin.webp" alt="Delete"> </button>
 
-                <div style="display:flex; flex-direction: row; justify-content: center; align-items: center">
-                    <div class="utilElement" style="width: 100%;">Form</div>
-
-                    <img class="utilElement" title="Copy" onclick="Builder.generateAndCopyJsonUI('copy')"
-                        style="width: 20px; position: relative; filter: drop-shadow(0px 0px 5px #000000); cursor: pointer;"
-                        src="icons/clipboard.webp" alt="Copy">
-                    <img class="utilElement" title="Download" onclick="Builder.generateAndCopyJsonUI('download')"
-                        style="width: 20px; position: relative; filter: drop-shadow(0px 0px 5px #000000); cursor: pointer;"
-                        src="icons/download.webp" alt="Download">
-                </div>
-
-                <div style="display:flex; flex-direction: row; justify-content: center; align-items: center">
-                    <div class="utilElement" style="width: 100%;">Server-Form</div>
-
-                    <img class="utilElement" title="Copy" onclick="Builder.downloadServerForm('copy')"
-                        style="width: 20px; position: relative; filter: drop-shadow(0px 0px 5px #000000); cursor: pointer;"
-                        src="icons/clipboard.webp" alt="Copy">
-                    <img class="utilElement" title="Download" onclick="Builder.downloadServerForm('download')"
-                        style="width: 20px; position: relative; filter: drop-shadow(0px 0px 5px #000000); cursor: pointer;"
-                        src="icons/download.webp" alt="Download">
-                </div>
+                <button class="utilElement saveFormsLauncher" type="button" onclick="Builder.openSaveFormsModal()">
+                    Save Forms
+                    <img style="width: 20px; top: 3px; position: relative; filter: drop-shadow(0px 0px 5px #000000);"
+                        src="icons/download.webp" alt="Save">
+                </button>
 
             </div>
 

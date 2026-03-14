@@ -204,6 +204,13 @@ input[type="file"] {
     outline: rgb(80, 77, 77) 1px solid;
 }
 
+.saveFormsLauncher {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
 .propertyInputButton {
     margin-top: 4px;
     padding: 6px;
@@ -398,6 +405,102 @@ input[type="file"] {
 }
 
 .modalSubmitButton:hover {
+    box-shadow: 6px 5px 31px -7px rgba(0, 0, 0, 0.75);
+    outline: rgb(162, 0, 255) 2px solid;
+}
+
+.modalSaveFormsContent {
+    min-width: min(560px, calc(100vw - 40px));
+}
+
+.modalSaveFormsForm {
+    display: flex;
+    flex-direction: column;
+}
+
+.saveFormsNameInput {
+    width: calc(100% - 12px);
+    max-width: 100%;
+}
+
+.saveFormsPreviewBox {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    outline: rgba(153, 0, 255, 0.35) 1px solid;
+}
+
+.saveFormsPreviewRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: white;
+}
+
+.saveFormsPreviewLabel {
+    color: rgb(175, 175, 175);
+    font-size: 14px;
+}
+
+.saveFormsPreviewValue {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(153, 0, 255, 0.16);
+    color: rgb(228, 210, 255);
+    font-size: 13px;
+    word-break: break-all;
+}
+
+.saveFormsActionGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.saveFormsActionCard {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border-radius: 10px;
+    background: linear-gradient(160deg, rgba(53, 53, 53, 0.95), rgba(34, 34, 34, 0.95));
+    outline: rgba(153, 0, 255, 0.25) 1px solid;
+}
+
+.saveFormsActionTitle {
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.saveFormsActionDescription {
+    color: rgb(179, 179, 179);
+    font-size: 13px;
+    line-height: 1.5;
+    min-height: 40px;
+}
+
+.saveFormsActionButtons {
+    display: flex;
+    gap: 10px;
+}
+
+.saveFormsActionButton {
+    flex: 1;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgb(59, 56, 71);
+    color: white;
+    cursor: pointer;
+    border: none;
+    outline: rgb(80, 77, 77) 1px solid;
+}
+
+.saveFormsActionButton:hover {
     box-shadow: 6px 5px 31px -7px rgba(0, 0, 0, 0.75);
     outline: rgb(162, 0, 255) 2px solid;
 }
@@ -1035,5 +1138,9 @@ input[type="file"] {
     .chooseImagePreviewPanel {
         width: auto;
         min-height: 0;
+    }
+
+    .saveFormsActionGrid {
+        grid-template-columns: 1fr;
     }
 }

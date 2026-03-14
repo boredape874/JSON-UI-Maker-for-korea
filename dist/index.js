@@ -23,6 +23,7 @@ import { ExplorerController } from "./ui/explorer/explorerController.js";
 import { loadTexturePresetsModal } from "./ui/modals/loadTexturePresets.js";
 import { helpModal } from "./ui/modals/helpMenu.js";
 import { chooseImageModal } from "./ui/modals/chooseImage.js";
+import { saveFormsModal } from "./ui/modals/saveForms.js";
 import "./ui/modals/settings.js";
 import { authModal } from "./ui/modals/authModal.js";
 import { uploadPresetModal } from "./ui/modals/uploadPresetModal.js";
@@ -63,10 +64,10 @@ document.addEventListener("DOMContentLoaded", async (e) => {
     uploadPresetModal.init();
     presetManagementModal.init();
     const createFormOptions = await createFormModal();
+    const form_name = createFormOptions.form_name;
     const title_flag = createFormOptions.title_flag;
+    Builder.setFormIdentity(form_name);
     config.title_flag = title_flag;
-    config.nameSpace = StringUtil.toSafeNamespace(config.formFileName);
-    syncJsonTypeNamespaces(config.nameSpace);
     const mainPanelInfo = constructMainPanel();
     config.rootElement = mainPanelInfo.mainPanel.getMainHTMLElement();
     // Update auth UI after everything is loaded
@@ -211,22 +212,19 @@ export function setFileSystem(fs) {
     GLOBAL_FILE_SYSTEM = fs;
 }
 export class Builder {
-    static requestExportIdentity(target, action) {
-        const targetLabel = target === "form" ? "폼" : "서버 폼";
-        const actionLabel = action === "copy" ? "복사" : "저장";
-        const defaultName = config.formFileName || config.nameSpace || "form_ui";
-        const enteredName = window.prompt(`${targetLabel} ${actionLabel} 이름을 입력하세요.`, defaultName);
-        if (enteredName === null)
-            return false;
-        const trimmedName = enteredName.trim();
+    static setFormIdentity(name) {
+        const trimmedName = name.trim();
         if (!trimmedName) {
-            new Notification("파일 이름을 입력해 주세요.", 2500, "warning");
+            new Notification("Please enter a form name.", 2500, "warning");
             return false;
         }
         config.formFileName = StringUtil.toSafeFileName(trimmedName);
         config.nameSpace = StringUtil.toSafeNamespace(trimmedName);
         syncJsonTypeNamespaces(config.nameSpace);
         return true;
+    }
+    static openSaveFormsModal() {
+        saveFormsModal();
     }
     static uploadForm() {
         console.log("Uploading form");
@@ -251,8 +249,6 @@ export class Builder {
         const func = JSON_TYPES_GENERATOR.get("server_form");
         if (!func)
             return;
-        if (!this.requestExportIdentity("server_form", type))
-            return;
         if (type == "copy") {
             navigator.clipboard.writeText(func(config.nameSpace));
             new Notification("Server-Form Copied to Clipboard!");
@@ -271,8 +267,6 @@ export class Builder {
         FileUploader.handleUiTexturesUpload();
     }
     static generateAndCopyJsonUI(type) {
-        if (!this.requestExportIdentity("form", type))
-            return;
         const jsonUI = Converter.convertToJsonUi(panelContainer, 0);
         if (type == "copy") {
             navigator.clipboard.writeText(jsonUI);

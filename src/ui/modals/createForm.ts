@@ -1,8 +1,18 @@
 import { config } from "../../CONFIG.js";
+import { translateText } from "../../i18n.js";
 
 const modal: HTMLElement = document.getElementById("modalCreateForm")!;
 
 const options = [
+    {
+        type: "text",
+        name: "form_name",
+        displayName: "Form Name",
+        required: true,
+        default: config.formFileName,
+        body: "Used for the exported file name and namespace",
+        condition: (value: string) => value.trim() !== "",
+    },
     {
         type: "text",
         name: "title_flag",
@@ -15,6 +25,7 @@ const options = [
 ];
 
 interface CreateFormOptions {
+    form_name?: string;
     title_flag?: string;
     [key: string]: any;
 }
@@ -38,7 +49,7 @@ export async function createFormModal(): Promise<CreateFormOptions> {
         input.value = option.default ?? "";
 
         const label = document.createElement("label");
-        label.textContent = `${option.displayName}: `;
+        label.textContent = `${translateText(option.displayName)}: `;
         label.className = "modalOptionLabel";
 
         // Add the nodes
@@ -58,7 +69,7 @@ export async function createFormModal(): Promise<CreateFormOptions> {
 
         if (option.body) {
             const body = document.createElement("label");
-            body.innerHTML = option.body;
+            body.innerHTML = translateText(option.body);
             body.className = "modalOptionBody";
             form.appendChild(body);
             form.appendChild(document.createElement("br"));

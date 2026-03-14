@@ -27,7 +27,8 @@ export declare const GLOBAL_ELEMENT_MAP: Map<string, GlobalElementMapValue>;
 export declare let GLOBAL_FILE_SYSTEM: any;
 export declare function setFileSystem(fs: any): void;
 export declare class Builder {
-    private static requestExportIdentity;
+    static setFormIdentity(name: string): boolean;
+    static openSaveFormsModal(): void;
     static uploadForm(): void;
     static formatBindingsArea(): void;
     static downloadServerForm(type: "copy" | "download"): void;

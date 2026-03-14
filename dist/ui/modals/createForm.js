@@ -1,6 +1,16 @@
 import { config } from "../../CONFIG.js";
+import { translateText } from "../../i18n.js";
 const modal = document.getElementById("modalCreateForm");
 const options = [
+    {
+        type: "text",
+        name: "form_name",
+        displayName: "Form Name",
+        required: true,
+        default: config.formFileName,
+        body: "Used for the exported file name and namespace",
+        condition: (value) => value.trim() !== "",
+    },
     {
         type: "text",
         name: "title_flag",
@@ -26,7 +36,7 @@ export async function createFormModal() {
         input.className = "modalOptionInput";
         input.value = option.default ?? "";
         const label = document.createElement("label");
-        label.textContent = `${option.displayName}: `;
+        label.textContent = `${translateText(option.displayName)}: `;
         label.className = "modalOptionLabel";
         // Add the nodes
         form.appendChild(label);
@@ -42,7 +52,7 @@ export async function createFormModal() {
         form.appendChild(document.createElement("br"));
         if (option.body) {
             const body = document.createElement("label");
-            body.innerHTML = option.body;
+            body.innerHTML = translateText(option.body);
             body.className = "modalOptionBody";
             form.appendChild(body);
             form.appendChild(document.createElement("br"));
