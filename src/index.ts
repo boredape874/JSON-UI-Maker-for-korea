@@ -75,10 +75,13 @@ document.addEventListener("DOMContentLoaded", async (e) => {
     presetManagementModal.init();
 
     const createFormOptions = await createFormModal();
+    const formName = createFormOptions.form_name!;
+    const namespace = createFormOptions.namespace!;
     const title_flag = createFormOptions.title_flag!;
 
+    config.formFileName = formName;
     config.title_flag = title_flag;
-    config.nameSpace = `${StringUtil.generateRandomString(6)}namespace`;
+    config.nameSpace = namespace;
 
     const mainPanelInfo = constructMainPanel();
 
@@ -267,7 +270,7 @@ export class Builder {
 
         reader.onload = (event) => {
             const text = event.target?.result as string;
-            FormUploader.uploadForm(text);
+            FormUploader.uploadForm(text, file.name);
             Builder.updateExplorer();
             undoRedoManager.clear(); // Clear undo/redo when loading new form
 
@@ -296,7 +299,7 @@ export class Builder {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "server_form.json";
+        a.download = this.getServerFormDownloadName();
         a.click();
         URL.revokeObjectURL(url);
     }
@@ -318,9 +321,17 @@ export class Builder {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${config.nameSpace}.json`;
+        a.download = `${this.getDownloadBaseName()}.json`;
         a.click();
         URL.revokeObjectURL(url);
+    }
+
+    private static getDownloadBaseName(): string {
+        return StringUtil.toSafeFileName(config.formFileName || config.nameSpace || "form_ui");
+    }
+
+    private static getServerFormDownloadName(): string {
+        return `${this.getDownloadBaseName()}_server_form.json`;
     }
 
     public static isValidPath(parent: HTMLElement, childType?: "scrolling_panel" | "collection_panel" | "label" | "button" | "canvas" | "panel"): boolean {

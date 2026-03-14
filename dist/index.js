@@ -63,9 +63,12 @@ document.addEventListener("DOMContentLoaded", async (e) => {
     uploadPresetModal.init();
     presetManagementModal.init();
     const createFormOptions = await createFormModal();
+    const formName = createFormOptions.form_name;
+    const namespace = createFormOptions.namespace;
     const title_flag = createFormOptions.title_flag;
+    config.formFileName = formName;
     config.title_flag = title_flag;
-    config.nameSpace = `${StringUtil.generateRandomString(6)}namespace`;
+    config.nameSpace = namespace;
     const mainPanelInfo = constructMainPanel();
     config.rootElement = mainPanelInfo.mainPanel.getMainHTMLElement();
     // Update auth UI after everything is loaded
@@ -219,7 +222,7 @@ export class Builder {
         const reader = new FileReader();
         reader.onload = (event) => {
             const text = event.target?.result;
-            FormUploader.uploadForm(text);
+            FormUploader.uploadForm(text, file.name);
             Builder.updateExplorer();
             undoRedoManager.clear(); // Clear undo/redo when loading new form
             input.value = "";
@@ -243,7 +246,7 @@ export class Builder {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "server_form.json";
+        a.download = this.getServerFormDownloadName();
         a.click();
         URL.revokeObjectURL(url);
     }
@@ -261,9 +264,15 @@ export class Builder {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${config.nameSpace}.json`;
+        a.download = `${this.getDownloadBaseName()}.json`;
         a.click();
         URL.revokeObjectURL(url);
+    }
+    static getDownloadBaseName() {
+        return StringUtil.toSafeFileName(config.formFileName || config.nameSpace || "form_ui");
+    }
+    static getServerFormDownloadName() {
+        return `${this.getDownloadBaseName()}_server_form.json`;
     }
     static isValidPath(parent, childType) {
         const convertionFunction = classToJsonUI.get(parent?.classList[0]);

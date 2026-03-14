@@ -1,8 +1,18 @@
 import { config } from "../../CONFIG.js";
+import { StringUtil } from "../../util/stringUtil.js";
 
 const modal: HTMLElement = document.getElementById("modalCreateForm")!;
 
 const options = [
+    {
+        type: "text",
+        name: "form_name",
+        displayName: "폼 이름",
+        required: true,
+        default: config.formFileName,
+        body: "폼 저장 파일 이름과 서버 폼 파일 이름에 사용됩니다.",
+        condition: (value: string) => value.trim() !== "",
+    },
     {
         type: "text",
         name: "title_flag",
@@ -15,7 +25,9 @@ const options = [
 ];
 
 interface CreateFormOptions {
-    title?: string;
+    form_name?: string;
+    namespace?: string;
+    title_flag?: string;
     [key: string]: any;
 }
 
@@ -33,7 +45,7 @@ export async function createFormModal(): Promise<CreateFormOptions> {
         const input = document.createElement("input");
         input.type = option.type;
         input.name = option.name;
-        input.style.maxWidth = "100px";
+        input.style.maxWidth = option.name === "form_name" ? "220px" : "100px";
         input.className = "modalOptionInput";
         input.value = option.default ?? "";
 
@@ -88,8 +100,11 @@ export async function createFormModal(): Promise<CreateFormOptions> {
 
                 if (options[i]?.condition && !options[i]?.condition(value)) return;
 
-                fields[element.name] = value;
+                fields[element.name] = value.trim();
             }
+
+            fields.namespace = StringUtil.toSafeNamespace(fields.form_name ?? config.formFileName);
+            fields.form_name = StringUtil.toSafeFileName(fields.form_name ?? config.formFileName);
 
             modal.style.display = "none";
 

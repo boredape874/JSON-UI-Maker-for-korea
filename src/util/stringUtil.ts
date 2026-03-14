@@ -39,4 +39,38 @@ export class StringUtil {
         if (lastDot === -1) return filename; // No dot
         return filename.slice(0, lastDot);
     }
+
+    /**
+     * Converts a user-facing label into a safe namespace string.
+     * Keeps letters and numbers, replaces spaces with underscores, and avoids leading digits.
+     */
+    public static toSafeNamespace(value: string): string {
+        let sanitized = this.removeFileExtension(value)
+            .trim()
+            .replace(/[\s-]+/g, "_")
+            .replace(/[.@:/\\|?*"'`~!#$%^&*()+=[\]{}<>,;]/g, "")
+            .replace(/_+/g, "_")
+            .replace(/^_+|_+$/g, "");
+
+        if (!sanitized) sanitized = "form_ui";
+        if (/^\d/u.test(sanitized)) sanitized = `form_${sanitized}`;
+
+        return sanitized;
+    }
+
+    /**
+     * Converts a user-facing label or filename into a browser-safe download filename base.
+     */
+    public static toSafeFileName(value: string): string {
+        let sanitized = this.removeFileExtension(value)
+            .trim()
+            .replace(/[<>:"/\\|?*\u0000-\u001F]/g, " ")
+            .replace(/\s+/g, "_")
+            .replace(/_+/g, "_")
+            .replace(/[. ]+$/g, "");
+
+        if (!sanitized) sanitized = "form_ui";
+
+        return sanitized;
+    }
 }

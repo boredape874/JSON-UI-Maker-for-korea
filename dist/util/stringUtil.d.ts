@@ -23,4 +23,13 @@ export declare class StringUtil {
      * @returns The filename without its extension.
      */
     static removeFileExtension(filename: string): string;
+    /**
+     * Converts a user-facing label into a safe namespace string.
+     * Keeps letters and numbers, replaces spaces with underscores, and avoids leading digits.
+     */
+    static toSafeNamespace(value: string): string;
+    /**
+     * Converts a user-facing label or filename into a browser-safe download filename base.
+     */
+    static toSafeFileName(value: string): string;
 }

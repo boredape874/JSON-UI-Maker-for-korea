@@ -228,6 +228,7 @@ export const config = {
     settings: configSettings,
     magicNumbers: configMagicNumbers,
     nameSpace: "default_namespace",
+    formFileName: "form_ui",
     title_flag: "default_title",
     defaultCollectionName: "form_buttons",
     texturePresets: texturePresets,

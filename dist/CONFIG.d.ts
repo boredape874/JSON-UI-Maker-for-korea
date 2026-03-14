@@ -85,6 +85,7 @@ interface Config {
     settings: typeof configSettings;
     magicNumbers: typeof configMagicNumbers;
     nameSpace: string;
+    formFileName: string;
     title_flag: string;
     defaultCollectionName: string;
     rootElement?: HTMLElement;

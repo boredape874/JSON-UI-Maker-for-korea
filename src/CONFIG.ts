@@ -237,6 +237,7 @@ interface Config {
     settings: typeof configSettings;
     magicNumbers: typeof configMagicNumbers;
     nameSpace: string;
+    formFileName: string;
     title_flag: string;
     defaultCollectionName: string;
     rootElement?: HTMLElement;
@@ -247,6 +248,7 @@ export const config: Config = {
     settings: configSettings,
     magicNumbers: configMagicNumbers,
     nameSpace: "default_namespace",
+    formFileName: "form_ui",
     title_flag: "default_title",
     defaultCollectionName: "form_buttons",
     texturePresets: texturePresets,

@@ -71,13 +71,16 @@ export class FormUploader {
         return jsonControls;
     }
 
-    public static uploadForm(form: string) {
+    public static uploadForm(form: string, uploadedFileName?: string) {
         if (FormUploader.isValid(form)) {
             const parsed = FormUploader.parseJsonWithComments(form);
             const namespace = parsed.namespace as string;
 
             Builder.reset();
             config.nameSpace = namespace;
+            config.formFileName = uploadedFileName
+                ? StringUtil.toSafeFileName(uploadedFileName)
+                : StringUtil.toSafeFileName(namespace);
 
             const mainPanel: GlobalElementMapValue = GeneralUtil.elementToClassElement(config.rootElement!)!;
             FormUploader.tree(parsed[namespace] as StringObjectMap, mainPanel, [parsed["config"], parsed]);

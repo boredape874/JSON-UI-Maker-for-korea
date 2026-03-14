@@ -32,6 +32,8 @@ export declare class Builder {
     static downloadServerForm(type: "copy" | "download"): void;
     static handleUiTexturesUpload(): void;
     static generateAndCopyJsonUI(type: "copy" | "download"): void;
+    private static getDownloadBaseName;
+    private static getServerFormDownloadName;
     static isValidPath(parent: HTMLElement, childType?: "scrolling_panel" | "collection_panel" | "label" | "button" | "canvas" | "panel"): boolean;
     static addLabel(): void;
     static addPanel(): void;

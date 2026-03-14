@@ -53,12 +53,15 @@ export class FormUploader {
         }
         return jsonControls;
     }
-    static uploadForm(form) {
+    static uploadForm(form, uploadedFileName) {
         if (FormUploader.isValid(form)) {
             const parsed = FormUploader.parseJsonWithComments(form);
             const namespace = parsed.namespace;
             Builder.reset();
             config.nameSpace = namespace;
+            config.formFileName = uploadedFileName
+                ? StringUtil.toSafeFileName(uploadedFileName)
+                : StringUtil.toSafeFileName(namespace);
             const mainPanel = GeneralUtil.elementToClassElement(config.rootElement);
             FormUploader.tree(parsed[namespace], mainPanel, [parsed["config"], parsed]);
             new Notification("Form uploaded successfully", 2000, "notif");
