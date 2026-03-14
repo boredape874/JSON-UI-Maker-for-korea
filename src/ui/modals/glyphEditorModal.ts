@@ -2,10 +2,6 @@ import { DEFAULT_GLYPH_BASE_PATH, DEFAULT_GLYPH_SHEETS, getGlyphCodepoint, getGl
 import { translateText } from "../../i18n.js";
 import { Notification } from "../notifs/noficationMaker.js";
 
-const modal: HTMLElement = document.getElementById("modalGlyphEditor")!;
-const closeBtn: HTMLElement = document.getElementById("modalGlyphEditorClose") as HTMLElement;
-const form: HTMLDivElement = document.getElementsByClassName("modalGlyphEditorForm")[0] as HTMLDivElement;
-
 type GlyphEditorState = {
     displayCanvas: HTMLCanvasElement | null;
     displayContext: CanvasRenderingContext2D | null;
@@ -27,6 +23,18 @@ const state: GlyphEditorState = {
     insertImage: null,
     insertImageName: null,
 };
+
+function getModal(): HTMLElement {
+    return document.getElementById("modalGlyphEditor") as HTMLElement;
+}
+
+function getCloseButton(): HTMLElement {
+    return document.getElementById("modalGlyphEditorClose") as HTMLElement;
+}
+
+function getForm(): HTMLDivElement {
+    return document.getElementsByClassName("modalGlyphEditorForm")[0] as HTMLDivElement;
+}
 
 function createImageCanvas(width: number, height: number): { canvas: HTMLCanvasElement; context: CanvasRenderingContext2D } {
     const canvas = document.createElement("canvas");
@@ -84,6 +92,7 @@ function getSelectedCellPosition(): { column: number; row: number } {
 }
 
 function updateGlyphInfo(): void {
+    const form = getForm();
     const status = form.querySelector(".glyphEditorStatus") as HTMLDivElement | null;
     const selectedCell = form.querySelector(".glyphEditorSelectedCell") as HTMLSpanElement | null;
     const unicodeValue = form.querySelector(".glyphEditorUnicode") as HTMLSpanElement | null;
@@ -94,17 +103,19 @@ function updateGlyphInfo(): void {
     if (!state.sheetName) {
         status.textContent = translateText("Choose a built-in glyph sheet or upload an edited sheet to begin.");
     } else {
-        status.textContent = `${state.sheetName} · ${translateText("Click a cell in the grid to choose where the next image should be inserted.")}`;
+        status.textContent = `${state.sheetName} - ${translateText("Click a cell in the grid to choose where the next image should be inserted.")}`;
     }
 
     const slotHex = getGlyphSlotHex(state.selectedCell);
     const codepoint = state.sheetName ? getGlyphCodepoint(state.sheetName, state.selectedCell) : state.selectedCell;
     selectedCell.textContent = `${getSelectedCellPosition().row}, ${getSelectedCellPosition().column} (${slotHex})`;
+
     const unicodeHex = codepoint.toString(16).toUpperCase().padStart(4, "0");
     const sheetHex = state.sheetName ? getGlyphSheetHex(state.sheetName) : "";
     unicodeValue.textContent = /^[0-9A-F]{2}$/u.test(sheetHex)
         ? `U+${unicodeHex} / \\u${unicodeHex}`
         : `${translateText("Slot")}: ${slotHex}`;
+
     imageStatus.textContent = state.insertImageName ?? translateText("No image selected yet.");
 }
 
@@ -129,10 +140,12 @@ function redrawGlyphCanvas(): void {
     for (let index = 0; index <= 16; index++) {
         const x = Math.round(index * cellWidth) + 0.5;
         const y = Math.round(index * cellHeight) + 0.5;
+
         displayContext.beginPath();
         displayContext.moveTo(x, 0);
         displayContext.lineTo(x, state.displayCanvas.height);
         displayContext.stroke();
+
         displayContext.beginPath();
         displayContext.moveTo(0, y);
         displayContext.lineTo(state.displayCanvas.width, y);
@@ -204,7 +217,7 @@ function insertSelectedImage(): void {
 
 function selectNextEmptyCell(): void {
     const metrics = getCellMetrics();
-    if (!state.workingContext || !state.workingCanvas || !metrics) {
+    if (!state.workingContext || !metrics) {
         new Notification("Please load a glyph sheet first.", 2500, "warning");
         return;
     }
@@ -214,6 +227,7 @@ function selectNextEmptyCell(): void {
         const row = Math.floor(index / 16);
         const imageData = state.workingContext.getImageData(column * metrics.cellWidth, row * metrics.cellHeight, metrics.cellWidth, metrics.cellHeight).data;
         let hasPixels = false;
+
         for (let pixelIndex = 3; pixelIndex < imageData.length; pixelIndex += 4) {
             if (imageData[pixelIndex] !== 0) {
                 hasPixels = true;
@@ -270,7 +284,9 @@ async function handleInsertImageUpload(file: File): Promise<void> {
 }
 
 function buildGlyphEditor(): void {
+    const form = getForm();
     if (form.dataset.initialized === "true") return;
+
     form.dataset.initialized = "true";
     form.innerHTML = `
         <div class="glyphEditorLayout">
@@ -357,14 +373,8 @@ function buildGlyphEditor(): void {
         redrawGlyphCanvas();
     });
 
-    loadBuiltInButton.onclick = () => {
-        void loadBuiltInSheet(sheetSelect.value);
-    };
-
-    findEmptyButton.onclick = () => {
-        selectNextEmptyCell();
-    };
-
+    loadBuiltInButton.onclick = () => void loadBuiltInSheet(sheetSelect.value);
+    findEmptyButton.onclick = () => selectNextEmptyCell();
     uploadSheetButton.onclick = () => uploadSheetInput.click();
     uploadInsertButton.onclick = () => uploadInsertInput.click();
 
@@ -391,10 +401,19 @@ function buildGlyphEditor(): void {
 }
 
 function close(): void {
-    modal.style.display = "none";
+    getModal().style.display = "none";
 }
 
 export async function glyphEditorModal(): Promise<void> {
+    const modal = getModal();
+    const closeBtn = getCloseButton();
+    const form = getForm();
+
+    if (!modal || !closeBtn || !form) {
+        new Notification("Could not load the glyph sheet.", 2800, "error");
+        return;
+    }
+
     buildGlyphEditor();
     modal.style.display = "block";
 

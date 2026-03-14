@@ -1,9 +1,6 @@
 import { DEFAULT_GLYPH_BASE_PATH, DEFAULT_GLYPH_SHEETS, getGlyphCodepoint, getGlyphSheetHex, getGlyphSlotHex } from "../../glyph/defaultGlyphSheets.js";
 import { translateText } from "../../i18n.js";
 import { Notification } from "../notifs/noficationMaker.js";
-const modal = document.getElementById("modalGlyphEditor");
-const closeBtn = document.getElementById("modalGlyphEditorClose");
-const form = document.getElementsByClassName("modalGlyphEditorForm")[0];
 const state = {
     displayCanvas: null,
     displayContext: null,
@@ -14,6 +11,15 @@ const state = {
     insertImage: null,
     insertImageName: null,
 };
+function getModal() {
+    return document.getElementById("modalGlyphEditor");
+}
+function getCloseButton() {
+    return document.getElementById("modalGlyphEditorClose");
+}
+function getForm() {
+    return document.getElementsByClassName("modalGlyphEditorForm")[0];
+}
 function createImageCanvas(width, height) {
     const canvas = document.createElement("canvas");
     canvas.width = width;
@@ -63,6 +69,7 @@ function getSelectedCellPosition() {
     };
 }
 function updateGlyphInfo() {
+    const form = getForm();
     const status = form.querySelector(".glyphEditorStatus");
     const selectedCell = form.querySelector(".glyphEditorSelectedCell");
     const unicodeValue = form.querySelector(".glyphEditorUnicode");
@@ -73,7 +80,7 @@ function updateGlyphInfo() {
         status.textContent = translateText("Choose a built-in glyph sheet or upload an edited sheet to begin.");
     }
     else {
-        status.textContent = `${state.sheetName} · ${translateText("Click a cell in the grid to choose where the next image should be inserted.")}`;
+        status.textContent = `${state.sheetName} - ${translateText("Click a cell in the grid to choose where the next image should be inserted.")}`;
     }
     const slotHex = getGlyphSlotHex(state.selectedCell);
     const codepoint = state.sheetName ? getGlyphCodepoint(state.sheetName, state.selectedCell) : state.selectedCell;
@@ -165,7 +172,7 @@ function insertSelectedImage() {
 }
 function selectNextEmptyCell() {
     const metrics = getCellMetrics();
-    if (!state.workingContext || !state.workingCanvas || !metrics) {
+    if (!state.workingContext || !metrics) {
         new Notification("Please load a glyph sheet first.", 2500, "warning");
         return;
     }
@@ -227,6 +234,7 @@ async function handleInsertImageUpload(file) {
     }
 }
 function buildGlyphEditor() {
+    const form = getForm();
     if (form.dataset.initialized === "true")
         return;
     form.dataset.initialized = "true";
@@ -311,12 +319,8 @@ function buildGlyphEditor() {
         state.selectedCell = row * 16 + column;
         redrawGlyphCanvas();
     });
-    loadBuiltInButton.onclick = () => {
-        void loadBuiltInSheet(sheetSelect.value);
-    };
-    findEmptyButton.onclick = () => {
-        selectNextEmptyCell();
-    };
+    loadBuiltInButton.onclick = () => void loadBuiltInSheet(sheetSelect.value);
+    findEmptyButton.onclick = () => selectNextEmptyCell();
     uploadSheetButton.onclick = () => uploadSheetInput.click();
     uploadInsertButton.onclick = () => uploadInsertInput.click();
     uploadSheetInput.onchange = () => {
@@ -340,9 +344,16 @@ function buildGlyphEditor() {
     redrawGlyphCanvas();
 }
 function close() {
-    modal.style.display = "none";
+    getModal().style.display = "none";
 }
 export async function glyphEditorModal() {
+    const modal = getModal();
+    const closeBtn = getCloseButton();
+    const form = getForm();
+    if (!modal || !closeBtn || !form) {
+        new Notification("Could not load the glyph sheet.", 2800, "error");
+        return;
+    }
     buildGlyphEditor();
     modal.style.display = "block";
     const select = form.querySelector(".glyphEditorSheetSelect");
