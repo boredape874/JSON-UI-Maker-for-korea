@@ -1,6 +1,4 @@
 interface CreateFormOptions {
-    form_name?: string;
-    namespace?: string;
     title_flag?: string;
     [key: string]: any;
 }

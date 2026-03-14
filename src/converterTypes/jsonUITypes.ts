@@ -156,6 +156,18 @@ export const JSON_TYPES: Map<string, JsonUISimpleElement> = new Map([
     ],
 ]);
 
+export function syncJsonTypeNamespaces(nameSpace: string): void {
+    const buttonWithHoverText = JSON_TYPES.get("buttonWithHoverText");
+    if (!buttonWithHoverText?.controls || buttonWithHoverText.controls.length < 2) return;
+
+    const lightContentButton = (buttonWithHoverText.controls[1] as any)["form_button@common_buttons.light_content_button"];
+    const firstVariable = lightContentButton?.variables?.[0];
+
+    if (firstVariable) {
+        firstVariable.$button_content = `${nameSpace}.hover_text_panel`;
+    }
+}
+
 export const JSON_TYPES_GENERATOR: Map<string, any> = new Map([
     [
         "server_form",

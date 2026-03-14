@@ -148,6 +148,16 @@ export const JSON_TYPES = new Map([
         },
     ],
 ]);
+export function syncJsonTypeNamespaces(nameSpace) {
+    const buttonWithHoverText = JSON_TYPES.get("buttonWithHoverText");
+    if (!buttonWithHoverText?.controls || buttonWithHoverText.controls.length < 2)
+        return;
+    const lightContentButton = buttonWithHoverText.controls[1]["form_button@common_buttons.light_content_button"];
+    const firstVariable = lightContentButton?.variables?.[0];
+    if (firstVariable) {
+        firstVariable.$button_content = `${nameSpace}.hover_text_panel`;
+    }
+}
 export const JSON_TYPES_GENERATOR = new Map([
     [
         "server_form",

@@ -12,7 +12,7 @@ import { DraggableLabel } from "./elements/label.js";
 import { classToJsonUI } from "./converterTypes/HTMLClassToJonUITypes.js";
 import { DraggableScrollingPanel } from "./elements/scrollingPanel.js";
 import { GeneralUtil } from "./util/generalUtil.js";
-import { JSON_TYPES_GENERATOR } from "./converterTypes/jsonUITypes.js";
+import { JSON_TYPES_GENERATOR, syncJsonTypeNamespaces } from "./converterTypes/jsonUITypes.js";
 import { BindingsArea } from "./scripter/bindings/bindingsArea.js";
 import { ScriptGenerator } from "./scripter/generator.js";
 import { createFormModal } from "./ui/modals/createForm.js";
@@ -63,12 +63,10 @@ document.addEventListener("DOMContentLoaded", async (e) => {
     uploadPresetModal.init();
     presetManagementModal.init();
     const createFormOptions = await createFormModal();
-    const formName = createFormOptions.form_name;
-    const namespace = createFormOptions.namespace;
     const title_flag = createFormOptions.title_flag;
-    config.formFileName = formName;
     config.title_flag = title_flag;
-    config.nameSpace = namespace;
+    config.nameSpace = StringUtil.toSafeNamespace(config.formFileName);
+    syncJsonTypeNamespaces(config.nameSpace);
     const mainPanelInfo = constructMainPanel();
     config.rootElement = mainPanelInfo.mainPanel.getMainHTMLElement();
     // Update auth UI after everything is loaded
@@ -213,6 +211,23 @@ export function setFileSystem(fs) {
     GLOBAL_FILE_SYSTEM = fs;
 }
 export class Builder {
+    static requestExportIdentity(target, action) {
+        const targetLabel = target === "form" ? "폼" : "서버 폼";
+        const actionLabel = action === "copy" ? "복사" : "저장";
+        const defaultName = config.formFileName || config.nameSpace || "form_ui";
+        const enteredName = window.prompt(`${targetLabel} ${actionLabel} 이름을 입력하세요.`, defaultName);
+        if (enteredName === null)
+            return false;
+        const trimmedName = enteredName.trim();
+        if (!trimmedName) {
+            new Notification("파일 이름을 입력해 주세요.", 2500, "warning");
+            return false;
+        }
+        config.formFileName = StringUtil.toSafeFileName(trimmedName);
+        config.nameSpace = StringUtil.toSafeNamespace(trimmedName);
+        syncJsonTypeNamespaces(config.nameSpace);
+        return true;
+    }
     static uploadForm() {
         console.log("Uploading form");
         const input = document.getElementById("form_importer");
@@ -236,6 +251,8 @@ export class Builder {
         const func = JSON_TYPES_GENERATOR.get("server_form");
         if (!func)
             return;
+        if (!this.requestExportIdentity("server_form", type))
+            return;
         if (type == "copy") {
             navigator.clipboard.writeText(func(config.nameSpace));
             new Notification("Server-Form Copied to Clipboard!");
@@ -254,6 +271,8 @@ export class Builder {
         FileUploader.handleUiTexturesUpload();
     }
     static generateAndCopyJsonUI(type) {
+        if (!this.requestExportIdentity("form", type))
+            return;
         const jsonUI = Converter.convertToJsonUi(panelContainer, 0);
         if (type == "copy") {
             navigator.clipboard.writeText(jsonUI);
