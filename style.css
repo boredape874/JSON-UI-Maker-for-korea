@@ -826,6 +826,176 @@ input[type="file"] {
     margin-top: 0;
 }
 
+.chooseImageExternalSection {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding: 14px;
+    border-radius: 12px;
+    background: linear-gradient(150deg, rgba(27, 33, 37, 0.96), rgba(39, 43, 48, 0.96));
+    border: 1px solid rgba(124, 196, 255, 0.18);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 22px rgba(0, 0, 0, 0.2);
+}
+
+.chooseImageExternalHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.chooseImageExternalTitle {
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.chooseImageExternalBody {
+    color: #c2ccd5;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.chooseImageExternalControls {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(110px, 0.6fr) auto auto;
+    gap: 10px;
+}
+
+.chooseImageExternalInput {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(9, 12, 15, 0.5);
+    color: white;
+    outline: none;
+}
+
+.chooseImageExternalInput:focus {
+    border-color: rgba(124, 196, 255, 0.75);
+    box-shadow: 0 0 0 3px rgba(124, 196, 255, 0.12);
+}
+
+.chooseImageExternalInput:disabled {
+    opacity: 0.55;
+}
+
+.chooseImageExternalButton {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(70, 74, 83, 0.95);
+    color: white;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.chooseImageExternalButton.primary {
+    background: linear-gradient(135deg, #0f84ff, #39b1ff);
+    border-color: rgba(105, 195, 255, 0.6);
+}
+
+.chooseImageExternalButton:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+}
+
+.chooseImageExternalButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.chooseImageExternalStatus,
+.chooseImageExternalLicense {
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.chooseImageExternalStatus {
+    color: #b7d6ee;
+}
+
+.chooseImageExternalStatus[data-state="success"] {
+    color: #8ef0b7;
+}
+
+.chooseImageExternalStatus[data-state="warning"],
+.chooseImageExternalLicense[data-state="warning"] {
+    color: #ffc98a;
+}
+
+.chooseImageExternalLicense {
+    color: #c8c8c8;
+}
+
+.chooseImageExternalResults {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 270px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.chooseImageExternalEmpty {
+    padding: 14px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    color: #b9c1c9;
+    font-size: 13px;
+    text-align: center;
+}
+
+.chooseImageExternalCard {
+    display: grid;
+    grid-template-columns: 54px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.chooseImageExternalThumb {
+    width: 54px;
+    height: 54px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    background: linear-gradient(135deg, rgba(8, 8, 8, 0.9), rgba(39, 39, 39, 0.9));
+    border-radius: 8px;
+    padding: 6px;
+}
+
+.chooseImageExternalInfo {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.chooseImageExternalName {
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chooseImageExternalPath {
+    color: #9fb8ca;
+    font-size: 11px;
+    word-break: break-all;
+}
+
+.chooseImageExternalActions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 .chooseImageContent {
     display: grid;
     grid-template-columns: minmax(360px, 520px) minmax(280px, 320px);
@@ -1127,6 +1297,23 @@ input[type="file"] {
 /* ====== End Choose Image Search Styles ====== */
 
 @media (max-width: 1100px) {
+    .chooseImageExternalControls {
+        grid-template-columns: 1fr;
+    }
+
+    .chooseImageExternalCard {
+        grid-template-columns: 54px minmax(0, 1fr);
+    }
+
+    .chooseImageExternalActions {
+        grid-column: 1 / -1;
+        justify-content: stretch;
+    }
+
+    .chooseImageExternalActions > * {
+        flex: 1;
+    }
+
     .chooseImageContent {
         grid-template-columns: 1fr;
     }
