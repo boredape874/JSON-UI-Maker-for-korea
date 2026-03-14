@@ -699,14 +699,207 @@ input[type="file"] {
 
 .modalChooseImageForm {
     max-height: 400px;
-    width: 500px;
-    overflow-y: scroll;
+    width: 100%;
+    min-width: 360px;
+    overflow-y: auto;
     scrollbar-color: rgb(0, 0, 0) rgb(73, 73, 73);
     padding: 10px;
     outline: #000000 3px solid;
     border-radius: 5px;
     background-color: #3f3f3f;
+    margin-top: 0;
+}
+
+.chooseImageContent {
+    display: grid;
+    grid-template-columns: minmax(360px, 520px) minmax(280px, 320px);
+    gap: 16px;
+    align-items: start;
     margin-top: 15px;
+}
+
+.chooseImagePreviewPanel {
+    width: 320px;
+    max-width: 100%;
+    min-height: 424px;
+    padding: 14px;
+    border-radius: 10px;
+    background: linear-gradient(160deg, #272727, #353535);
+    outline: rgba(153, 0, 255, 0.45) 2px solid;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.chooseImagePreviewHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.chooseImagePreviewEyebrow {
+    color: #e6b7ff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+}
+
+.chooseImagePreviewHint {
+    color: #c9c9c9;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.chooseImagePreviewCanvasWrap {
+    position: relative;
+    min-height: 220px;
+    padding: 16px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(20, 20, 20, 0.95), rgba(52, 52, 52, 0.95));
+    outline: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.chooseImagePreviewCanvasWrap::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.03) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.03) 50%, rgba(255, 255, 255, 0.03) 75%, transparent 75%, transparent);
+    background-size: 16px 16px;
+    opacity: 0.7;
+}
+
+.chooseImagePreviewCanvas,
+.chooseImagePreviewEmpty {
+    position: relative;
+    z-index: 1;
+}
+
+.chooseImagePreviewCanvas {
+    max-width: 100%;
+    max-height: 240px;
+    display: none;
+    image-rendering: pixelated;
+    border-radius: 6px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.chooseImagePreviewEmpty {
+    color: #c9c9c9;
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chooseImagePreviewTitle {
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+    word-break: break-word;
+}
+
+.chooseImagePreviewPath {
+    color: #9ad3ff;
+    font-size: 12px;
+    word-break: break-all;
+    min-height: 18px;
+}
+
+.chooseImagePreviewBadgeRow {
+    min-height: 28px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.chooseImagePreviewBadge {
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+}
+
+.chooseImagePreviewBadge.is-png {
+    color: #77f0b8;
+    background: rgba(66, 185, 131, 0.18);
+    border: 1px solid rgba(119, 240, 184, 0.25);
+}
+
+.chooseImagePreviewBadge.is-nineslice {
+    color: #8fd3ff;
+    background: rgba(36, 158, 255, 0.18);
+    border: 1px solid rgba(143, 211, 255, 0.25);
+}
+
+.chooseImagePreviewBadge.is-missing {
+    color: #ffc48a;
+    background: rgba(255, 170, 80, 0.18);
+    border: 1px solid rgba(255, 196, 138, 0.25);
+}
+
+.chooseImagePreviewMeta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #d6d6d6;
+    font-size: 13px;
+}
+
+.chooseImagePreviewMetaRow {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.chooseImagePreviewMetaRow:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.chooseImagePreviewMetaLabel {
+    color: #9f9f9f;
+}
+
+.chooseImagePreviewMetaValue {
+    color: white;
+    text-align: right;
+    word-break: break-word;
+}
+
+.chooseImagePreviewButton {
+    margin-top: auto;
+    padding: 12px 14px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #7f22ff, #b100ff);
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
+}
+
+.chooseImagePreviewButton:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(177, 0, 255, 0.25);
+}
+
+.chooseImagePreviewButton:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+}
 }
 
 @font-face {
@@ -816,3 +1009,18 @@ input[type="file"] {
     border-color: rgba(153, 0, 255, 0.8);
 }
 /* ====== End Choose Image Search Styles ====== */
+
+@media (max-width: 1100px) {
+    .chooseImageContent {
+        grid-template-columns: 1fr;
+    }
+
+    .modalChooseImageForm {
+        min-width: 0;
+    }
+
+    .chooseImagePreviewPanel {
+        width: auto;
+        min-height: 0;
+    }
+}
