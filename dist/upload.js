@@ -38,6 +38,7 @@ export class FormUploader {
         }
         catch (e) {
             console.log(3, e);
+            new Notification("Could not parse the form JSON. Check commas, quotes, and comments.", 5000, "error");
             return false;
         }
     }
