@@ -1,5 +1,6 @@
 import { config } from "../../CONFIG.js";
 import { GLOBAL_FILE_SYSTEM } from "../../index.js";
+import { translateText } from "../../i18n.js";
 import { Notification } from "../notifs/noficationMaker.js";
 import { downloadExternalImage, fetchExternalImageState, loadExternalImageRepo, } from "./externalImageResources.js";
 const modal = document.getElementById("modalChooseImage");
@@ -113,6 +114,26 @@ function createPreviewPanel() {
     `;
     return previewPanel;
 }
+function createTranslatedPreviewPanel() {
+    const previewPanel = document.createElement("div");
+    previewPanel.className = "chooseImagePreviewPanel";
+    previewPanel.innerHTML = `
+        <div class="chooseImagePreviewHeader">
+            <div class="chooseImagePreviewEyebrow">${translateText("Texture Preview")}</div>
+            <div class="chooseImagePreviewHint">${translateText("Select a texture from the list to preview it, then double-click it or use the button below.")}</div>
+        </div>
+        <div class="chooseImagePreviewCanvasWrap">
+            <canvas class="chooseImagePreviewCanvas"></canvas>
+            <div class="chooseImagePreviewEmpty">${translateText("The selected texture will appear here.")}</div>
+        </div>
+        <div class="chooseImagePreviewTitle">${translateText("No texture selected yet.")}</div>
+        <div class="chooseImagePreviewPath" data-no-translate="true"></div>
+        <div class="chooseImagePreviewBadgeRow"></div>
+        <div class="chooseImagePreviewMeta"></div>
+        <button type="button" class="chooseImagePreviewButton" disabled>${translateText("Use This Texture")}</button>
+    `;
+    return previewPanel;
+}
 function addFilePathToStructure(fsObj, filePath) {
     const parts = filePath.split("/").filter(Boolean);
     let current = fsObj;
@@ -134,7 +155,7 @@ function ensureChooseImageLayout() {
     }
     let previewPanel = contentWrapper.querySelector(".chooseImagePreviewPanel");
     if (!previewPanel) {
-        previewPanel = createPreviewPanel();
+        previewPanel = createTranslatedPreviewPanel();
         contentWrapper.appendChild(previewPanel);
     }
     return { contentWrapper, previewPanel };
@@ -163,6 +184,22 @@ function resetPreview(previewPanel) {
     preview.meta.innerHTML = "";
     preview.button.disabled = true;
     preview.button.textContent = "Use This Texture";
+    preview.button.onclick = null;
+    delete preview.button.dataset.imagePath;
+}
+function resetTranslatedPreview(previewPanel) {
+    const preview = getPreviewElements(previewPanel);
+    preview.canvas.style.display = "none";
+    preview.canvas.width = 1;
+    preview.canvas.height = 1;
+    preview.empty.style.display = "flex";
+    preview.empty.textContent = translateText("The selected texture will appear here.");
+    preview.title.textContent = translateText("No texture selected yet.");
+    preview.path.textContent = "";
+    preview.badges.innerHTML = "";
+    preview.meta.innerHTML = "";
+    preview.button.disabled = true;
+    preview.button.textContent = translateText("Use This Texture");
     preview.button.onclick = null;
     delete preview.button.dataset.imagePath;
 }
@@ -214,7 +251,7 @@ function getImageLabel(imagePath) {
 }
 function renderPreviewLegacy(previewPanel, imagePath) {
     if (!imagePath) {
-        resetPreview(previewPanel);
+        resetTranslatedPreview(previewPanel);
         return false;
     }
     const preview = getPreviewElements(previewPanel);
@@ -258,7 +295,7 @@ function renderPreviewLegacy(previewPanel, imagePath) {
 }
 function renderPreviewState(previewPanel, imagePath, imageState, options = {}) {
     if (!imagePath && !imageState) {
-        resetPreview(previewPanel);
+        resetTranslatedPreview(previewPanel);
         return false;
     }
     const preview = getPreviewElements(previewPanel);
@@ -311,7 +348,7 @@ function renderPreviewState(previewPanel, imagePath, imageState, options = {}) {
 }
 function renderPreview(previewPanel, imagePath) {
     if (!imagePath) {
-        resetPreview(previewPanel);
+        resetTranslatedPreview(previewPanel);
         return false;
     }
     return renderPreviewState(previewPanel, imagePath, getImagesMap().get(imagePath));
@@ -357,7 +394,7 @@ async function chooseImageModalLegacy() {
         const preview = getPreviewElements(previewPanel);
         modalContent.querySelector(".chooseImageSearchWrapper")?.remove();
         form.innerHTML = "";
-        resetPreview(previewPanel);
+        resetTranslatedPreview(previewPanel);
         clearTreeSelection();
         const searchWrapper = document.createElement("div");
         searchWrapper.classList.add("chooseImageSearchWrapper");
@@ -459,7 +496,7 @@ async function chooseImageModalLegacy() {
             modal.style.display = "none";
             modalContent.querySelector(".chooseImageSearchWrapper")?.remove();
             form.innerHTML = "";
-            resetPreview(previewPanel);
+            resetTranslatedPreview(previewPanel);
             clearTreeSelection();
         };
         searchInput.addEventListener("input", updateDropdown);
@@ -550,7 +587,7 @@ export async function chooseImageModal() {
         modalContent.querySelector(".chooseImageSearchWrapper")?.remove();
         modalContent.querySelector(".chooseImageExternalSection")?.remove();
         form.innerHTML = "";
-        resetPreview(previewPanel);
+        resetTranslatedPreview(previewPanel);
         clearTreeSelection();
         const externalSection = document.createElement("div");
         externalSection.className = "chooseImageExternalSection";
@@ -611,7 +648,7 @@ export async function chooseImageModal() {
         searchWrapper.classList.add("chooseImageSearchWrapper");
         const searchInput = document.createElement("input");
         searchInput.type = "text";
-        searchInput.placeholder = "?대?吏 寃??..";
+        searchInput.placeholder = translateText("Search images...");
         searchInput.classList.add("chooseImageSearchInput");
         searchWrapper.appendChild(searchInput);
         const dropdown = document.createElement("select");
@@ -689,7 +726,7 @@ export async function chooseImageModal() {
             clearTreeSelection();
             const requestId = ++activeExternalPreviewRequest;
             preview.button.disabled = true;
-            preview.button.textContent = "Loading Preview...";
+            preview.button.textContent = translateText("Loading Preview...");
             try {
                 const imageState = await getExternalState(entry);
                 if (isClosed || requestId !== activeExternalPreviewRequest)
@@ -715,7 +752,7 @@ export async function chooseImageModal() {
                 console.error(error);
                 if (!isClosed) {
                     new Notification(error instanceof Error ? error.message : "Could not preview the external texture.", 3000, "error");
-                    resetPreview(previewPanel);
+                    resetTranslatedPreview(previewPanel);
                 }
             }
         };
@@ -730,8 +767,7 @@ export async function chooseImageModal() {
             }
             const query = externalSearch.value.trim().toLowerCase();
             const filtered = externalEntries
-                .filter((entry) => !query || `${entry.name} ${entry.path}`.toLowerCase().includes(query))
-                .slice(0, 24);
+                .filter((entry) => !query || `${entry.name} ${entry.path}`.toLowerCase().includes(query));
             if (filtered.length === 0) {
                 const empty = document.createElement("div");
                 empty.className = "chooseImageExternalEmpty";
@@ -904,7 +940,7 @@ export async function chooseImageModal() {
             modalContent.querySelector(".chooseImageSearchWrapper")?.remove();
             modalContent.querySelector(".chooseImageExternalSection")?.remove();
             form.innerHTML = "";
-            resetPreview(previewPanel);
+            resetTranslatedPreview(previewPanel);
             clearTreeSelection();
         };
         searchInput.addEventListener("input", updateDropdown);

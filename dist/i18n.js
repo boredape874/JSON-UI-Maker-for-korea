@@ -254,6 +254,11 @@ const EXACT_TRANSLATIONS = {
     "Repository or branch was not found.": "\ub9ac\ud3ec \ub610\ub294 \ube0c\ub79c\uce58\ub97c \ucc3e\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.",
     "Could not load the selected image from GitHub.": "GitHub\uc5d0\uc11c \uc120\ud0dd\ud55c \uc774\ubbf8\uc9c0\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.",
     "Could not download the selected image.": "\uc120\ud0dd\ud55c \uc774\ubbf8\uc9c0\ub97c \ub2e4\uc6b4\ub85c\ub4dc\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.",
+    "Texture Preview": "\ud14d\uc2a4\ucc98 \ubbf8\ub9ac\ubcf4\uae30",
+    "Select a texture from the list to preview it, then double-click it or use the button below.": "\ubaa9\ub85d\uc5d0\uc11c \ud14d\uc2a4\ucc98\ub97c \ud55c \ubc88 \ub20c\ub7ec \ubbf8\ub9ac\ubcf4\uace0, \ub354\ube14\ud074\ub9ad\ud558\uac70\ub098 \uc544\ub798 \ubc84\ud2bc\uc73c\ub85c \uc120\ud0dd\ud558\uc138\uc694.",
+    "The selected texture will appear here.": "\uc120\ud0dd\ud55c \ud14d\uc2a4\ucc98\uac00 \uc5ec\uae30\uc5d0 \ud45c\uc2dc\ub429\ub2c8\ub2e4.",
+    "No texture selected yet.": "\uc544\uc9c1 \uc120\ud0dd\ud55c \ud14d\uc2a4\ucc98\uac00 \uc5c6\uc2b5\ub2c8\ub2e4.",
+    "Select an element to edit bindings.": "\ubc14\uc778\ub529\uc744 \uc218\uc815\ud558\ub824\uba74 \uba3c\uc800 \uc694\uc18c\ub97c \uc120\ud0dd\ud558\uc138\uc694.",
 };
 const PATTERN_TRANSLATORS = [
     {

@@ -4,6 +4,8 @@ body {
     padding: 0;
     height: 100%;
     width: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
     background-color: rgb(26, 26, 26);
     font-family: sans-serif;
 }
@@ -269,6 +271,7 @@ input[type="file"] {
     border-radius: 10px;
     color: white;
     min-height: 50px;
+    overflow-x: auto;
 }
 
 .propertyInput {
@@ -316,20 +319,26 @@ input[type="file"] {
     top: 0;
     width: 100%;
     height: 100%;
-    overflow: hidden;
+    overflow-y: auto;
     background-color: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(3px);
+    box-sizing: border-box;
+    padding: 24px 16px;
 }
 
 /* Modal Content Box */
 .modal-content {
     background-color: #424242;
-    margin: 10% auto;
+    margin: 0 auto;
     padding: 20px;
     border: 2px solid #9900ff;
     width: fit-content;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 48px);
+    overflow: auto;
     border-radius: 8px;
     z-index: 100;
+    box-sizing: border-box;
 }
 
 /* Close button */
@@ -509,6 +518,8 @@ input[type="file"] {
 
 .main {
     display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
 }
 
 .scripter {
@@ -520,6 +531,7 @@ input[type="file"] {
     text-align: center;
     color: white;
     flex: 1;
+    min-width: 320px;
     height: calc(1510px / 1.7777777);
     background-color: rgb(39, 39, 39);
     border-radius: 10px;
@@ -813,10 +825,14 @@ input[type="file"] {
     transform: scale(1.1);
 }
 
+.chooseImageModalContent {
+    width: min(1180px, calc(100vw - 32px));
+}
+
 .modalChooseImageForm {
-    max-height: 400px;
+    max-height: min(420px, 42vh);
     width: 100%;
-    min-width: 360px;
+    min-width: 0;
     overflow-y: auto;
     scrollbar-color: rgb(0, 0, 0) rgb(73, 73, 73);
     padding: 10px;
@@ -932,7 +948,7 @@ input[type="file"] {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    max-height: 270px;
+    max-height: min(320px, 30vh);
     overflow-y: auto;
     padding-right: 4px;
 }
@@ -998,10 +1014,17 @@ input[type="file"] {
 
 .chooseImageContent {
     display: grid;
-    grid-template-columns: minmax(360px, 520px) minmax(280px, 320px);
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
     gap: 16px;
     align-items: start;
     margin-top: 15px;
+}
+
+.chooseImageSearchWrapper,
+.chooseImageExternalSection,
+.modalChooseImageForm,
+.chooseImagePreviewPanel {
+    min-width: 0;
 }
 
 .chooseImagePreviewPanel {

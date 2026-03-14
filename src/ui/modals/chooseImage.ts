@@ -1,5 +1,6 @@
 import { config } from "../../CONFIG.js";
 import { GLOBAL_FILE_SYSTEM } from "../../index.js";
+import { translateText } from "../../i18n.js";
 import { Notification } from "../notifs/noficationMaker.js";
 import {
     downloadExternalImage,
@@ -155,6 +156,29 @@ function createPreviewPanel(): HTMLDivElement {
     return previewPanel;
 }
 
+function createTranslatedPreviewPanel(): HTMLDivElement {
+    const previewPanel = document.createElement("div");
+    previewPanel.className = "chooseImagePreviewPanel";
+
+    previewPanel.innerHTML = `
+        <div class="chooseImagePreviewHeader">
+            <div class="chooseImagePreviewEyebrow">${translateText("Texture Preview")}</div>
+            <div class="chooseImagePreviewHint">${translateText("Select a texture from the list to preview it, then double-click it or use the button below.")}</div>
+        </div>
+        <div class="chooseImagePreviewCanvasWrap">
+            <canvas class="chooseImagePreviewCanvas"></canvas>
+            <div class="chooseImagePreviewEmpty">${translateText("The selected texture will appear here.")}</div>
+        </div>
+        <div class="chooseImagePreviewTitle">${translateText("No texture selected yet.")}</div>
+        <div class="chooseImagePreviewPath" data-no-translate="true"></div>
+        <div class="chooseImagePreviewBadgeRow"></div>
+        <div class="chooseImagePreviewMeta"></div>
+        <button type="button" class="chooseImagePreviewButton" disabled>${translateText("Use This Texture")}</button>
+    `;
+
+    return previewPanel;
+}
+
 function addFilePathToStructure(fsObj: any, filePath: string): void {
     const parts = filePath.split("/").filter(Boolean);
     let current = fsObj;
@@ -181,7 +205,7 @@ function ensureChooseImageLayout(): { contentWrapper: HTMLDivElement; previewPan
 
     let previewPanel = contentWrapper.querySelector(".chooseImagePreviewPanel") as HTMLDivElement | null;
     if (!previewPanel) {
-        previewPanel = createPreviewPanel();
+        previewPanel = createTranslatedPreviewPanel();
         contentWrapper.appendChild(previewPanel);
     }
 
@@ -214,6 +238,24 @@ function resetPreview(previewPanel: HTMLElement): void {
     preview.meta.innerHTML = "";
     preview.button.disabled = true;
     preview.button.textContent = "Use This Texture";
+    preview.button.onclick = null;
+    delete preview.button.dataset.imagePath;
+}
+
+function resetTranslatedPreview(previewPanel: HTMLElement): void {
+    const preview = getPreviewElements(previewPanel);
+
+    preview.canvas.style.display = "none";
+    preview.canvas.width = 1;
+    preview.canvas.height = 1;
+    preview.empty.style.display = "flex";
+    preview.empty.textContent = translateText("The selected texture will appear here.");
+    preview.title.textContent = translateText("No texture selected yet.");
+    preview.path.textContent = "";
+    preview.badges.innerHTML = "";
+    preview.meta.innerHTML = "";
+    preview.button.disabled = true;
+    preview.button.textContent = translateText("Use This Texture");
     preview.button.onclick = null;
     delete preview.button.dataset.imagePath;
 }
@@ -278,7 +320,7 @@ function getImageLabel(imagePath: string): string {
 
 function renderPreviewLegacy(previewPanel: HTMLElement, imagePath: string | undefined): boolean {
     if (!imagePath) {
-        resetPreview(previewPanel);
+        resetTranslatedPreview(previewPanel);
         return false;
     }
 
@@ -347,7 +389,7 @@ function renderPreviewState(
     options: PreviewRenderOptions = {}
 ): boolean {
     if (!imagePath && !imageState) {
-        resetPreview(previewPanel);
+        resetTranslatedPreview(previewPanel);
         return false;
     }
 
@@ -411,7 +453,7 @@ function renderPreviewState(
 
 function renderPreview(previewPanel: HTMLElement, imagePath: string | undefined): boolean {
     if (!imagePath) {
-        resetPreview(previewPanel);
+        resetTranslatedPreview(previewPanel);
         return false;
     }
 
@@ -470,7 +512,7 @@ async function chooseImageModalLegacy(): Promise<string> {
 
         modalContent.querySelector(".chooseImageSearchWrapper")?.remove();
         form.innerHTML = "";
-        resetPreview(previewPanel);
+        resetTranslatedPreview(previewPanel);
         clearTreeSelection();
 
         const searchWrapper = document.createElement("div");
@@ -592,7 +634,7 @@ async function chooseImageModalLegacy(): Promise<string> {
             modalContent.querySelector(".chooseImageSearchWrapper")?.remove();
 
             form.innerHTML = "";
-            resetPreview(previewPanel);
+            resetTranslatedPreview(previewPanel);
             clearTreeSelection();
         };
 
@@ -705,7 +747,7 @@ export async function chooseImageModal(): Promise<string> {
         modalContent.querySelector(".chooseImageSearchWrapper")?.remove();
         modalContent.querySelector(".chooseImageExternalSection")?.remove();
         form.innerHTML = "";
-        resetPreview(previewPanel);
+        resetTranslatedPreview(previewPanel);
         clearTreeSelection();
 
         const externalSection = document.createElement("div");
@@ -784,7 +826,7 @@ export async function chooseImageModal(): Promise<string> {
 
         const searchInput = document.createElement("input");
         searchInput.type = "text";
-        searchInput.placeholder = "?대?吏 寃??..";
+        searchInput.placeholder = translateText("Search images...");
         searchInput.classList.add("chooseImageSearchInput");
         searchWrapper.appendChild(searchInput);
 
@@ -874,7 +916,7 @@ export async function chooseImageModal(): Promise<string> {
             const requestId = ++activeExternalPreviewRequest;
 
             preview.button.disabled = true;
-            preview.button.textContent = "Loading Preview...";
+            preview.button.textContent = translateText("Loading Preview...");
 
             try {
                 const imageState = await getExternalState(entry);
@@ -900,7 +942,7 @@ export async function chooseImageModal(): Promise<string> {
                 console.error(error);
                 if (!isClosed) {
                     new Notification(error instanceof Error ? error.message : "Could not preview the external texture.", 3000, "error");
-                    resetPreview(previewPanel);
+                    resetTranslatedPreview(previewPanel);
                 }
             }
         };
@@ -918,8 +960,7 @@ export async function chooseImageModal(): Promise<string> {
 
             const query = externalSearch.value.trim().toLowerCase();
             const filtered = externalEntries
-                .filter((entry) => !query || `${entry.name} ${entry.path}`.toLowerCase().includes(query))
-                .slice(0, 24);
+                .filter((entry) => !query || `${entry.name} ${entry.path}`.toLowerCase().includes(query));
 
             if (filtered.length === 0) {
                 const empty = document.createElement("div");
@@ -1124,7 +1165,7 @@ export async function chooseImageModal(): Promise<string> {
             modalContent.querySelector(".chooseImageExternalSection")?.remove();
 
             form.innerHTML = "";
-            resetPreview(previewPanel);
+            resetTranslatedPreview(previewPanel);
             clearTreeSelection();
         };
 

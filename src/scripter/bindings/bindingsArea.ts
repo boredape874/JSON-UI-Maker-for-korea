@@ -38,7 +38,8 @@ export class BindingsArea {
 
     static init() {
         this.bindingsTextArea.value = "";
-        this.bindingsTextArea.placeholder = this.placeHolderBindings;
+        this.bindingsTextArea.placeholder = translateText("Select an element to edit bindings.");
+        this.editable(false);
 
         this.bindingsTextArea.addEventListener("focus", () => {
             this.isBindingsTextAreaFocused = true;
@@ -127,6 +128,7 @@ export class BindingsArea {
     public static updateBindingsEditor(): void {
         if (!selectedElement) {
             this.bindingsTextArea.value = "";
+            this.bindingsTextArea.placeholder = translateText("Select an element to edit bindings.");
 
             this.editable(false);
             this.BindingsTextPrompt.detach();
@@ -134,6 +136,7 @@ export class BindingsArea {
         }
 
         this.editable(true);
+        this.bindingsTextArea.placeholder = this.placeHolderBindings;
 
         const selectedElementClass = GeneralUtil.elementToClassElement(selectedElement)!;
         const bindings = selectedElementClass.bindings;
@@ -147,6 +150,7 @@ export class BindingsArea {
     public static editable(isEditable: boolean): void {
         this.isEditable = isEditable;
         this.bindingsTextArea.readOnly = !isEditable;
+        this.bindingsTextArea.toggleAttribute("readonly", !isEditable);
     }
 
     public static saveBindings(): void {
