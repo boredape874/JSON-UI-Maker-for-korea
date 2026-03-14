@@ -194,6 +194,20 @@ export class ElementSharedFuncs {
             parentClassElement.grid(config.settings.show_grid.value);
         }
         const mainElement = classElement.getMainHTMLElement();
+        // Selecting on drag start makes the bindings editor usable without requiring a double click first.
+        if (isSelectableElement(classElement) && !classElement.selected) {
+            if (selectedElement && selectedElement !== mainElement) {
+                const selectedClassElement = GeneralUtil.elementToClassElement(selectedElement);
+                if (selectedClassElement && isSelectableElement(selectedClassElement)) {
+                    selectedClassElement.selected = false;
+                    selectedElement.style.outline = `${config.settings.element_outline.value}px solid black`;
+                }
+            }
+            classElement.selected = true;
+            setSelectedElement(mainElement);
+            mainElement.style.outline = `${config.settings.element_outline.value}px solid blue`;
+            updatePropertiesArea();
+        }
         // Get position relative to parent container
         const panelRect = mainElement.getBoundingClientRect();
         classElement.offsetX = e.clientX - panelRect.left;

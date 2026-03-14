@@ -509,6 +509,15 @@ input[type="file"] {
     outline: rgb(80, 77, 77) 1px solid;
 }
 
+.modalTextareaInput {
+    width: min(720px, 80vw);
+    min-height: 320px;
+    resize: vertical;
+    font-family: Consolas, "Courier New", monospace;
+    line-height: 1.5;
+    white-space: pre;
+}
+
 .saveFormsActionButton:hover {
     box-shadow: 6px 5px 31px -7px rgba(0, 0, 0, 0.75);
     outline: rgb(162, 0, 255) 2px solid;
@@ -518,8 +527,9 @@ input[type="file"] {
 
 .main {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: flex-start;
+    min-width: max-content;
 }
 
 .scripter {
@@ -531,7 +541,6 @@ input[type="file"] {
     text-align: center;
     color: white;
     flex: 1;
-    min-width: 320px;
     height: calc(1510px / 1.7777777);
     background-color: rgb(39, 39, 39);
     border-radius: 10px;

@@ -27,6 +27,7 @@ import { loadTexturePresetsModal } from "./ui/modals/loadTexturePresets.js";
 import { helpModal } from "./ui/modals/helpMenu.js";
 import { chooseImageModal } from "./ui/modals/chooseImage.js";
 import { saveFormsModal } from "./ui/modals/saveForms.js";
+import { pasteFormModal } from "./ui/modals/pasteFormModal.js";
 import "./ui/modals/settings.js";
 import { authModal } from "./ui/modals/authModal.js";
 import { uploadPresetModal } from "./ui/modals/uploadPresetModal.js";
@@ -294,6 +295,15 @@ export class Builder {
         };
 
         reader.readAsText(file);
+    }
+
+    public static async openPasteFormModal(): Promise<void> {
+        const result = await pasteFormModal();
+        if (!result?.formText) return;
+
+        FormUploader.uploadForm(result.formText, result.fileName);
+        Builder.updateExplorer();
+        undoRedoManager.clear();
     }
 
     public static formatBindingsArea(): void {

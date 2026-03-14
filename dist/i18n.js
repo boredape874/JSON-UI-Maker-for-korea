@@ -259,6 +259,12 @@ const EXACT_TRANSLATIONS = {
     "The selected texture will appear here.": "\uc120\ud0dd\ud55c \ud14d\uc2a4\ucc98\uac00 \uc5ec\uae30\uc5d0 \ud45c\uc2dc\ub429\ub2c8\ub2e4.",
     "No texture selected yet.": "\uc544\uc9c1 \uc120\ud0dd\ud55c \ud14d\uc2a4\ucc98\uac00 \uc5c6\uc2b5\ub2c8\ub2e4.",
     "Select an element to edit bindings.": "\ubc14\uc778\ub529\uc744 \uc218\uc815\ud558\ub824\uba74 \uba3c\uc800 \uc694\uc18c\ub97c \uc120\ud0dd\ud558\uc138\uc694.",
+    "Paste Form Code": "\ud3fc \ucf54\ub4dc \ubd99\uc5ec\ub123\uae30",
+    "Form File Name (Optional)": "\ud3fc \ud30c\uc77c \uc774\ub984 (\uc120\ud0dd)",
+    "Paste JSON-UI Code": "JSON-UI \ucf54\ub4dc \ubd99\uc5ec\ub123\uae30",
+    "Paste an existing JSON-UI form here to load it directly into the editor.": "\uae30\uc874 JSON-UI \ud3fc \ucf54\ub4dc\ub97c \uc5ec\uae30\uc5d0 \ubd99\uc5ec\ub123\uc73c\uba74 \ubc14\ub85c \uc5d0\ub514\ud130\uc5d0 \ubd88\ub7ec\uc635\ub2c8\ub2e4.",
+    "Load Form": "\ud3fc \ubd88\ub7ec\uc624\uae30",
+    "Could not parse the form JSON. Check commas, quotes, and comments.": "\ud3fc JSON\uc744 \ud30c\uc2f1\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4. \uc27c\ud45c, \ub530\uc634\ud45c, \uc8fc\uc11d \ubb38\ubc95\uc744 \ud655\uc778\ud574 \uc8fc\uc138\uc694.",
 };
 const PATTERN_TRANSLATORS = [
     {

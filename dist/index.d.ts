@@ -30,6 +30,7 @@ export declare class Builder {
     static setFormIdentity(name: string): boolean;
     static openSaveFormsModal(): void;
     static uploadForm(): void;
+    static openPasteFormModal(): Promise<void>;
     static formatBindingsArea(): void;
     static downloadServerForm(type: "copy" | "download"): void;
     static handleUiTexturesUpload(): void;

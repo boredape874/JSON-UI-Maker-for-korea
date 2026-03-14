@@ -24,6 +24,8 @@
                     <input title="Upload Form" type="file" id="form_importer" onchange="Builder.uploadForm()" accept=".json" />
                     Upload Form
                 </label>
+
+                <button type="button" class="propertyInputButton" onclick="Builder.openPasteFormModal()">Paste Form Code</button>
             </div>
         </div>
 
@@ -108,6 +110,16 @@
             <div class="modalSaveFormsForm">
 
             </div>
+        </div>
+    </div>
+    <!--------------->
+
+    <!-- The Paste Form Modal -->
+    <div id="modalPasteForm" class="modal">
+        <div class="modal-content" style="max-width: 860px;">
+            <span id="modalPasteFormClose" class="modalClose">&times;</span>
+            <h2 class="modalHeader">Paste Form Code</h2>
+            <div class="modalPasteFormForm"></div>
         </div>
     </div>
     <!--------------->
