@@ -1,14 +1,22 @@
 import { TextPrompt } from "../../ui/textPrompt.js";
 export declare class BindingsArea {
+    private static hudBindingDefaults;
     private static placeHolderBindings;
     static bindingsTextArea: HTMLTextAreaElement;
     static errorMessage: HTMLLabelElement;
     static isBindingsTextAreaFocused: boolean;
     static BindingsTextPrompt: TextPrompt;
+    static hudBindingSourceSelect: HTMLSelectElement | null;
+    static hudBindingSourceKeyInput: HTMLInputElement | null;
+    static hudBindingMatchInput: HTMLInputElement | null;
     static lastValue: string;
     static isEditable: boolean;
     static doubledLetters: Map<string, string>;
     static init(): void;
+    private static initHudBindingHelper;
+    private static syncHudBindingSourceDefault;
+    static insertHudBindingSnippet(kind: "show" | "hide" | "text"): void;
+    private static createHudBindingSnippet;
     static format(): void;
     static indent(e: KeyboardEvent): void;
     static tryOpenBrackets(e: KeyboardEvent): boolean;

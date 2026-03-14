@@ -331,6 +331,64 @@ input[type="file"] {
     }
 }
 
+.toolMenu {
+    position: relative;
+}
+
+.toolMenuSummary {
+    list-style: none;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: linear-gradient(45deg, rgb(227, 0, 114), rgb(115, 0, 255));
+    color: white;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 700;
+    user-select: none;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.toolMenuSummary::-webkit-details-marker {
+    display: none;
+}
+
+.toolMenuSummary:hover {
+    box-shadow: 6px 5px 31px -7px rgba(0, 0, 0, 0.75);
+}
+
+.toolMenuPanel {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    min-width: 260px;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(22, 22, 28, 0.96);
+    outline: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+    z-index: 1001;
+}
+
+.toolMenuPanel > * {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.toolMenuPanel .propertyInputButton {
+    margin-top: 0;
+}
+
+.toolMenuPanel.importers {
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toolMenuPanel.importers > * {
+    margin-right: 0;
+}
+
 .draggable-panel {
     position: absolute;
     width: 150px;
@@ -623,6 +681,66 @@ input[type="file"] {
     font-family: Consolas, "Courier New", monospace;
     line-height: 1.5;
     white-space: pre;
+}
+
+.hudBindingHelper {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    outline: rgba(153, 0, 255, 0.25) 1px solid;
+    color: white;
+}
+
+.hudBindingHelperTitle {
+    font-size: 15px;
+    font-weight: 700;
+    color: #f1d8ff;
+}
+
+.hudBindingHelperDesc,
+.hudBindingHelperNote {
+    margin-top: 6px;
+    color: rgb(181, 181, 181);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.hudBindingHelperGrid {
+    display: grid;
+    grid-template-columns: 90px minmax(0, 1fr);
+    gap: 8px 10px;
+    align-items: center;
+    margin-top: 12px;
+}
+
+.hudBindingHelperLabel {
+    color: #d3d3d3;
+    font-size: 12px;
+}
+
+.hudBindingHelperInput {
+    width: 100%;
+    min-width: 0;
+    padding: 7px 9px;
+    border-radius: 6px;
+    background-color: rgb(59, 56, 71);
+    color: white;
+    border: none;
+    outline: rgb(80, 77, 77) 1px solid;
+    box-sizing: border-box;
+}
+
+.hudBindingHelperActions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.hudBindingHelperActions .propertyInputButton {
+    flex: 1 1 120px;
+    margin-top: 0;
 }
 
 .saveFormsActionButton:hover {

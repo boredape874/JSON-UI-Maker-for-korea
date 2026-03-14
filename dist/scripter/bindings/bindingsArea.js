@@ -5,7 +5,13 @@ import { GeneralUtil } from "../../util/generalUtil.js";
 import { binding_keys } from "./binding_keys.js";
 import { collectSourcePropertyNames } from "./source_property_name.js";
 import { translateText } from "../../i18n.js";
+import { Notification } from "../../ui/notifs/noficationMaker.js";
 export class BindingsArea {
+    static hudBindingDefaults = {
+        title: "#hud_title_text_string",
+        subtitle: "#hud_subtitle_text_string",
+        actionbar: "#hud_actionbar_text_string",
+    };
     static placeHolderBindings = `[
   {
     "binding_name": "#title_text"
@@ -20,6 +26,9 @@ export class BindingsArea {
     static errorMessage = document.getElementById("errorMessage");
     static isBindingsTextAreaFocused = false;
     static BindingsTextPrompt = new TextPrompt(this.bindingsTextArea);
+    static hudBindingSourceSelect = document.getElementById("hudBindingSource");
+    static hudBindingSourceKeyInput = document.getElementById("hudBindingSourceKey");
+    static hudBindingMatchInput = document.getElementById("hudBindingMatchText");
     static lastValue = this.bindingsTextArea.value;
     static isEditable = false;
     static doubledLetters = new Map([
@@ -34,6 +43,7 @@ export class BindingsArea {
         this.bindingsTextArea.value = "";
         this.bindingsTextArea.placeholder = translateText("Select an element to edit bindings.");
         this.editable(false);
+        this.initHudBindingHelper();
         this.bindingsTextArea.addEventListener("focus", () => {
             this.isBindingsTextAreaFocused = true;
         });
@@ -52,6 +62,79 @@ export class BindingsArea {
             }
             catch { }
         });
+    }
+    static initHudBindingHelper() {
+        if (!this.hudBindingSourceSelect || !this.hudBindingSourceKeyInput)
+            return;
+        this.hudBindingSourceSelect.addEventListener("change", () => {
+            this.syncHudBindingSourceDefault();
+        });
+        this.syncHudBindingSourceDefault();
+    }
+    static syncHudBindingSourceDefault() {
+        if (!this.hudBindingSourceSelect || !this.hudBindingSourceKeyInput)
+            return;
+        const selectedSource = this.hudBindingSourceSelect.value;
+        const defaultKey = this.hudBindingDefaults[selectedSource] ?? "#hud_title_text_string";
+        this.hudBindingSourceKeyInput.value = defaultKey;
+    }
+    static insertHudBindingSnippet(kind) {
+        if (!selectedElement) {
+            new Notification("먼저 요소를 선택한 다음 사용하세요.", 2500, "warning");
+            return;
+        }
+        const snippet = this.createHudBindingSnippet(kind);
+        if (!snippet)
+            return;
+        const existingValue = this.bindingsTextArea.value.trim();
+        let mergedBindings = [];
+        if (existingValue) {
+            const parsed = GeneralUtil.tryParseBindings(existingValue);
+            if (!parsed || !GeneralUtil.isIterable(parsed)) {
+                new Notification("현재 바인딩 JSON이 올바르지 않아 자동 추가할 수 없습니다.", 3000, "warning");
+                return;
+            }
+            mergedBindings = [...parsed, ...snippet];
+        }
+        else {
+            mergedBindings = snippet;
+        }
+        this.bindingsTextArea.value = JSON.stringify(mergedBindings, null, config.magicNumbers.textEditor.indentation);
+        this.saveBindings();
+        this.updateWarningLabel();
+        new Notification("HUD 바인딩 스니펫을 추가했습니다.", 2200, "notif");
+    }
+    static createHudBindingSnippet(kind) {
+        const sourceKey = this.hudBindingSourceKeyInput?.value.trim();
+        const matchText = this.hudBindingMatchInput?.value.trim() ?? "";
+        if (!sourceKey) {
+            new Notification("바인딩 키를 입력하세요.", 2500, "warning");
+            return;
+        }
+        if (kind === "text") {
+            return [
+                {
+                    binding_name: sourceKey,
+                    binding_name_override: "#text",
+                },
+            ];
+        }
+        if (!matchText) {
+            new Notification("감지할 문자열을 입력하세요.", 2500, "warning");
+            return;
+        }
+        const escapedMatchText = matchText.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+        const containsExpression = `(not ((${sourceKey} - '${escapedMatchText}') = ${sourceKey}))`;
+        return [
+            {
+                binding_name: sourceKey,
+            },
+            {
+                binding_type: "view",
+                source_property_name: kind === "show" ? containsExpression : `(not ${containsExpression})`,
+                target_property_name: "#visible",
+            },
+        ];
     }
     static format() {
         if (this.errorMessage.style.visibility === "visible")

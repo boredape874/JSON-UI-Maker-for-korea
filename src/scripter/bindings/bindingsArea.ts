@@ -5,8 +5,16 @@ import { GeneralUtil } from "../../util/generalUtil.js";
 import { binding_keys } from "./binding_keys.js";
 import { collectSourcePropertyNames } from "./source_property_name.js";
 import { translateText } from "../../i18n.js";
+import { Notification } from "../../ui/notifs/noficationMaker.js";
+import { Binding } from "./types.js";
 
 export class BindingsArea {
+    private static hudBindingDefaults: Record<string, string> = {
+        title: "#hud_title_text_string",
+        subtitle: "#hud_subtitle_text_string",
+        actionbar: "#hud_actionbar_text_string",
+    };
+
     private static placeHolderBindings = `[
   {
     "binding_name": "#title_text"
@@ -22,6 +30,9 @@ export class BindingsArea {
     public static errorMessage = document.getElementById("errorMessage") as HTMLLabelElement;
     public static isBindingsTextAreaFocused = false;
     public static BindingsTextPrompt = new TextPrompt(this.bindingsTextArea);
+    public static hudBindingSourceSelect = document.getElementById("hudBindingSource") as HTMLSelectElement | null;
+    public static hudBindingSourceKeyInput = document.getElementById("hudBindingSourceKey") as HTMLInputElement | null;
+    public static hudBindingMatchInput = document.getElementById("hudBindingMatchText") as HTMLInputElement | null;
 
     public static lastValue: string = this.bindingsTextArea.value;
 
@@ -40,6 +51,7 @@ export class BindingsArea {
         this.bindingsTextArea.value = "";
         this.bindingsTextArea.placeholder = translateText("Select an element to edit bindings.");
         this.editable(false);
+        this.initHudBindingHelper();
 
         this.bindingsTextArea.addEventListener("focus", () => {
             this.isBindingsTextAreaFocused = true;
@@ -62,6 +74,93 @@ export class BindingsArea {
                 this.bindingsTextArea.value = JSON.stringify(parsed, null, config.magicNumbers.textEditor.indentation);
             } catch {}
         });
+    }
+
+    private static initHudBindingHelper(): void {
+        if (!this.hudBindingSourceSelect || !this.hudBindingSourceKeyInput) return;
+
+        this.hudBindingSourceSelect.addEventListener("change", () => {
+            this.syncHudBindingSourceDefault();
+        });
+
+        this.syncHudBindingSourceDefault();
+    }
+
+    private static syncHudBindingSourceDefault(): void {
+        if (!this.hudBindingSourceSelect || !this.hudBindingSourceKeyInput) return;
+
+        const selectedSource = this.hudBindingSourceSelect.value as keyof typeof BindingsArea.hudBindingDefaults;
+        const defaultKey = this.hudBindingDefaults[selectedSource] ?? "#hud_title_text_string";
+        this.hudBindingSourceKeyInput.value = defaultKey;
+    }
+
+    public static insertHudBindingSnippet(kind: "show" | "hide" | "text"): void {
+        if (!selectedElement) {
+            new Notification("먼저 요소를 선택한 다음 사용하세요.", 2500, "warning");
+            return;
+        }
+
+        const snippet = this.createHudBindingSnippet(kind);
+        if (!snippet) return;
+
+        const existingValue = this.bindingsTextArea.value.trim();
+        let mergedBindings: Binding[] = [];
+
+        if (existingValue) {
+            const parsed = GeneralUtil.tryParseBindings(existingValue);
+            if (!parsed || !GeneralUtil.isIterable(parsed)) {
+                new Notification("현재 바인딩 JSON이 올바르지 않아 자동 추가할 수 없습니다.", 3000, "warning");
+                return;
+            }
+
+            mergedBindings = [...parsed, ...snippet];
+        } else {
+            mergedBindings = snippet;
+        }
+
+        this.bindingsTextArea.value = JSON.stringify(mergedBindings, null, config.magicNumbers.textEditor.indentation);
+        this.saveBindings();
+        this.updateWarningLabel();
+
+        new Notification("HUD 바인딩 스니펫을 추가했습니다.", 2200, "notif");
+    }
+
+    private static createHudBindingSnippet(kind: "show" | "hide" | "text"): Binding[] | undefined {
+        const sourceKey = this.hudBindingSourceKeyInput?.value.trim();
+        const matchText = this.hudBindingMatchInput?.value.trim() ?? "";
+
+        if (!sourceKey) {
+            new Notification("바인딩 키를 입력하세요.", 2500, "warning");
+            return;
+        }
+
+        if (kind === "text") {
+            return [
+                {
+                    binding_name: sourceKey,
+                    binding_name_override: "#text",
+                },
+            ];
+        }
+
+        if (!matchText) {
+            new Notification("감지할 문자열을 입력하세요.", 2500, "warning");
+            return;
+        }
+
+        const escapedMatchText = matchText.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+        const containsExpression = `(not ((${sourceKey} - '${escapedMatchText}') = ${sourceKey}))`;
+
+        return [
+            {
+                binding_name: sourceKey,
+            },
+            {
+                binding_type: "view",
+                source_property_name: kind === "show" ? containsExpression : `(not ${containsExpression})`,
+                target_property_name: "#visible",
+            },
+        ];
     }
 
     static format(): void {

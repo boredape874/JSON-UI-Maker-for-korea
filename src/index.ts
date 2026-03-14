@@ -358,6 +358,10 @@ export class Builder {
         BindingsArea.format();
     }
 
+    public static insertHudBindingSnippet(kind: "show" | "hide" | "text"): void {
+        BindingsArea.insertHudBindingSnippet(kind);
+    }
+
     public static downloadServerForm(type: "copy" | "download"): void {
         const func = JSON_TYPES_GENERATOR.get("server_form");
         if (!func) return;

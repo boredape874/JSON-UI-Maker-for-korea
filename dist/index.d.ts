@@ -35,6 +35,7 @@ export declare class Builder {
     static importUiWorkspace(): Promise<void>;
     static openGlyphEditorModal(): Promise<void>;
     static formatBindingsArea(): void;
+    static insertHudBindingSnippet(kind: "show" | "hide" | "text"): void;
     static downloadServerForm(type: "copy" | "download"): void;
     static handleUiTexturesUpload(): void;
     static generateAndCopyJsonUI(type: "copy" | "download"): void;

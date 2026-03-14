@@ -292,6 +292,9 @@ export class Builder {
     static formatBindingsArea() {
         BindingsArea.format();
     }
+    static insertHudBindingSnippet(kind) {
+        BindingsArea.insertHudBindingSnippet(kind);
+    }
     static downloadServerForm(type) {
         const func = JSON_TYPES_GENERATOR.get("server_form");
         if (!func)
