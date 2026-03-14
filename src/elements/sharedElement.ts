@@ -10,11 +10,19 @@ import { DraggableCollectionPanel } from "./collectionPanel.js";
 import { DraggablePanel } from "./panel.js";
 import { DraggableScrollingPanel } from "./scrollingPanel.js";
 import { DraggableLabel } from "./label.js";
+import { DraggableStackPanel } from "./stackPanel.js";
 import { AllJsonUIElements } from "./elements.js";
 import { GeneralUtil } from "../util/generalUtil.js";
 import { MathUtil } from "../util/mathUtil.js";
 
-export type SelectableElements = DraggableButton | DraggablePanel | DraggableCanvas | DraggableCollectionPanel | DraggableScrollingPanel | DraggableLabel;
+export type SelectableElements =
+    | DraggableButton
+    | DraggablePanel
+    | DraggableCanvas
+    | DraggableCollectionPanel
+    | DraggableScrollingPanel
+    | DraggableLabel
+    | DraggableStackPanel;
 export function isSelectableElement(el: unknown): el is SelectableElements {
     return (
         el instanceof DraggableButton ||
@@ -22,24 +30,32 @@ export function isSelectableElement(el: unknown): el is SelectableElements {
         el instanceof DraggableCanvas ||
         el instanceof DraggableCollectionPanel ||
         el instanceof DraggableScrollingPanel ||
-        el instanceof DraggableLabel
+        el instanceof DraggableLabel ||
+        el instanceof DraggableStackPanel
     );
 }
 
-export type ResizeableElements = DraggableButton | DraggablePanel | DraggableCanvas | DraggableCollectionPanel | DraggableScrollingPanel;
+export type ResizeableElements = DraggableButton | DraggablePanel | DraggableCanvas | DraggableCollectionPanel | DraggableScrollingPanel | DraggableStackPanel;
 export function isResizeableElement(el: unknown): el is ResizeableElements {
     return (
         el instanceof DraggableButton ||
         el instanceof DraggablePanel ||
         el instanceof DraggableCanvas ||
         el instanceof DraggableCollectionPanel ||
-        el instanceof DraggableScrollingPanel
+        el instanceof DraggableScrollingPanel ||
+        el instanceof DraggableStackPanel
     );
 }
 
-export type GridableElements = DraggableButton | DraggablePanel | DraggableCanvas | DraggableCollectionPanel;
+export type GridableElements = DraggableButton | DraggablePanel | DraggableCanvas | DraggableCollectionPanel | DraggableStackPanel;
 export function isGridableElement(el: unknown): el is GridableElements {
-    return el instanceof DraggableButton || el instanceof DraggablePanel || el instanceof DraggableCanvas || el instanceof DraggableCollectionPanel;
+    return (
+        el instanceof DraggableButton ||
+        el instanceof DraggablePanel ||
+        el instanceof DraggableCanvas ||
+        el instanceof DraggableCollectionPanel ||
+        el instanceof DraggableStackPanel
+    );
 }
 
 export class ElementSharedFuncs {

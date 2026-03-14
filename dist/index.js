@@ -25,6 +25,7 @@ import { helpModal } from "./ui/modals/helpMenu.js";
 import { chooseImageModal } from "./ui/modals/chooseImage.js";
 import { saveFormsModal } from "./ui/modals/saveForms.js";
 import { pasteFormModal } from "./ui/modals/pasteFormModal.js";
+import { uiWorkspaceModal } from "./ui/modals/uiWorkspaceModal.js";
 import "./ui/modals/settings.js";
 import { authModal } from "./ui/modals/authModal.js";
 import { uploadPresetModal } from "./ui/modals/uploadPresetModal.js";
@@ -37,6 +38,7 @@ import { initI18n } from "./i18n.js";
 import "./elements/groupedEventlisteners.js";
 import "./ui/scale.js";
 import { undoRedoManager } from "./keyboard/undoRedo.js";
+import { createSyntheticFormFromWorkspace, loadUiWorkspace } from "./ui/uiWorkspace.js";
 initI18n();
 console.log("Script Loaded");
 initDefaultImages();
@@ -250,6 +252,38 @@ export class Builder {
         FormUploader.uploadForm(result.formText, result.fileName);
         Builder.updateExplorer();
         undoRedoManager.clear();
+    }
+    static async importUiWorkspace() {
+        const input = document.getElementById("ui_workspace_importer");
+        const files = input?.files ? Array.from(input.files) : [];
+        if (files.length === 0)
+            return;
+        const workspace = await loadUiWorkspace(files);
+        if (workspace.candidates.length === 0) {
+            new Notification("No UI controls were found in the selected folder.", 3000, "warning");
+            if (input)
+                input.value = "";
+            return;
+        }
+        const selection = await uiWorkspaceModal(workspace);
+        if (!selection) {
+            if (input)
+                input.value = "";
+            return;
+        }
+        const syntheticForm = createSyntheticFormFromWorkspace(workspace, selection.candidateId);
+        if (!syntheticForm) {
+            new Notification("Could not prepare the selected UI control.", 3000, "error");
+            if (input)
+                input.value = "";
+            return;
+        }
+        FormUploader.uploadParsedForm(syntheticForm.parsed, syntheticForm.uploadedFileName, workspace.definitions);
+        Builder.updateExplorer();
+        undoRedoManager.clear();
+        new Notification("UI workspace imported. Some advanced controls may appear partially.", 3500, "notif");
+        if (input)
+            input.value = "";
     }
     static formatBindingsArea() {
         BindingsArea.format();

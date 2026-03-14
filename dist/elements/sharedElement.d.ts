@@ -5,11 +5,12 @@ import { DraggableCollectionPanel } from "./collectionPanel.js";
 import { DraggablePanel } from "./panel.js";
 import { DraggableScrollingPanel } from "./scrollingPanel.js";
 import { DraggableLabel } from "./label.js";
-export type SelectableElements = DraggableButton | DraggablePanel | DraggableCanvas | DraggableCollectionPanel | DraggableScrollingPanel | DraggableLabel;
+import { DraggableStackPanel } from "./stackPanel.js";
+export type SelectableElements = DraggableButton | DraggablePanel | DraggableCanvas | DraggableCollectionPanel | DraggableScrollingPanel | DraggableLabel | DraggableStackPanel;
 export declare function isSelectableElement(el: unknown): el is SelectableElements;
-export type ResizeableElements = DraggableButton | DraggablePanel | DraggableCanvas | DraggableCollectionPanel | DraggableScrollingPanel;
+export type ResizeableElements = DraggableButton | DraggablePanel | DraggableCanvas | DraggableCollectionPanel | DraggableScrollingPanel | DraggableStackPanel;
 export declare function isResizeableElement(el: unknown): el is ResizeableElements;
-export type GridableElements = DraggableButton | DraggablePanel | DraggableCanvas | DraggableCollectionPanel;
+export type GridableElements = DraggableButton | DraggablePanel | DraggableCanvas | DraggableCollectionPanel | DraggableStackPanel;
 export declare function isGridableElement(el: unknown): el is GridableElements;
 export declare class ElementSharedFuncs {
     /**

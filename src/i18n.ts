@@ -275,6 +275,15 @@ const EXACT_TRANSLATIONS: Record<string, string> = {
     "Paste an existing JSON-UI form here to load it directly into the editor.": "\uae30\uc874 JSON-UI \ud3fc \ucf54\ub4dc\ub97c \uc5ec\uae30\uc5d0 \ubd99\uc5ec\ub123\uc73c\uba74 \ubc14\ub85c \uc5d0\ub514\ud130\uc5d0 \ubd88\ub7ec\uc635\ub2c8\ub2e4.",
     "Load Form": "\ud3fc \ubd88\ub7ec\uc624\uae30",
     "Could not parse the form JSON. Check commas, quotes, and comments.": "\ud3fc JSON\uc744 \ud30c\uc2f1\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4. \uc27c\ud45c, \ub530\uc634\ud45c, \uc8fc\uc11d \ubb38\ubc95\uc744 \ud655\uc778\ud574 \uc8fc\uc138\uc694.",
+    "Import UI Folder": "UI \ud3f4\ub354 \ubd88\ub7ec\uc624\uae30",
+    "Loaded UI files:": "\ubd88\ub7ec\uc628 UI \ud30c\uc77c",
+    "Choose the screen or control you want to open.": "\uc5f4\uace0 \uc2f6\uc740 \uc2a4\ud06c\ub9b0 \ub610\ub294 \ucee8\ud2b8\ub864\uc744 \uc120\ud0dd\ud558\uc138\uc694.",
+    "Search UI controls...": "UI \ucee8\ud2b8\ub864 \uac80\uc0c9...",
+    "Tip: complex controls that depend on unsupported Bedrock features may only load partially in the editor.": "\ucc38\uace0: \uc9c0\uc6d0\ud558\uc9c0 \uc54a\ub294 \ubca0\ub4dc\ub77d \uae30\ub2a5\uc5d0 \uc758\uc874\ud558\ub294 \ubcf5\uc7a1\ud55c \ucee8\ud2b8\ub864\uc740 \uc5d0\ub514\ud130\uc5d0\uc11c \ubd80\ubd84\uc801\uc73c\ub85c\ub9cc \ubcf4\uc77c \uc218 \uc788\uc2b5\ub2c8\ub2e4.",
+    "Load Selected UI": "\uc120\ud0dd\ud55c UI \ubd88\ub7ec\uc624\uae30",
+    "No UI controls were found in the selected folder.": "\uc120\ud0dd\ud55c \ud3f4\ub354\uc5d0\uc11c UI \ucee8\ud2b8\ub864\uc744 \ucc3e\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.",
+    "Could not prepare the selected UI control.": "\uc120\ud0dd\ud55c UI \ucee8\ud2b8\ub864\uc744 \ubd88\ub7ec\uc624\uae30 \uc900\ube44\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.",
+    "UI workspace imported. Some advanced controls may appear partially.": "UI \uc6cc\ud06c\uc2a4\ud398\uc774\uc2a4\ub97c \ubd88\ub7ec\uc654\uc2b5\ub2c8\ub2e4. \uc77c\ubd80 \uace0\uae09 \ucee8\ud2b8\ub864\uc740 \ubd80\ubd84\uc801\uc73c\ub85c\ub9cc \ud45c\uc2dc\ub420 \uc218 \uc788\uc2b5\ub2c8\ub2e4.",
 };
 
 const PATTERN_TRANSLATORS: PatternTranslator[] = [

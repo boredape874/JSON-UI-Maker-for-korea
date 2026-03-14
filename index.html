@@ -25,6 +25,11 @@
                     Upload Form
                 </label>
 
+                <label class="form_importer">
+                    <input title="Import UI Folder" type="file" id="ui_workspace_importer" onchange="Builder.importUiWorkspace()" webkitdirectory directory multiple />
+                    Import UI Folder
+                </label>
+
                 <button type="button" class="propertyInputButton" onclick="Builder.openPasteFormModal()">Paste Form Code</button>
             </div>
         </div>
@@ -120,6 +125,16 @@
             <span id="modalPasteFormClose" class="modalClose">&times;</span>
             <h2 class="modalHeader">Paste Form Code</h2>
             <div class="modalPasteFormForm"></div>
+        </div>
+    </div>
+    <!--------------->
+
+    <!-- The UI Workspace Modal -->
+    <div id="modalUiWorkspace" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <span id="modalUiWorkspaceClose" class="modalClose">&times;</span>
+            <h2 class="modalHeader">Import UI Folder</h2>
+            <div class="modalUiWorkspaceForm"></div>
         </div>
     </div>
     <!--------------->

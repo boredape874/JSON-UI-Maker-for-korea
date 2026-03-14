@@ -10,6 +10,7 @@ import { DraggableCollectionPanel } from "./collectionPanel.js";
 import { DraggablePanel } from "./panel.js";
 import { DraggableScrollingPanel } from "./scrollingPanel.js";
 import { DraggableLabel } from "./label.js";
+import { DraggableStackPanel } from "./stackPanel.js";
 import { AllJsonUIElements } from "./elements.js";
 import { GeneralUtil } from "../util/generalUtil.js";
 import { MathUtil } from "../util/mathUtil.js";
@@ -19,17 +20,23 @@ export function isSelectableElement(el) {
         el instanceof DraggableCanvas ||
         el instanceof DraggableCollectionPanel ||
         el instanceof DraggableScrollingPanel ||
-        el instanceof DraggableLabel);
+        el instanceof DraggableLabel ||
+        el instanceof DraggableStackPanel);
 }
 export function isResizeableElement(el) {
     return (el instanceof DraggableButton ||
         el instanceof DraggablePanel ||
         el instanceof DraggableCanvas ||
         el instanceof DraggableCollectionPanel ||
-        el instanceof DraggableScrollingPanel);
+        el instanceof DraggableScrollingPanel ||
+        el instanceof DraggableStackPanel);
 }
 export function isGridableElement(el) {
-    return el instanceof DraggableButton || el instanceof DraggablePanel || el instanceof DraggableCanvas || el instanceof DraggableCollectionPanel;
+    return (el instanceof DraggableButton ||
+        el instanceof DraggablePanel ||
+        el instanceof DraggableCanvas ||
+        el instanceof DraggableCollectionPanel ||
+        el instanceof DraggableStackPanel);
 }
 export class ElementSharedFuncs {
     /**

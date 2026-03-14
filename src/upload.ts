@@ -7,6 +7,7 @@ import { DraggableCollectionPanel } from "./elements/collectionPanel.js";
 import { DraggableLabel } from "./elements/label.js";
 import { DraggablePanel } from "./elements/panel.js";
 import { DraggableScrollingPanel } from "./elements/scrollingPanel.js";
+import { DraggableStackPanel } from "./elements/stackPanel.js";
 import { ElementSharedFuncs } from "./elements/sharedElement.js";
 import { FileUploader } from "./files/openFiles.js";
 import { Builder, GLOBAL_ELEMENT_MAP, GlobalElementMapValue, ImageDataState, images } from "./index.js";
@@ -20,7 +21,18 @@ interface UploadTreeInstructions {
     FollowPath?: string;
 }
 
+export interface WorkspaceDefinition {
+    id: string;
+    namespace: string;
+    key: string;
+    rawKey: string;
+    control: StringObjectMap;
+    sourceFile: string;
+}
+
 export class FormUploader {
+    public static workspaceDefinitions: Map<string, WorkspaceDefinition> = new Map();
+
     public static parseJsonWithComments(raw: string) {
         const noComments = raw
             // Remove block comments first so we don't break URLs
@@ -33,27 +45,63 @@ export class FormUploader {
         return JSON.parse(noComments);
     }
 
+    public static parseControlKey(childKey: string): { baseKey: string; type: string; reference?: string } {
+        const [leftSide, reference] = childKey.split("@");
+        const baseKey = leftSide?.split("-").at(-1) ?? childKey;
+        return {
+            baseKey,
+            type: baseKey,
+            reference,
+        };
+    }
+
+    public static deepMerge(base: any, override: any): any {
+        if (Array.isArray(override)) return structuredClone(override);
+        if (override === null || typeof override !== "object") return override;
+        if (base === null || typeof base !== "object" || Array.isArray(base)) return structuredClone(override);
+
+        const merged: Record<string, any> = { ...structuredClone(base) };
+
+        for (const [key, value] of Object.entries(override)) {
+            merged[key] = key in merged ? this.deepMerge(merged[key], value) : structuredClone(value);
+        }
+
+        return merged;
+    }
+
+    public static resolveReferencedControl(reference: string | undefined, override: StringObjectMap): StringObjectMap {
+        if (!reference) return override;
+
+        const definition = this.workspaceDefinitions.get(reference);
+        if (!definition) return override;
+
+        return this.deepMerge(definition.control, override);
+    }
+
     public static isValid(form: string) {
         try {
             const parsed = FormUploader.parseJsonWithComments(form);
-
-            if (!parsed.namespace) {
-                new Notification("Invalid namespace, please upload a valid form", 5000, "error");
-                return false;
-            }
-
-            if (!parsed[parsed.namespace]) {
-                new Notification("Cant find root element, please upload a valid form", 5000, "error");
-                return false;
-            }
-
-            return true;
+            return FormUploader.isValidParsed(parsed);
         } catch (e) {
             console.log(3, e);
             new Notification("Could not parse the form JSON. Check commas, quotes, and comments.", 5000, "error");
 
             return false;
         }
+    }
+
+    public static isValidParsed(parsed: StringObjectMap): boolean {
+        if (!parsed.namespace) {
+            new Notification("Invalid namespace, please upload a valid form", 5000, "error");
+            return false;
+        }
+
+        if (!parsed[parsed.namespace as string]) {
+            new Notification("Cant find root element, please upload a valid form", 5000, "error");
+            return false;
+        }
+
+        return true;
     }
 
     public static getJsonControlsAndType(json: StringObjectMap) {
@@ -63,33 +111,43 @@ export class FormUploader {
         for (const child of controls) {
             const childKey = Object.keys(child)[0]!;
             const childJson = child[childKey];
-            let childType = childKey?.split("-")[1];
+            const parsedKey = this.parseControlKey(childKey);
+            const resolvedChildJson = this.resolveReferencedControl(parsedKey.reference, childJson!);
 
-            if (childType?.includes("@")) childType = childType.split("@")[0];
-
-            jsonControls.push({ control: childJson!, type: childType! });
+            jsonControls.push({ control: resolvedChildJson, type: parsedKey.type });
         }
 
         return jsonControls;
     }
 
-    public static uploadForm(form: string, uploadedFileName?: string) {
-        if (FormUploader.isValid(form)) {
-            const parsed = FormUploader.parseJsonWithComments(form);
-            const namespace = parsed.namespace as string;
+    public static uploadParsedForm(
+        parsed: StringObjectMap,
+        uploadedFileName?: string,
+        workspaceDefinitions?: Map<string, WorkspaceDefinition>
+    ) {
+        if (!FormUploader.isValidParsed(parsed)) return;
 
-            Builder.reset();
-            config.nameSpace = namespace;
-            config.formFileName = uploadedFileName
-                ? StringUtil.toSafeFileName(uploadedFileName)
-                : StringUtil.toSafeFileName(namespace);
-            syncJsonTypeNamespaces(config.nameSpace);
+        const namespace = parsed.namespace as string;
 
-            const mainPanel: GlobalElementMapValue = GeneralUtil.elementToClassElement(config.rootElement!)!;
-            FormUploader.tree(parsed[namespace] as StringObjectMap, mainPanel, [parsed["config"], parsed]);
+        Builder.reset();
+        config.nameSpace = namespace;
+        config.formFileName = uploadedFileName
+            ? StringUtil.toSafeFileName(uploadedFileName)
+            : StringUtil.toSafeFileName(namespace);
+        syncJsonTypeNamespaces(config.nameSpace);
+        this.workspaceDefinitions = workspaceDefinitions ?? new Map();
 
-            new Notification("Form uploaded successfully", 2000, "notif");
-        }
+        const mainPanel: GlobalElementMapValue = GeneralUtil.elementToClassElement(config.rootElement!)!;
+        FormUploader.tree(parsed[namespace] as StringObjectMap, mainPanel, [parsed["config"], parsed]);
+
+        new Notification("Form uploaded successfully", 2000, "notif");
+    }
+
+    public static uploadForm(form: string, uploadedFileName?: string, workspaceDefinitions?: Map<string, WorkspaceDefinition>) {
+        if (!FormUploader.isValid(form)) return;
+
+        const parsed = FormUploader.parseJsonWithComments(form);
+        FormUploader.uploadParsedForm(parsed, uploadedFileName, workspaceDefinitions);
     }
 
     public static tree(rootJson: StringObjectMap, parentClassElement: GlobalElementMapValue, args?: any) {
@@ -142,6 +200,12 @@ export class FormUploader {
             }
 
             if (newParent.instructions.FollowPath) {
+                const workspaceNode = this.workspaceDefinitions.get(newParent.instructions.FollowPath);
+                if (workspaceNode) {
+                    FormUploader.tree(workspaceNode.control, newParent.element, args);
+                    continue;
+                }
+
                 const splitPathString = newParent.instructions.FollowPath.split(".");
 
                 if (splitPathString[0] != args[1]["namespace"]) {
@@ -209,6 +273,98 @@ export const tagNameToCreateClassElementFunc: Map<
             if ((json.bindings as []).length > 0) panel.bindings = JSON.stringify(json.bindings, null, config.magicNumbers.textEditor.indentation);
 
             return { element: panel, instructions: { ContinuePath: true } };
+        },
+    ],
+    [
+        "input_panel",
+        (
+            json: StringObjectMap,
+            parentClassElement: GlobalElementMapValue,
+            usedConfig: SavedConfig
+        ): { element: GlobalElementMapValue; instructions: UploadTreeInstructions } | undefined => {
+            const UI_SCALAR = usedConfig!.magicNumbers!.UI_SCALAR as number;
+
+            const id: string = StringUtil.generateRandomString(15);
+            const panel: DraggablePanel = new DraggablePanel(id, parentClassElement.getMainHTMLElement());
+
+            GLOBAL_ELEMENT_MAP.set(id, panel);
+
+            const size = (json.size as [number | string, number | string]) ?? ["100%", "100%"];
+            const offset = (json.offset as [number, number]) ?? [0, 0];
+
+            panel.panel.style.width = typeof size[0] === "number" ? `${size[0] / UI_SCALAR}px` : `${size[0]}`;
+            panel.panel.style.height = typeof size[1] === "number" ? `${size[1] / UI_SCALAR}px` : `${size[1]}`;
+            panel.panel.style.left = `${offset[0] / UI_SCALAR}px`;
+            panel.panel.style.top = `${offset[1] / UI_SCALAR}px`;
+            panel.panel.style.zIndex = `${json.layer ?? 0}`;
+
+            ElementSharedFuncs.updateCenterCirclePosition(panel);
+
+            if ((json.bindings as []).length > 0) panel.bindings = JSON.stringify(json.bindings, null, config.magicNumbers.textEditor.indentation);
+
+            return { element: panel, instructions: { ContinuePath: true } };
+        },
+    ],
+    [
+        "grid",
+        (
+            json: StringObjectMap,
+            parentClassElement: GlobalElementMapValue,
+            usedConfig: SavedConfig
+        ): { element: GlobalElementMapValue; instructions: UploadTreeInstructions } | undefined => {
+            const UI_SCALAR = usedConfig!.magicNumbers!.UI_SCALAR as number;
+
+            const id: string = StringUtil.generateRandomString(15);
+            const panel: DraggablePanel = new DraggablePanel(id, parentClassElement.getMainHTMLElement());
+
+            GLOBAL_ELEMENT_MAP.set(id, panel);
+
+            const size = (json.size as [number | string, number | string]) ?? ["100%", "100%"];
+            const offset = (json.offset as [number, number]) ?? [0, 0];
+
+            panel.panel.style.width = typeof size[0] === "number" ? `${size[0] / UI_SCALAR}px` : `${size[0]}`;
+            panel.panel.style.height = typeof size[1] === "number" ? `${size[1] / UI_SCALAR}px` : `${size[1]}`;
+            panel.panel.style.left = `${offset[0] / UI_SCALAR}px`;
+            panel.panel.style.top = `${offset[1] / UI_SCALAR}px`;
+            panel.panel.style.zIndex = `${json.layer ?? 0}`;
+
+            ElementSharedFuncs.updateCenterCirclePosition(panel);
+
+            if ((json.bindings as []).length > 0) panel.bindings = JSON.stringify(json.bindings, null, config.magicNumbers.textEditor.indentation);
+
+            return { element: panel, instructions: { ContinuePath: true } };
+        },
+    ],
+    [
+        "stack_panel",
+        (
+            json: StringObjectMap,
+            parentClassElement: GlobalElementMapValue,
+            usedConfig: SavedConfig
+        ): { element: GlobalElementMapValue; instructions: UploadTreeInstructions } | undefined => {
+            const UI_SCALAR = usedConfig!.magicNumbers!.UI_SCALAR as number;
+
+            const id: string = StringUtil.generateRandomString(15);
+            const stackPanel: DraggableStackPanel = new DraggableStackPanel(id, parentClassElement.getMainHTMLElement(), {
+                orientation: json.orientation as "vertical" | "horizontal",
+            });
+
+            GLOBAL_ELEMENT_MAP.set(id, stackPanel as unknown as GlobalElementMapValue);
+
+            const size = (json.size as [number | string, number | string]) ?? ["100%", "100%"];
+            const offset = (json.offset as [number, number]) ?? [0, 0];
+
+            stackPanel.panel.style.width = typeof size[0] === "number" ? `${size[0] / UI_SCALAR}px` : `${size[0]}`;
+            stackPanel.panel.style.height = typeof size[1] === "number" ? `${size[1] / UI_SCALAR}px` : `${size[1]}`;
+            stackPanel.panel.style.left = `${offset[0] / UI_SCALAR}px`;
+            stackPanel.panel.style.top = `${offset[1] / UI_SCALAR}px`;
+            stackPanel.panel.style.zIndex = `${json.layer ?? 0}`;
+
+            ElementSharedFuncs.updateCenterCirclePosition(stackPanel);
+
+            if ((json.bindings as []).length > 0) stackPanel.bindings = JSON.stringify(json.bindings, null, config.magicNumbers.textEditor.indentation);
+
+            return { element: stackPanel as unknown as GlobalElementMapValue, instructions: { ContinuePath: true } };
         },
     ],
     [

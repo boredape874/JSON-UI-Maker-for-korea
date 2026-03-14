@@ -12,6 +12,7 @@ import { StringUtil } from "./util/stringUtil.js";
 import { DraggableLabel } from "./elements/label.js";
 import { classToJsonUI } from "./converterTypes/HTMLClassToJonUITypes.js";
 import { DraggableScrollingPanel } from "./elements/scrollingPanel.js";
+import { DraggableStackPanel } from "./elements/stackPanel.js";
 import { GeneralUtil } from "./util/generalUtil.js";
 import { JSON_TYPES_GENERATOR, syncJsonTypeNamespaces } from "./converterTypes/jsonUITypes.js";
 import { BindingsArea } from "./scripter/bindings/bindingsArea.js";
@@ -28,6 +29,7 @@ import { helpModal } from "./ui/modals/helpMenu.js";
 import { chooseImageModal } from "./ui/modals/chooseImage.js";
 import { saveFormsModal } from "./ui/modals/saveForms.js";
 import { pasteFormModal } from "./ui/modals/pasteFormModal.js";
+import { uiWorkspaceModal } from "./ui/modals/uiWorkspaceModal.js";
 import "./ui/modals/settings.js";
 import { authModal } from "./ui/modals/authModal.js";
 import { uploadPresetModal } from "./ui/modals/uploadPresetModal.js";
@@ -40,6 +42,7 @@ import { initI18n } from "./i18n.js";
 import "./elements/groupedEventlisteners.js";
 import "./ui/scale.js";
 import { undoRedoManager } from "./keyboard/undoRedo.js";
+import { createSyntheticFormFromWorkspace, loadUiWorkspace } from "./ui/uiWorkspace.js";
 
 initI18n();
 
@@ -244,7 +247,14 @@ panelContainer.addEventListener("mouseleave", () => {
     isInMainWindow = false;
 });
 
-export type GlobalElementMapValue = DraggableButton | DraggableCanvas | DraggablePanel | DraggableCollectionPanel | DraggableLabel | DraggableScrollingPanel;
+export type GlobalElementMapValue =
+    | DraggableButton
+    | DraggableCanvas
+    | DraggablePanel
+    | DraggableCollectionPanel
+    | DraggableLabel
+    | DraggableScrollingPanel
+    | DraggableStackPanel;
 
 /*
  * Contains all the elements in the main window.
@@ -304,6 +314,39 @@ export class Builder {
         FormUploader.uploadForm(result.formText, result.fileName);
         Builder.updateExplorer();
         undoRedoManager.clear();
+    }
+
+    public static async importUiWorkspace(): Promise<void> {
+        const input = document.getElementById("ui_workspace_importer") as HTMLInputElement | null;
+        const files = input?.files ? Array.from(input.files) : [];
+        if (files.length === 0) return;
+
+        const workspace = await loadUiWorkspace(files);
+        if (workspace.candidates.length === 0) {
+            new Notification("No UI controls were found in the selected folder.", 3000, "warning");
+            if (input) input.value = "";
+            return;
+        }
+
+        const selection = await uiWorkspaceModal(workspace);
+        if (!selection) {
+            if (input) input.value = "";
+            return;
+        }
+
+        const syntheticForm = createSyntheticFormFromWorkspace(workspace, selection.candidateId);
+        if (!syntheticForm) {
+            new Notification("Could not prepare the selected UI control.", 3000, "error");
+            if (input) input.value = "";
+            return;
+        }
+
+        FormUploader.uploadParsedForm(syntheticForm.parsed, syntheticForm.uploadedFileName, workspace.definitions);
+        Builder.updateExplorer();
+        undoRedoManager.clear();
+        new Notification("UI workspace imported. Some advanced controls may appear partially.", 3500, "notif");
+
+        if (input) input.value = "";
     }
 
     public static formatBindingsArea(): void {
