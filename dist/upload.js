@@ -109,7 +109,10 @@ export class FormUploader {
             const childJson = child[childKey];
             const parsedKey = this.parseControlKey(childKey);
             const resolvedChildJson = this.resolveReferencedControl(parsedKey.reference, childJson);
-            jsonControls.push({ control: resolvedChildJson, type: parsedKey.type });
+            const resolvedType = typeof resolvedChildJson?.type === "string" && resolvedChildJson.type.trim() !== ""
+                ? resolvedChildJson.type
+                : parsedKey.type;
+            jsonControls.push({ control: resolvedChildJson, type: resolvedType });
         }
         return jsonControls;
     }
@@ -154,6 +157,10 @@ export class FormUploader {
                 continue;
             }
             const createClassElement = tagNameToCreateClassElementFunc.get(childType);
+            if (!createClassElement) {
+                new Notification(`Unsupported control type: ${childType}`, 3000, "warning");
+                continue;
+            }
             const newParent = createClassElement(childJson, parentClassElement, args[0], rootJson);
             if (!newParent?.element || !newParent.instructions) {
                 new Notification("Error creating element", 5000, "error");

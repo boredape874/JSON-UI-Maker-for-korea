@@ -284,6 +284,7 @@ const EXACT_TRANSLATIONS: Record<string, string> = {
     "No UI controls were found in the selected folder.": "\uc120\ud0dd\ud55c \ud3f4\ub354\uc5d0\uc11c UI \ucee8\ud2b8\ub864\uc744 \ucc3e\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.",
     "Could not prepare the selected UI control.": "\uc120\ud0dd\ud55c UI \ucee8\ud2b8\ub864\uc744 \ubd88\ub7ec\uc624\uae30 \uc900\ube44\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.",
     "UI workspace imported. Some advanced controls may appear partially.": "UI \uc6cc\ud06c\uc2a4\ud398\uc774\uc2a4\ub97c \ubd88\ub7ec\uc654\uc2b5\ub2c8\ub2e4. \uc77c\ubd80 \uace0\uae09 \ucee8\ud2b8\ub864\uc740 \ubd80\ubd84\uc801\uc73c\ub85c\ub9cc \ud45c\uc2dc\ub420 \uc218 \uc788\uc2b5\ub2c8\ub2e4.",
+    "Unsupported control type:": "\uc9c0\uc6d0\ud558\uc9c0 \uc54a\ub294 \ucee8\ud2b8\ub864 \ud0c0\uc785:",
 };
 
 const PATTERN_TRANSLATORS: PatternTranslator[] = [
@@ -355,6 +356,10 @@ const PATTERN_TRANSLATORS: PatternTranslator[] = [
     {
         pattern: /^GitHub request failed with status (\d+)\.$/u,
         translate: (match) => `GitHub \uc694\uccad\uc774 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4. \uc0c1\ud0dc \ucf54\ub4dc: ${match[1]}`,
+    },
+    {
+        pattern: /^Unsupported control type:\s*(.+)$/u,
+        translate: (match) => `\uc9c0\uc6d0\ud558\uc9c0 \uc54a\ub294 \ucee8\ud2b8\ub864 \ud0c0\uc785: ${match[1]}`,
     },
 ];
 
