@@ -290,8 +290,10 @@ const EXACT_TRANSLATIONS: Record<string, string> = {
     "Selected Cell": "선택한 칸",
     "Slot": "슬롯",
     "Unicode": "유니코드",
+    "Glyph Text": "글리프 텍스트",
     "No image selected yet.": "아직 선택한 이미지가 없습니다.",
     "Insert Into Selected Cell": "선택한 칸에 삽입",
+    "Copy Selected Glyph Text": "선택한 글리프 텍스트 복사",
     "Clear Selected Cell": "선택한 칸 비우기",
     "Download Glyph Sheet": "글리프 시트 다운로드",
     "Load a built-in glyph sheet, upload an edited sheet to continue working, then insert your image into any slot.": "기본 글리프 시트를 불러오거나 수정한 시트를 다시 업로드한 뒤 원하는 칸에 이미지를 삽입하세요.",
@@ -306,6 +308,8 @@ const EXACT_TRANSLATIONS: Record<string, string> = {
     "Find Empty Slot": "빈 칸 찾기",
     "Selected the next empty glyph slot.": "다음 빈 글리프 칸을 선택했습니다.",
     "No empty glyph slots were found in this sheet.": "이 시트에서는 빈 글리프 칸을 찾지 못했습니다.",
+    "Selected glyph text copied to clipboard!": "선택한 글리프 텍스트를 클립보드에 복사했습니다!",
+    "Could not copy the selected glyph text.": "선택한 글리프 텍스트를 복사하지 못했습니다.",
 };
 
 const PATTERN_TRANSLATORS: PatternTranslator[] = [
@@ -328,6 +332,7 @@ const PATTERN_TRANSLATORS: PatternTranslator[] = [
     { pattern: /^Unsupported control type:\s*(.+)$/u, translate: (match) => `지원하지 않는 컨트롤 타입: ${match[1]}` },
     { pattern: /^Loaded built-in glyph sheet:\s*(.+)$/u, translate: (match) => `기본 글리프 시트를 불러왔습니다: ${match[1]}` },
     { pattern: /^Loaded edited glyph sheet:\s*(.+)$/u, translate: (match) => `수정한 글리프 시트를 불러왔습니다: ${match[1]}` },
+    { pattern: /^Selected glyph text copied to clipboard!$/u, translate: () => "선택한 글리프 텍스트를 클립보드에 복사했습니다!" },
 ];
 
 function normalizeText(text: string): string {

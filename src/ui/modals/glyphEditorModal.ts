@@ -91,14 +91,43 @@ function getSelectedCellPosition(): { column: number; row: number } {
     };
 }
 
+function getSelectedCodepoint(): number {
+    return state.sheetName ? getGlyphCodepoint(state.sheetName, state.selectedCell) : state.selectedCell;
+}
+
+function hasStandardGlyphCodepoint(): boolean {
+    const sheetHex = state.sheetName ? getGlyphSheetHex(state.sheetName) : "";
+    return /^[0-9A-F]{2}$/u.test(sheetHex);
+}
+
+function getSelectedGlyphCharacter(): string {
+    return String.fromCodePoint(getSelectedCodepoint());
+}
+
+async function copySelectedGlyphText(): Promise<void> {
+    if (!state.sheetName) {
+        new Notification("Please load a glyph sheet first.", 2500, "warning");
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(getSelectedGlyphCharacter());
+        new Notification("Selected glyph text copied to clipboard!", 2200, "notif");
+    } catch (error) {
+        console.error(error);
+        new Notification("Could not copy the selected glyph text.", 2800, "error");
+    }
+}
+
 function updateGlyphInfo(): void {
     const form = getForm();
     const status = form.querySelector(".glyphEditorStatus") as HTMLDivElement | null;
     const selectedCell = form.querySelector(".glyphEditorSelectedCell") as HTMLSpanElement | null;
     const unicodeValue = form.querySelector(".glyphEditorUnicode") as HTMLSpanElement | null;
+    const glyphTextValue = form.querySelector(".glyphEditorGlyphText") as HTMLSpanElement | null;
     const imageStatus = form.querySelector(".glyphEditorImageStatus") as HTMLSpanElement | null;
 
-    if (!status || !selectedCell || !unicodeValue || !imageStatus) return;
+    if (!status || !selectedCell || !unicodeValue || !glyphTextValue || !imageStatus) return;
 
     if (!state.sheetName) {
         status.textContent = translateText("Choose a built-in glyph sheet or upload an edited sheet to begin.");
@@ -107,14 +136,14 @@ function updateGlyphInfo(): void {
     }
 
     const slotHex = getGlyphSlotHex(state.selectedCell);
-    const codepoint = state.sheetName ? getGlyphCodepoint(state.sheetName, state.selectedCell) : state.selectedCell;
+    const codepoint = getSelectedCodepoint();
     selectedCell.textContent = `${getSelectedCellPosition().row}, ${getSelectedCellPosition().column} (${slotHex})`;
 
     const unicodeHex = codepoint.toString(16).toUpperCase().padStart(4, "0");
-    const sheetHex = state.sheetName ? getGlyphSheetHex(state.sheetName) : "";
-    unicodeValue.textContent = /^[0-9A-F]{2}$/u.test(sheetHex)
+    unicodeValue.textContent = hasStandardGlyphCodepoint()
         ? `U+${unicodeHex} / \\u${unicodeHex}`
         : `${translateText("Slot")}: ${slotHex}`;
+    glyphTextValue.textContent = hasStandardGlyphCodepoint() ? getSelectedGlyphCharacter() : "-";
 
     imageStatus.textContent = state.insertImageName ?? translateText("No image selected yet.");
 }
@@ -315,12 +344,15 @@ function buildGlyphEditor(): void {
                     <div class="glyphEditorMetaValue glyphEditorSelectedCell">0, 0 (00)</div>
                     <div class="glyphEditorMetaTitle">${translateText("Unicode")}</div>
                     <div class="glyphEditorMetaValue glyphEditorUnicode">U+0000 / \\u0000</div>
+                    <div class="glyphEditorMetaTitle">${translateText("Glyph Text")}</div>
+                    <div class="glyphEditorMetaValue glyphEditorGlyphText">-</div>
                     <div class="glyphEditorMetaTitle">${translateText("Insert Image")}</div>
                     <div class="glyphEditorMetaValue glyphEditorImageStatus">${translateText("No image selected yet.")}</div>
                 </div>
 
                 <div class="glyphEditorButtonColumn">
                     <button type="button" class="propertyInputButton glyphEditorInsertButton">${translateText("Insert Into Selected Cell")}</button>
+                    <button type="button" class="propertyInputButton glyphEditorCopyGlyphButton">${translateText("Copy Selected Glyph Text")}</button>
                     <button type="button" class="propertyInputButton glyphEditorClearButton">${translateText("Clear Selected Cell")}</button>
                     <button type="button" class="propertyInputButton glyphEditorDownloadButton">${translateText("Download Glyph Sheet")}</button>
                 </div>
@@ -343,6 +375,7 @@ function buildGlyphEditor(): void {
     const uploadInsertButton = form.querySelector(".glyphEditorUploadInsertButton") as HTMLButtonElement;
     const uploadInsertInput = form.querySelector(".glyphEditorUploadInsertInput") as HTMLInputElement;
     const insertButton = form.querySelector(".glyphEditorInsertButton") as HTMLButtonElement;
+    const copyGlyphButton = form.querySelector(".glyphEditorCopyGlyphButton") as HTMLButtonElement;
     const clearButton = form.querySelector(".glyphEditorClearButton") as HTMLButtonElement;
     const downloadButton = form.querySelector(".glyphEditorDownloadButton") as HTMLButtonElement;
     const canvas = form.querySelector(".glyphEditorCanvas") as HTMLCanvasElement;
@@ -374,6 +407,7 @@ function buildGlyphEditor(): void {
     });
 
     loadBuiltInButton.onclick = () => void loadBuiltInSheet(sheetSelect.value);
+    sheetSelect.onchange = () => void loadBuiltInSheet(sheetSelect.value);
     findEmptyButton.onclick = () => selectNextEmptyCell();
     uploadSheetButton.onclick = () => uploadSheetInput.click();
     uploadInsertButton.onclick = () => uploadInsertInput.click();
@@ -393,6 +427,7 @@ function buildGlyphEditor(): void {
     };
 
     insertButton.onclick = () => insertSelectedImage();
+    copyGlyphButton.onclick = () => void copySelectedGlyphText();
     clearButton.onclick = () => clearSelectedCell();
     downloadButton.onclick = () => downloadWorkingSheet();
 
