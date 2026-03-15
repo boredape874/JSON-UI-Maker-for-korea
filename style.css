@@ -517,6 +517,41 @@ input[type="file"] {
     padding: 0;
 }
 
+.hudEditorHelpCard {
+    margin-top: 14px;
+    padding: 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    outline: 1px solid rgba(255, 255, 255, 0.08);
+    color: white;
+}
+
+.hudEditorInspectorCard {
+    margin-top: 0;
+    margin-bottom: 12px;
+}
+
+.hudEditorHelpText,
+.hudEditorHelpList,
+.hudEditorHelpExamples {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #d8deeb;
+}
+
+.hudEditorHelpList,
+.hudEditorHelpExamples {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.hudEditorHelpExample code,
+.hudEditorHelpList code {
+    color: #ffe28b;
+}
+
 @media (max-width: 960px) {
     .glyphEditorLayout {
         flex-direction: column;
