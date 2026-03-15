@@ -368,6 +368,16 @@ input[type="file"] {
     margin-top: 12px;
 }
 
+.hudEditorSectionSpacer {
+    margin-top: 14px;
+}
+
+.hudEditorTemplateButtons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
 .hudEditorPreviewFrame {
     width: min(70vw, 860px);
     max-width: 860px;
@@ -459,6 +469,21 @@ input[type="file"] {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.hudEditorProgressShell {
+    width: 100%;
+    height: 100%;
+    padding: 3px;
+    box-sizing: border-box;
+}
+
+.hudEditorProgressFill {
+    width: 100%;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #ff5a5a, #ff9b71);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
 }
 
 .hudEditorInspectorFields {

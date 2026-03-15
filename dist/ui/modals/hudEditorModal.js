@@ -6,6 +6,67 @@ const BINDING_KEYS = {
     subtitle: "#hud_subtitle_text_string",
     actionbar: "#hud_actionbar_text_string",
 };
+const OVERLAY_TEMPLATES = {
+    info: {
+        label: "Info Panel",
+        sourceType: "title",
+        bindingKey: BINDING_KEYS.title,
+        parseMode: "trigger",
+        outputType: "label",
+        triggerText: "info:",
+        sampleText: "info: Notice",
+        preserveValue: true,
+        stripTriggerText: true,
+        background: true,
+        color: "#ffffff",
+    },
+    coin: {
+        label: "Coin Panel",
+        sourceType: "title",
+        bindingKey: BINDING_KEYS.title,
+        parseMode: "slice",
+        outputType: "label",
+        triggerText: "coin:",
+        sampleText: "coin:1200",
+        preserveValue: true,
+        stripTriggerText: true,
+        sliceStart: 200,
+        sliceEnd: 400,
+        background: true,
+        color: "#f6d96b",
+    },
+    hp_text: {
+        label: "HP Text Panel",
+        sourceType: "title",
+        bindingKey: BINDING_KEYS.title,
+        parseMode: "slice",
+        outputType: "label",
+        triggerText: "hp_text:",
+        sampleText: "hp_text:84/100",
+        preserveValue: true,
+        stripTriggerText: true,
+        sliceStart: 400,
+        sliceEnd: 600,
+        background: false,
+        color: "#ffffff",
+    },
+    hp_clip: {
+        label: "HP Bar Panel",
+        sourceType: "title",
+        bindingKey: BINDING_KEYS.title,
+        parseMode: "slice",
+        outputType: "progress_bar",
+        triggerText: "hp_clip:",
+        sampleText: "hp_clip:84",
+        preserveValue: true,
+        stripTriggerText: true,
+        sliceStart: 600,
+        sliceEnd: 800,
+        background: true,
+        color: "#ffffff",
+        maxValue: 100,
+    },
+};
 function createDefaultOverlays() {
     return [
         {
@@ -13,10 +74,15 @@ function createDefaultOverlays() {
             label: "Title Panel",
             sourceType: "title",
             bindingKey: BINDING_KEYS.title,
+            parseMode: "trigger",
+            outputType: "label",
             triggerText: "info:",
             sampleText: "info: Main Title",
             preserveValue: true,
             stripTriggerText: true,
+            sliceStart: 0,
+            sliceEnd: 200,
+            maxValue: 100,
             x: 500,
             y: 120,
             width: 500,
@@ -31,10 +97,15 @@ function createDefaultOverlays() {
             label: "Subtitle Panel",
             sourceType: "subtitle",
             bindingKey: BINDING_KEYS.subtitle,
+            parseMode: "trigger",
+            outputType: "label",
             triggerText: "",
             sampleText: "Subtitle",
             preserveValue: true,
             stripTriggerText: false,
+            sliceStart: 0,
+            sliceEnd: 200,
+            maxValue: 100,
             x: 540,
             y: 200,
             width: 420,
@@ -49,10 +120,15 @@ function createDefaultOverlays() {
             label: "Actionbar Panel",
             sourceType: "actionbar",
             bindingKey: BINDING_KEYS.actionbar,
+            parseMode: "trigger",
+            outputType: "label",
             triggerText: "",
             sampleText: "Actionbar Text",
             preserveValue: true,
             stripTriggerText: false,
+            sliceStart: 0,
+            sliceEnd: 200,
+            maxValue: 100,
             x: 560,
             y: 640,
             width: 380,
@@ -91,6 +167,17 @@ function escapeHtml(text) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
 }
+function cloneDefaults() {
+    state.overlays = createDefaultOverlays();
+    state.selectedId = "title";
+}
+function applyTemplate(name) {
+    const overlay = getSelectedOverlay();
+    Object.assign(overlay, OVERLAY_TEMPLATES[name]);
+    overlay.bindingKey = BINDING_KEYS[overlay.sourceType];
+    renderHudEditor();
+    new Notification(`Applied ${name} template.`, 2200, "notif");
+}
 function buildHudEditor() {
     const form = getForm();
     if (form.dataset.initialized === "true")
@@ -102,6 +189,13 @@ function buildHudEditor() {
                 <div class="glyphEditorMetaCard">
                     <div class="hudEditorSectionTitle">HUD Elements</div>
                     <div class="hudEditorOverlayList"></div>
+                    <div class="hudEditorSectionTitle hudEditorSectionSpacer">Templates</div>
+                    <div class="hudEditorTemplateButtons">
+                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="info">Info</button>
+                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="coin">Coin</button>
+                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="hp_text">HP Text</button>
+                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="hp_clip">HP Bar</button>
+                    </div>
                     <div class="hudEditorSidebarActions">
                         <button type="button" class="propertyInputButton hudEditorResetBtn">Reset Layout</button>
                     </div>
@@ -110,7 +204,7 @@ function buildHudEditor() {
 
             <div class="hudEditorCanvasPanel">
                 <div class="glyphEditorCanvasHeader">
-                    Move the title, subtitle, and actionbar panels directly in the preview. Use Trigger Text, Preserve, and Strip Trigger on the right to control how each HUD panel reacts.
+                    Drag the title, subtitle, and actionbar panels in the preview. Use Trigger or Slice mode on the right, then export a HUD JSON snippet.
                 </div>
                 <div class="hudEditorPreviewFrame">
                     <div class="hudEditorPreview" id="hudEditorPreview"></div>
@@ -130,11 +224,13 @@ function buildHudEditor() {
         </div>
     `;
     form.querySelector(".hudEditorResetBtn").onclick = () => {
-        state.overlays = createDefaultOverlays();
-        state.selectedId = "title";
+        cloneDefaults();
         renderHudEditor();
         new Notification("Reset HUD layout.", 2200, "notif");
     };
+    form.querySelectorAll(".hudTemplateBtn").forEach((button) => {
+        button.onclick = () => applyTemplate(button.dataset.template);
+    });
     form.querySelector(".hudEditorCopyBtn").onclick = async () => {
         try {
             await navigator.clipboard.writeText(generateHudJson());
@@ -160,6 +256,11 @@ function renderHudEditor() {
     renderPreview();
     renderInspector();
 }
+function getOverlaySummary(overlay) {
+    const modeLabel = overlay.parseMode === "slice" ? `${overlay.sliceStart}-${overlay.sliceEnd}` : (overlay.triggerText ? `contains "${overlay.triggerText}"` : "when text exists");
+    const outputLabel = overlay.outputType === "progress_bar" ? "bar" : overlay.preserveValue ? "preserve" : "direct";
+    return `${modeLabel} · ${outputLabel}`;
+}
 function renderOverlayList() {
     const container = getForm().querySelector(".hudEditorOverlayList");
     if (!container)
@@ -167,12 +268,10 @@ function renderOverlayList() {
     container.innerHTML = state.overlays
         .map((overlay) => {
         const activeClass = overlay.id === state.selectedId ? " hudEditorOverlayListItemActive" : "";
-        const triggerLabel = overlay.triggerText ? `contains "${escapeHtml(overlay.triggerText)}"` : "when text exists";
-        const preserveLabel = overlay.preserveValue ? "preserve" : "direct";
         return `
                 <button type="button" class="hudEditorOverlayListItem${activeClass}" data-overlay-id="${overlay.id}">
                     <span>${escapeHtml(overlay.label)}</span>
-                    <span>${triggerLabel} · ${preserveLabel}</span>
+                    <span>${escapeHtml(getOverlaySummary(overlay))}</span>
                 </button>
             `;
     })
@@ -197,7 +296,10 @@ function renderPreview() {
         .filter((overlay) => overlay.visible)
         .map((overlay) => {
         const activeClass = overlay.id === state.selectedId ? " hudEditorOverlayActive" : "";
-        const bgClass = overlay.background ? " hudEditorOverlayWithBg" : "";
+        const bgClass = overlay.background || overlay.outputType === "progress_bar" ? " hudEditorOverlayWithBg" : "";
+        const content = overlay.outputType === "progress_bar"
+            ? `<div class="hudEditorProgressShell"><div class="hudEditorProgressFill" style="width:70%"></div></div>`
+            : `<div class="hudEditorOverlayLabel">${escapeHtml(overlay.sampleText)}</div>`;
         return `
                     <div
                         class="hudEditorOverlay${activeClass}${bgClass}"
@@ -211,7 +313,7 @@ function renderPreview() {
                             color:${overlay.color};
                         "
                     >
-                        <div class="hudEditorOverlayLabel">${escapeHtml(overlay.sampleText)}</div>
+                        ${content}
                     </div>
                 `;
     })
@@ -257,6 +359,8 @@ function renderInspector() {
     if (!container)
         return;
     const overlay = getSelectedOverlay();
+    const sliceDisabled = overlay.parseMode !== "slice" ? "disabled" : "";
+    const triggerDisabled = overlay.parseMode !== "trigger" ? "disabled" : "";
     container.innerHTML = `
         <label class="hudEditorFieldLabel">Name</label>
         <input class="hudEditorFieldInput" type="text" data-field="label" value="${escapeHtml(overlay.label)}">
@@ -271,8 +375,26 @@ function renderInspector() {
         <label class="hudEditorFieldLabel">Binding Key</label>
         <input class="hudEditorFieldInput" type="text" data-field="bindingKey" value="${escapeHtml(overlay.bindingKey)}">
 
+        <label class="hudEditorFieldLabel">Parse Mode</label>
+        <select class="hudEditorFieldInput" data-field="parseMode">
+            <option value="trigger" ${overlay.parseMode === "trigger" ? "selected" : ""}>Trigger</option>
+            <option value="slice" ${overlay.parseMode === "slice" ? "selected" : ""}>Slice</option>
+        </select>
+
+        <label class="hudEditorFieldLabel">Output</label>
+        <select class="hudEditorFieldInput" data-field="outputType">
+            <option value="label" ${overlay.outputType === "label" ? "selected" : ""}>Label</option>
+            <option value="progress_bar" ${overlay.outputType === "progress_bar" ? "selected" : ""}>Progress Bar</option>
+        </select>
+
         <label class="hudEditorFieldLabel">Trigger Text</label>
-        <input class="hudEditorFieldInput" type="text" data-field="triggerText" value="${escapeHtml(overlay.triggerText)}" placeholder="example: info:">
+        <input class="hudEditorFieldInput" type="text" data-field="triggerText" value="${escapeHtml(overlay.triggerText)}" placeholder="example: info:" ${triggerDisabled}>
+
+        <label class="hudEditorFieldLabel">Slice Start</label>
+        <input class="hudEditorFieldInput" type="number" data-field="sliceStart" value="${overlay.sliceStart}" ${sliceDisabled}>
+
+        <label class="hudEditorFieldLabel">Slice End</label>
+        <input class="hudEditorFieldInput" type="number" data-field="sliceEnd" value="${overlay.sliceEnd}" ${sliceDisabled}>
 
         <label class="hudEditorFieldLabel">Preview Text</label>
         <input class="hudEditorFieldInput" type="text" data-field="sampleText" value="${escapeHtml(overlay.sampleText)}">
@@ -282,6 +404,9 @@ function renderInspector() {
 
         <label class="hudEditorFieldLabel">Strip Trigger</label>
         <input class="hudEditorFieldCheckbox" type="checkbox" data-field="stripTriggerText" ${overlay.stripTriggerText ? "checked" : ""}>
+
+        <label class="hudEditorFieldLabel">Max Value</label>
+        <input class="hudEditorFieldInput" type="number" data-field="maxValue" value="${overlay.maxValue}" ${overlay.outputType !== "progress_bar" ? "disabled" : ""}>
 
         <label class="hudEditorFieldLabel">Left</label>
         <input class="hudEditorFieldInput" type="number" data-field="x" value="${overlay.x}">
@@ -315,6 +440,15 @@ function renderInspector() {
                 selected.sourceType = input.value;
                 selected.bindingKey = BINDING_KEYS[selected.sourceType];
             }
+            else if (field === "parseMode") {
+                selected.parseMode = input.value;
+            }
+            else if (field === "outputType") {
+                selected.outputType = input.value;
+                if (selected.outputType === "progress_bar") {
+                    selected.background = true;
+                }
+            }
             else if (input instanceof HTMLInputElement && input.type === "checkbox") {
                 selected[field] = input.checked;
             }
@@ -335,24 +469,125 @@ function colorHexToRgb(color) {
     const bigint = Number.parseInt(normalized, 16);
     return [((bigint >> 16) & 255) / 255, ((bigint >> 8) & 255) / 255, (bigint & 255) / 255];
 }
+function escapeBindingText(value) {
+    return value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+}
 function createVisibilityExpression(bindingKey, triggerText) {
     if (!triggerText.trim()) {
         return `(not (${bindingKey} = ''))`;
     }
-    const escaped = triggerText.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+    const escaped = escapeBindingText(triggerText);
     return `(not ((${bindingKey} - '${escaped}') = ${bindingKey}))`;
 }
 function createPreserveVisibilityExpression(bindingKey, triggerText) {
     const containsExpression = createVisibilityExpression(bindingKey, triggerText);
     return `(not (${bindingKey} = #preserved_text) and ${containsExpression})`;
 }
+function buildSliceExpression(sourceValue, start, end) {
+    const safeEnd = Math.max(start, end);
+    const safeStart = Math.max(0, start);
+    if (safeStart <= 0) {
+        return `('%.${safeEnd}s' * ${sourceValue})`;
+    }
+    return `(('%.${safeEnd}s' * ${sourceValue}) - ('%.${safeStart}s' * ${sourceValue}))`;
+}
 function createLabelTextExpression(overlay) {
     const sourceValue = overlay.preserveValue ? "#preserved_text" : overlay.bindingKey;
+    const baseExpression = overlay.parseMode === "slice" ? buildSliceExpression(sourceValue, overlay.sliceStart, overlay.sliceEnd) : sourceValue;
     if (!overlay.stripTriggerText || !overlay.triggerText.trim()) {
-        return sourceValue;
+        return baseExpression;
     }
-    const escaped = overlay.triggerText.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-    return `(${sourceValue} - '${escaped}')`;
+    const escaped = escapeBindingText(overlay.triggerText);
+    return `(${baseExpression} - '${escaped}')`;
+}
+function createDataControlBindings(overlay) {
+    if (!overlay.preserveValue)
+        return [];
+    const visibilityExpression = overlay.parseMode === "slice"
+        ? `(not (${overlay.bindingKey} = #preserved_text) and (not (${overlay.bindingKey} = ''))) `
+        : createPreserveVisibilityExpression(overlay.bindingKey, overlay.triggerText);
+    return [
+        {
+            binding_name: overlay.bindingKey,
+        },
+        {
+            binding_name: overlay.bindingKey,
+            binding_name_override: "#preserved_text",
+            binding_condition: "visibility_changed",
+        },
+        {
+            binding_type: "view",
+            source_property_name: visibilityExpression.trim(),
+            target_property_name: "#visible",
+        },
+    ];
+}
+function createLabelBindings(overlay, dataControlName) {
+    if (overlay.preserveValue) {
+        return [
+            {
+                binding_type: "view",
+                source_control_name: dataControlName,
+                source_property_name: createLabelTextExpression(overlay),
+                target_property_name: "#text",
+            },
+        ];
+    }
+    return [
+        {
+            binding_name: overlay.bindingKey,
+        },
+        {
+            binding_type: "view",
+            source_property_name: createLabelTextExpression(overlay),
+            target_property_name: "#text",
+        },
+        {
+            binding_type: "view",
+            source_property_name: overlay.parseMode === "slice" ? `(not (${overlay.bindingKey} = ''))` : createVisibilityExpression(overlay.bindingKey, overlay.triggerText),
+            target_property_name: "#visible",
+        },
+    ];
+}
+function createProgressBindings(overlay, dataControlName) {
+    const sourceTextExpression = createLabelTextExpression(overlay);
+    const healthSource = `(${sourceTextExpression} * 1)`;
+    const bindings = [
+        {
+            binding_type: "view",
+            source_property_name: healthSource,
+            target_property_name: "#health",
+        },
+        {
+            binding_type: "view",
+            source_property_name: `(((${overlay.maxValue} - #health) / ${overlay.maxValue}))`,
+            target_property_name: "#clip_ratio",
+        },
+    ];
+    if (overlay.preserveValue) {
+        bindings.unshift({
+            binding_type: "view",
+            source_control_name: dataControlName,
+            source_property_name: sourceTextExpression,
+            target_property_name: "#raw_value",
+        });
+    }
+    else {
+        bindings.unshift({
+            binding_type: "view",
+            source_property_name: sourceTextExpression,
+            target_property_name: "#raw_value",
+        });
+        bindings.unshift({
+            binding_name: overlay.bindingKey,
+        });
+        bindings.push({
+            binding_type: "view",
+            source_property_name: overlay.parseMode === "slice" ? `(not (${overlay.bindingKey} = ''))` : createVisibilityExpression(overlay.bindingKey, overlay.triggerText),
+            target_property_name: "#visible",
+        });
+    }
+    return bindings;
 }
 function createOverlayControl(overlay) {
     const [r, g, b] = colorHexToRgb(overlay.color);
@@ -360,31 +595,8 @@ function createOverlayControl(overlay) {
     const backgroundControlName = `${overlay.id}_background`;
     const labelControlName = `${overlay.id}_label`;
     const dataControlName = `${overlay.id}_data_control`;
-    const labelBindings = overlay.preserveValue
-        ? [
-            {
-                binding_type: "view",
-                source_control_name: dataControlName,
-                source_property_name: createLabelTextExpression(overlay),
-                target_property_name: "#text",
-            },
-        ]
-        : [
-            {
-                binding_name: overlay.bindingKey,
-            },
-            {
-                binding_type: "view",
-                source_property_name: createLabelTextExpression(overlay),
-                target_property_name: "#text",
-            },
-            {
-                binding_type: "view",
-                source_property_name: createVisibilityExpression(overlay.bindingKey, overlay.triggerText),
-                target_property_name: "#visible",
-            },
-        ];
-    const labelControls = overlay.preserveValue
+    const fillControlName = `${overlay.id}_fill`;
+    const dataControl = overlay.preserveValue
         ? [
             {
                 [dataControlName]: {
@@ -393,25 +605,36 @@ function createOverlayControl(overlay) {
                     property_bag: {
                         "#preserved_text": "",
                     },
-                    bindings: [
-                        {
-                            binding_name: overlay.bindingKey,
-                        },
-                        {
-                            binding_name: overlay.bindingKey,
-                            binding_name_override: "#preserved_text",
-                            binding_condition: "visibility_changed",
-                        },
-                        {
-                            binding_type: "view",
-                            source_property_name: createPreserveVisibilityExpression(overlay.bindingKey, overlay.triggerText),
-                            target_property_name: "#visible",
-                        },
-                    ],
+                    bindings: createDataControlBindings(overlay),
                 },
             },
         ]
         : [];
+    const mainControl = overlay.outputType === "progress_bar"
+        ? {
+            [fillControlName]: {
+                type: "image",
+                size: ["100%", "100%"],
+                texture: "textures/ui/hp_bar/hp_bar_full",
+                clip_ratio: 0,
+                clip_direction: "left",
+                clip_pixelperfect: false,
+                bindings: createProgressBindings(overlay, dataControlName),
+            },
+        }
+        : {
+            [labelControlName]: {
+                type: "label",
+                text: "#text",
+                size: ["100%", "default"],
+                offset: [0, Math.max(0, Math.round((overlay.height - 20) / 2))],
+                color: [r, g, b],
+                text_alignment: "center",
+                shadow: true,
+                controls: dataControl,
+                bindings: createLabelBindings(overlay, dataControlName),
+            },
+        };
     return {
         [controlName]: {
             type: "panel",
@@ -421,31 +644,19 @@ function createOverlayControl(overlay) {
             offset: [overlay.x, overlay.y],
             layer: overlay.layer,
             controls: [
-                ...(overlay.background
+                ...(overlay.background || overlay.outputType === "progress_bar"
                     ? [
                         {
                             [backgroundControlName]: {
                                 type: "image",
                                 size: ["100%", "100%"],
-                                texture: "textures/ui/hud_tip_text_background",
+                                texture: overlay.outputType === "progress_bar" ? "textures/ui/hp_bar/hp_bar_bg" : "textures/ui/hud_tip_text_background",
                                 alpha: 0.75,
                             },
                         },
                     ]
                     : []),
-                {
-                    [labelControlName]: {
-                        type: "label",
-                        text: "#text",
-                        size: ["100%", "default"],
-                        offset: [0, Math.max(0, Math.round((overlay.height - 20) / 2))],
-                        color: [r, g, b],
-                        text_alignment: "center",
-                        shadow: true,
-                        controls: labelControls,
-                        bindings: labelBindings,
-                    },
-                },
+                mainControl,
             ],
         },
     };
