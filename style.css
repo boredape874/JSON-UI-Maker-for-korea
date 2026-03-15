@@ -580,6 +580,96 @@ input[type="file"] {
     }
 }
 
+@media (max-width: 1100px) {
+    .main {
+        flex-direction: column;
+        width: 100%;
+        min-width: 0;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .buttons,
+    .scripter,
+    .properties,
+    .canvasViewport {
+        width: calc(100vw - 20px);
+        max-width: calc(100vw - 20px);
+        min-width: 0;
+        margin: 10px;
+        box-sizing: border-box;
+    }
+
+    .buttons {
+        flex: 0 1 auto;
+    }
+
+    .scripter {
+        flex: 0 1 auto;
+        min-height: 520px;
+        height: auto;
+        margin-right: 10px;
+    }
+
+    .properties {
+        margin-top: 0;
+        margin-right: 10px;
+    }
+
+    .bindings {
+        min-height: 220px;
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .toolMenu {
+        width: 100%;
+        padding-bottom: 0;
+    }
+
+    .toolMenuSummary {
+        display: none;
+    }
+
+    .toolMenuPanel {
+        position: static;
+        top: auto;
+        left: auto;
+        width: 100%;
+        min-width: 0;
+        margin-top: 8px;
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    .toolMenuPanel.importers {
+        width: 100%;
+    }
+
+    .canvasViewport {
+        margin-top: 0;
+    }
+
+    .main_window_outline {
+        margin: 0;
+    }
+
+    .scripter_buttons {
+        flex-direction: column;
+    }
+
+    .scripter_buttons > * {
+        width: 100%;
+    }
+
+    .auth-status-inline {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+
 .toolMenu {
     position: relative;
     padding-bottom: 6px;
@@ -977,6 +1067,14 @@ input[type="file"] {
     width: max-content;
     min-width: max-content;
     gap: 0;
+}
+
+.canvasViewport {
+    margin: 10px;
+    max-width: calc(100vw - 20px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    box-sizing: border-box;
 }
 
 .scripter {

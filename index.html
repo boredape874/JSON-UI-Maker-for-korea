@@ -279,9 +279,11 @@
 
         </div>
 
-        <div class="main_window_outline">
-            <div class="main_window" id="main_window">
-                <img title="Background" src="background.png" width="100%" height="100%" class="bg_image" id="bg_image" alt="Background">
+        <div class="canvasViewport">
+            <div class="main_window_outline">
+                <div class="main_window" id="main_window">
+                    <img title="Background" src="background.png" width="100%" height="100%" class="bg_image" id="bg_image" alt="Background">
+                </div>
             </div>
         </div>
 
@@ -531,6 +533,7 @@
 
         @media (max-width: 768px) {
             .top-navbar {
+                position: sticky;
                 flex-direction: column;
                 padding: 10px;
                 overflow-x: visible;
@@ -549,7 +552,7 @@
             }
 
             .main {
-                margin-top: 220px;
+                margin-top: 12px;
             }
         }
     </style>
