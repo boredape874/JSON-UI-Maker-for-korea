@@ -303,7 +303,23 @@ function overlayControl(overlay) {
     return { [controlName]: { type: "panel", size: [overlay.width, overlay.height], anchor_from: "top_left", anchor_to: "top_left", offset: [overlay.x, overlay.y], layer: overlay.layer, controls: [...(overlay.background || overlay.outputType === "progress_bar" ? [{ [`${overlay.id}_background`]: { type: "image", size: ["100%", "100%"], texture: overlay.outputType === "progress_bar" ? "textures/ui/hp_bar/hp_bar_bg" : "textures/ui/hud_tip_text_background", alpha: 0.75 } }] : []), contentControl] } };
 }
 function generateHudJson() {
-    const payload = { namespace: "hud_text_editor", hud_text_editor: { type: "panel", size: ["100%", "100%"], controls: state.overlays.filter((overlay) => overlay.visible).map((overlay) => ({ [`${overlay.id}_control@hud_text_editor.${overlay.id}_control`]: {} })) } };
+    const payload = {
+        namespace: "hud",
+        root_panel: {
+            modifications: [{
+                    array_name: "controls",
+                    operation: "insert_back",
+                    value: [{ "hud_text_editor@hud.hud_text_editor_panel": {} }],
+                }],
+        },
+        hud_text_editor_panel: {
+            type: "panel",
+            size: ["100%", "100%"],
+            controls: state.overlays
+                .filter((overlay) => overlay.visible)
+                .map((overlay) => ({ [`${overlay.id}_control@hud.${overlay.id}_control`]: {} })),
+        },
+    };
     for (const overlay of state.overlays)
         Object.assign(payload, overlayControl(overlay));
     return JSON.stringify(payload, null, 2);
