@@ -15,6 +15,8 @@ function createDefaultOverlays() {
             bindingKey: BINDING_KEYS.title,
             triggerText: "info:",
             sampleText: "info: Main Title",
+            preserveValue: true,
+            stripTriggerText: true,
             x: 500,
             y: 120,
             width: 500,
@@ -31,6 +33,8 @@ function createDefaultOverlays() {
             bindingKey: BINDING_KEYS.subtitle,
             triggerText: "",
             sampleText: "Subtitle",
+            preserveValue: true,
+            stripTriggerText: false,
             x: 540,
             y: 200,
             width: 420,
@@ -47,6 +51,8 @@ function createDefaultOverlays() {
             bindingKey: BINDING_KEYS.actionbar,
             triggerText: "",
             sampleText: "Actionbar Text",
+            preserveValue: true,
+            stripTriggerText: false,
             x: 560,
             y: 640,
             width: 380,
@@ -104,7 +110,7 @@ function buildHudEditor() {
 
             <div class="hudEditorCanvasPanel">
                 <div class="glyphEditorCanvasHeader">
-                    Move the title, subtitle, and actionbar panels directly in the preview. Use the trigger field on the right to decide when each panel should appear.
+                    Move the title, subtitle, and actionbar panels directly in the preview. Use Trigger Text, Preserve, and Strip Trigger on the right to control how each HUD panel reacts.
                 </div>
                 <div class="hudEditorPreviewFrame">
                     <div class="hudEditorPreview" id="hudEditorPreview"></div>
@@ -162,10 +168,11 @@ function renderOverlayList() {
         .map((overlay) => {
         const activeClass = overlay.id === state.selectedId ? " hudEditorOverlayListItemActive" : "";
         const triggerLabel = overlay.triggerText ? `contains "${escapeHtml(overlay.triggerText)}"` : "when text exists";
+        const preserveLabel = overlay.preserveValue ? "preserve" : "direct";
         return `
                 <button type="button" class="hudEditorOverlayListItem${activeClass}" data-overlay-id="${overlay.id}">
                     <span>${escapeHtml(overlay.label)}</span>
-                    <span>${triggerLabel}</span>
+                    <span>${triggerLabel} · ${preserveLabel}</span>
                 </button>
             `;
     })
@@ -270,6 +277,12 @@ function renderInspector() {
         <label class="hudEditorFieldLabel">Preview Text</label>
         <input class="hudEditorFieldInput" type="text" data-field="sampleText" value="${escapeHtml(overlay.sampleText)}">
 
+        <label class="hudEditorFieldLabel">Preserve</label>
+        <input class="hudEditorFieldCheckbox" type="checkbox" data-field="preserveValue" ${overlay.preserveValue ? "checked" : ""}>
+
+        <label class="hudEditorFieldLabel">Strip Trigger</label>
+        <input class="hudEditorFieldCheckbox" type="checkbox" data-field="stripTriggerText" ${overlay.stripTriggerText ? "checked" : ""}>
+
         <label class="hudEditorFieldLabel">Left</label>
         <input class="hudEditorFieldInput" type="number" data-field="x" value="${overlay.x}">
 
@@ -329,11 +342,76 @@ function createVisibilityExpression(bindingKey, triggerText) {
     const escaped = triggerText.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
     return `(not ((${bindingKey} - '${escaped}') = ${bindingKey}))`;
 }
+function createPreserveVisibilityExpression(bindingKey, triggerText) {
+    const containsExpression = createVisibilityExpression(bindingKey, triggerText);
+    return `(not (${bindingKey} = #preserved_text) and ${containsExpression})`;
+}
+function createLabelTextExpression(overlay) {
+    const sourceValue = overlay.preserveValue ? "#preserved_text" : overlay.bindingKey;
+    if (!overlay.stripTriggerText || !overlay.triggerText.trim()) {
+        return sourceValue;
+    }
+    const escaped = overlay.triggerText.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+    return `(${sourceValue} - '${escaped}')`;
+}
 function createOverlayControl(overlay) {
     const [r, g, b] = colorHexToRgb(overlay.color);
     const controlName = `${overlay.id}_control`;
     const backgroundControlName = `${overlay.id}_background`;
     const labelControlName = `${overlay.id}_label`;
+    const dataControlName = `${overlay.id}_data_control`;
+    const labelBindings = overlay.preserveValue
+        ? [
+            {
+                binding_type: "view",
+                source_control_name: dataControlName,
+                source_property_name: createLabelTextExpression(overlay),
+                target_property_name: "#text",
+            },
+        ]
+        : [
+            {
+                binding_name: overlay.bindingKey,
+            },
+            {
+                binding_type: "view",
+                source_property_name: createLabelTextExpression(overlay),
+                target_property_name: "#text",
+            },
+            {
+                binding_type: "view",
+                source_property_name: createVisibilityExpression(overlay.bindingKey, overlay.triggerText),
+                target_property_name: "#visible",
+            },
+        ];
+    const labelControls = overlay.preserveValue
+        ? [
+            {
+                [dataControlName]: {
+                    type: "panel",
+                    size: [0, 0],
+                    property_bag: {
+                        "#preserved_text": "",
+                    },
+                    bindings: [
+                        {
+                            binding_name: overlay.bindingKey,
+                        },
+                        {
+                            binding_name: overlay.bindingKey,
+                            binding_name_override: "#preserved_text",
+                            binding_condition: "visibility_changed",
+                        },
+                        {
+                            binding_type: "view",
+                            source_property_name: createPreserveVisibilityExpression(overlay.bindingKey, overlay.triggerText),
+                            target_property_name: "#visible",
+                        },
+                    ],
+                },
+            },
+        ]
+        : [];
     return {
         [controlName]: {
             type: "panel",
@@ -364,20 +442,8 @@ function createOverlayControl(overlay) {
                         color: [r, g, b],
                         text_alignment: "center",
                         shadow: true,
-                        bindings: [
-                            {
-                                binding_name: overlay.bindingKey,
-                                binding_name_override: "#text",
-                            },
-                            {
-                                binding_name: overlay.bindingKey,
-                            },
-                            {
-                                binding_type: "view",
-                                source_property_name: createVisibilityExpression(overlay.bindingKey, overlay.triggerText),
-                                target_property_name: "#visible",
-                            },
-                        ],
+                        controls: labelControls,
+                        bindings: labelBindings,
                     },
                 },
             ],
