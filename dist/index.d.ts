@@ -34,6 +34,7 @@ export declare class Builder {
     static openPasteFormModal(): Promise<void>;
     static importUiWorkspace(): Promise<void>;
     static openGlyphEditorModal(): Promise<void>;
+    static openHudEditorModal(): Promise<void>;
     static formatBindingsArea(): void;
     static insertHudBindingSnippet(kind: "show" | "hide" | "text"): void;
     static downloadServerForm(type: "copy" | "download"): void;

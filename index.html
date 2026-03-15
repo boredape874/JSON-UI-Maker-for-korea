@@ -13,9 +13,10 @@
     <!-- Top Navigation Bar -->
     <div class="top-navbar">
         <div class="navbar-left">
-            <details class="toolMenu">
-                <summary class="toolMenuSummary">도구</summary>
+            <div class="toolMenu">
+                <div class="toolMenuSummary">도구 목록</div>
                 <div class="importers toolMenuPanel">
+                    <button type="button" class="propertyInputButton" onclick="Builder.openHudEditorModal()">HUD Editor</button>
                     <label class="ui_textures_importer">
                         <input title="Import Textures" type="file" id="ui_textures_importer"
                             onchange="Builder.handleUiTexturesUpload()" webkitdirectory directory multiple />
@@ -35,7 +36,7 @@
                     <button type="button" class="propertyInputButton" onclick="Builder.openPasteFormModal()">Paste Form Code</button>
                     <button type="button" class="propertyInputButton" onclick="Builder.openGlyphEditorModal()">Glyph Editor</button>
                 </div>
-            </details>
+            </div>
         </div>
 
         <div class="navbar-center">
@@ -153,6 +154,16 @@
     </div>
     <!--------------->
 
+    <!-- The HUD Editor Modal -->
+    <div id="modalHudEditor" class="modal">
+        <div class="modal-content hudEditorModalContent">
+            <span id="modalHudEditorClose" class="modalClose">&times;</span>
+            <h2 class="modalHeader">HUD Editor</h2>
+            <div class="modalHudEditorForm"></div>
+        </div>
+    </div>
+    <!--------------->
+
     <!-- The Load Texture Presets Modal -->
     <div id="modalLoadTexturePresets" class="modal">
         <div class="modal-content">
@@ -201,12 +212,6 @@
     "target_property_name": "#visible"
   }
 ]</pre><br><br>
-
-                <label style="font-weight: 500; color: rgb(255, 255, 255); font-size: 20px;">HUD 문자열 도구</label><br><br>
-                <label class="modalOptionLabel">오른쪽 Bindings 아래의 "HUD 텍스트 빠른 추가" 박스를 쓰면 title, subtitle, actionbar 반응형 바인딩을 빠르게 붙일 수 있습니다.</label><br><br>
-                <label class="modalOptionLabel">"포함 시 표시"는 지정한 문자열이 들어올 때만 요소를 보이게 하고, "포함 시 숨김"은 반대로 숨깁니다.</label><br><br>
-                <label class="modalOptionLabel">"텍스트 연결"은 들어온 HUD 문자열 전체를 현재 라벨의 텍스트로 바로 연결할 때 씁니다.</label><br><br>
-                <label class="modalOptionLabel" style="color: #9dd1ff;">액션바는 리소스팩 구조에 따라 키 이름이 다를 수 있으니, 필요하면 바인딩 키 입력칸에서 직접 수정하세요.</label><br><br>
 
                 <label style="font-weight: 500; color: rgb(255, 255, 255); font-size: 20px;">General
                     Issues:</label><br><br>
@@ -300,35 +305,6 @@
             <div id="errorMessage" title="Default Error Message" style="visibility: hidden; color: #7e0000;">Warnings ⚠️
             </div>
             <textarea spellcheck="false" class="bindings" id="bindings"></textarea>
-
-            <div class="hudBindingHelper">
-                <div class="hudBindingHelperTitle">HUD 텍스트 빠른 추가</div>
-                <div class="hudBindingHelperDesc">title, subtitle, actionbar 문구를 기준으로 현재 선택한 요소의 바인딩 스니펫을 빠르게 추가합니다.</div>
-                <div class="hudBindingHelperGrid">
-                    <label class="hudBindingHelperLabel" for="hudBindingSource">감시 대상</label>
-                    <select id="hudBindingSource" class="hudBindingHelperInput">
-                        <option value="title">Title</option>
-                        <option value="subtitle">Subtitle</option>
-                        <option value="actionbar">Actionbar</option>
-                    </select>
-
-                    <label class="hudBindingHelperLabel" for="hudBindingSourceKey">바인딩 키</label>
-                    <input id="hudBindingSourceKey" class="hudBindingHelperInput" type="text" value="#hud_title_text_string">
-
-                    <label class="hudBindingHelperLabel" for="hudBindingMatchText">감지 문자열</label>
-                    <input id="hudBindingMatchText" class="hudBindingHelperInput" type="text" placeholder="예: !info:">
-                </div>
-
-                <div class="hudBindingHelperActions">
-                    <button type="button" class="propertyInputButton" onclick="Builder.insertHudBindingSnippet('show')">포함 시 표시</button>
-                    <button type="button" class="propertyInputButton" onclick="Builder.insertHudBindingSnippet('hide')">포함 시 숨김</button>
-                    <button type="button" class="propertyInputButton" onclick="Builder.insertHudBindingSnippet('text')">텍스트 연결</button>
-                </div>
-
-                <div class="hudBindingHelperNote">
-                    액션바는 팩 구조에 따라 실제 키 이름이 다를 수 있습니다. 필요하면 바인딩 키를 직접 수정해서 쓰세요.
-                </div>
-            </div>
 
             <div style="display:flex; flex-direction: row; justify-content: center; align-items: center">
                 <div style="font-size: 20px; color: rgb(39, 165, 255);">TAB</div>&nbsp To indent

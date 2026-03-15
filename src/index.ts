@@ -31,6 +31,7 @@ import { saveFormsModal } from "./ui/modals/saveForms.js";
 import { pasteFormModal } from "./ui/modals/pasteFormModal.js";
 import { uiWorkspaceModal } from "./ui/modals/uiWorkspaceModal.js";
 import { glyphEditorModal } from "./ui/modals/glyphEditorModal.js";
+import { hudEditorModal } from "./ui/modals/hudEditorModal.js";
 import "./ui/modals/settings.js";
 import { authModal } from "./ui/modals/authModal.js";
 import { uploadPresetModal } from "./ui/modals/uploadPresetModal.js";
@@ -352,6 +353,10 @@ export class Builder {
 
     public static async openGlyphEditorModal(): Promise<void> {
         await glyphEditorModal();
+    }
+
+    public static async openHudEditorModal(): Promise<void> {
+        await hudEditorModal();
     }
 
     public static formatBindingsArea(): void {
