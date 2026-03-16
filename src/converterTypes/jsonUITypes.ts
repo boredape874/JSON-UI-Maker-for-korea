@@ -203,7 +203,7 @@ export const JSON_TYPES_GENERATOR: Map<string, any> = new Map([
                 }
             },
             {
-                "${config.nameSpace}@${config.nameSpace}.${config.nameSpace}": {
+                "generated_form@${config.nameSpace}.${config.nameSpace}": {
                     "layer": 2,
                     "bindings": [
                         {

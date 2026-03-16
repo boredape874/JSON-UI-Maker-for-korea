@@ -305,7 +305,7 @@ export class Builder {
             return;
         if (type == "copy") {
             navigator.clipboard.writeText(func(config.nameSpace));
-            new Notification("Server-Form Copied to Clipboard!");
+            new Notification("Server-Form copied. Export the normal form JSON with the same namespace too.");
             return;
         }
         const json = func(config.nameSpace);
@@ -316,6 +316,7 @@ export class Builder {
         a.download = this.getServerFormDownloadName();
         a.click();
         URL.revokeObjectURL(url);
+        new Notification("Server-Form downloaded. Place it together with the normal form JSON file.", 3500, "notif");
     }
     static handleUiTexturesUpload() {
         FileUploader.handleUiTexturesUpload();

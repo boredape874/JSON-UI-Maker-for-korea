@@ -85,6 +85,10 @@ export function saveFormsModal(): void {
     helper.className = "modalOptionBody";
     helper.textContent = translateText("This updates the form file name and namespace together. Server-Form stays server_form.json.");
 
+    const serverFormNotice = document.createElement("label");
+    serverFormNotice.className = "modalOptionBody";
+    serverFormNotice.textContent = translateText("Server-Form must be used together with the normal form JSON that has the same namespace. Export both files into the UI folder.");
+
     const previewBox = document.createElement("div");
     previewBox.className = "saveFormsPreviewBox";
 
@@ -145,6 +149,8 @@ export function saveFormsModal(): void {
     form.appendChild(nameInput);
     form.appendChild(document.createElement("br"));
     form.appendChild(helper);
+    form.appendChild(document.createElement("br"));
+    form.appendChild(serverFormNotice);
     form.appendChild(document.createElement("br"));
     form.appendChild(document.createElement("br"));
     form.appendChild(previewBox);
