@@ -28,6 +28,11 @@ export declare const GLOBAL_ELEMENT_MAP: Map<string, GlobalElementMapValue>;
 export declare let GLOBAL_FILE_SYSTEM: any;
 export declare function setFileSystem(fs: any): void;
 export declare class Builder {
+    private static collectCurrentFormImagePaths;
+    private static collectLoadedPresetImagePaths;
+    private static downloadImageAssets;
+    static downloadCurrentFormImages(): Promise<void>;
+    static downloadLoadedPresetTextures(): Promise<void>;
     static setFormIdentity(name: string): boolean;
     static openSaveFormsModal(): void;
     static uploadForm(): void;

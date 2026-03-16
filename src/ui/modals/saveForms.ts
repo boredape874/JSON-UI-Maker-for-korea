@@ -139,6 +139,26 @@ export function saveFormsModal(): void {
         ])
     );
 
+    cardGrid.appendChild(
+        createActionCard("Used Images", "Download the textures currently used by this form, including button states and nineslice JSON when available.", [
+            createActionButton("Download", () => {
+                void runAction(() => {
+                    void Builder.downloadCurrentFormImages();
+                });
+            }),
+        ])
+    );
+
+    cardGrid.appendChild(
+        createActionCard("Loaded Presets", "Download every preset texture currently loaded in the site, including matching nineslice JSON files.", [
+            createActionButton("Download", () => {
+                void runAction(() => {
+                    void Builder.downloadLoadedPresetTextures();
+                });
+            }),
+        ])
+    );
+
     nameInput.addEventListener("input", refreshPreview);
     refreshPreview();
 

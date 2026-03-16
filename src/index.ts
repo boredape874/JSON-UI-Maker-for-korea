@@ -187,6 +187,38 @@ async function createImageDataFromBase64(base64Data: string): Promise<ImageData>
     });
 }
 
+async function createPngBlobFromImageData(imageData: ImageData): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+            reject(new Error("Could not create canvas context."));
+            return;
+        }
+
+        canvas.width = imageData.width;
+        canvas.height = imageData.height;
+        ctx.putImageData(imageData, 0, 0);
+
+        canvas.toBlob((blob) => {
+            if (!blob) {
+                reject(new Error("Could not create PNG blob."));
+                return;
+            }
+            resolve(blob);
+        }, "image/png");
+    });
+}
+
+function triggerBlobDownload(blob: Blob, fileName: string): void {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
 /**
  * Constructs the main panel, which is a non-interactive draggable panel.
  * The panel is added to the global element map.
@@ -271,6 +303,98 @@ export function setFileSystem(fs: any): void {
 }
 
 export class Builder {
+    private static collectCurrentFormImagePaths(): string[] {
+        const imagePaths = new Set<string>();
+        const elements = panelContainer.querySelectorAll<HTMLElement>("[data-image-path], [data-default-image-path], [data-hover-image-path], [data-pressed-image-path]");
+
+        for (const element of Array.from(elements)) {
+            const candidates = [
+                element.dataset.imagePath,
+                element.dataset.defaultImagePath,
+                element.dataset.hoverImagePath,
+                element.dataset.pressedImagePath,
+            ];
+
+            for (const candidate of candidates) {
+                if (candidate) imagePaths.add(candidate);
+            }
+        }
+
+        return Array.from(imagePaths);
+    }
+
+    private static collectLoadedPresetImagePaths(): string[] {
+        const imagePaths = new Set<string>();
+
+        for (const key of Object.keys(localStorage)) {
+            if (!key.startsWith("asset_") || (!key.endsWith("_png") && !key.endsWith("_json"))) continue;
+
+            try {
+                const raw = localStorage.getItem(key);
+                if (!raw) continue;
+
+                const stored = JSON.parse(raw);
+                if (!stored?.metadata?.presetLoaded) continue;
+
+                const imagePath = key.replace("asset_", "").replace(/_png|_json$/, "");
+                if (imagePath) imagePaths.add(imagePath);
+            } catch (error) {
+                console.error("Failed to inspect stored preset asset:", key, error);
+            }
+        }
+
+        return Array.from(imagePaths);
+    }
+
+    private static async downloadImageAssets(imagePaths: string[], emptyMessage: string, successMessage: string): Promise<void> {
+        if (imagePaths.length === 0) {
+            new Notification(emptyMessage, 3000, "warning");
+            return;
+        }
+
+        let downloadCount = 0;
+
+        for (const imagePath of imagePaths) {
+            const imageInfo = images.get(imagePath);
+            if (!imageInfo) continue;
+
+            if (imageInfo.png) {
+                const pngBlob = await createPngBlobFromImageData(imageInfo.png);
+                triggerBlobDownload(pngBlob, `${imagePath.split("/").pop() ?? imagePath}.png`);
+                downloadCount++;
+            }
+
+            if (imageInfo.json) {
+                const jsonBlob = new Blob([JSON.stringify(imageInfo.json, null, 2)], { type: "application/json" });
+                triggerBlobDownload(jsonBlob, `${imagePath.split("/").pop() ?? imagePath}.json`);
+                downloadCount++;
+            }
+        }
+
+        if (downloadCount === 0) {
+            new Notification(emptyMessage, 3000, "warning");
+            return;
+        }
+
+        new Notification(`${successMessage} (${downloadCount})`, 3500, "notif");
+    }
+
+    public static async downloadCurrentFormImages(): Promise<void> {
+        await this.downloadImageAssets(
+            this.collectCurrentFormImagePaths(),
+            "No images used in the current form were found.",
+            "Downloaded current form image assets"
+        );
+    }
+
+    public static async downloadLoadedPresetTextures(): Promise<void> {
+        await this.downloadImageAssets(
+            this.collectLoadedPresetImagePaths(),
+            "No loaded preset textures were found.",
+            "Downloaded loaded preset textures"
+        );
+    }
+
     public static setFormIdentity(name: string): boolean {
         const trimmedName = name.trim();
         if (!trimmedName) {
