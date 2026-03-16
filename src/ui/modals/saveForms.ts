@@ -146,6 +146,11 @@ export function saveFormsModal(): void {
                     void Builder.downloadCurrentFormImages();
                 });
             }),
+            createActionButton("ZIP", () => {
+                void runAction(() => {
+                    void Builder.downloadCurrentFormImagesZip();
+                });
+            }),
         ])
     );
 
@@ -154,6 +159,11 @@ export function saveFormsModal(): void {
             createActionButton("Download", () => {
                 void runAction(() => {
                     void Builder.downloadLoadedPresetTextures();
+                });
+            }),
+            createActionButton("ZIP", () => {
+                void runAction(() => {
+                    void Builder.downloadLoadedPresetTexturesZip();
                 });
             }),
         ])

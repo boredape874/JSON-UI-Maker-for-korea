@@ -41,6 +41,7 @@ import "./elements/groupedEventlisteners.js";
 import "./ui/scale.js";
 import { undoRedoManager } from "./keyboard/undoRedo.js";
 import { createSyntheticFormFromWorkspace, loadUiWorkspace } from "./ui/uiWorkspace.js";
+import { createZipBlob } from "./util/zip.js";
 initI18n();
 console.log("Script Loaded");
 initDefaultImages();
@@ -178,6 +179,9 @@ async function createPngBlobFromImageData(imageData) {
         }, "image/png");
     });
 }
+async function blobToUint8Array(blob) {
+    return new Uint8Array(await blob.arrayBuffer());
+}
 function triggerBlobDownload(blob, fileName) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -185,6 +189,9 @@ function triggerBlobDownload(blob, fileName) {
     link.download = fileName;
     link.click();
     URL.revokeObjectURL(url);
+}
+function uint8ArrayToArrayBuffer(data) {
+    return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
 }
 /**
  * Constructs the main panel, which is a non-interactive draggable panel.
@@ -284,26 +291,38 @@ export class Builder {
         }
         return Array.from(imagePaths);
     }
-    static async downloadImageAssets(imagePaths, emptyMessage, successMessage) {
-        if (imagePaths.length === 0) {
-            new Notification(emptyMessage, 3000, "warning");
-            return;
-        }
-        let downloadCount = 0;
+    static async buildImageAssetEntries(imagePaths) {
+        const entries = [];
         for (const imagePath of imagePaths) {
             const imageInfo = images.get(imagePath);
             if (!imageInfo)
                 continue;
             if (imageInfo.png) {
                 const pngBlob = await createPngBlobFromImageData(imageInfo.png);
-                triggerBlobDownload(pngBlob, `${imagePath.split("/").pop() ?? imagePath}.png`);
-                downloadCount++;
+                entries.push({
+                    name: `${imagePath}.png`,
+                    data: await blobToUint8Array(pngBlob),
+                });
             }
             if (imageInfo.json) {
-                const jsonBlob = new Blob([JSON.stringify(imageInfo.json, null, 2)], { type: "application/json" });
-                triggerBlobDownload(jsonBlob, `${imagePath.split("/").pop() ?? imagePath}.json`);
-                downloadCount++;
+                entries.push({
+                    name: `${imagePath}.json`,
+                    data: new TextEncoder().encode(JSON.stringify(imageInfo.json, null, 2)),
+                });
             }
+        }
+        return entries;
+    }
+    static async downloadImageAssets(imagePaths, emptyMessage, successMessage) {
+        if (imagePaths.length === 0) {
+            new Notification(emptyMessage, 3000, "warning");
+            return;
+        }
+        const entries = await this.buildImageAssetEntries(imagePaths);
+        let downloadCount = 0;
+        for (const entry of entries) {
+            triggerBlobDownload(new Blob([uint8ArrayToArrayBuffer(entry.data)]), entry.name.split("/").pop() ?? entry.name);
+            downloadCount++;
         }
         if (downloadCount === 0) {
             new Notification(emptyMessage, 3000, "warning");
@@ -316,6 +335,26 @@ export class Builder {
     }
     static async downloadLoadedPresetTextures() {
         await this.downloadImageAssets(this.collectLoadedPresetImagePaths(), "No loaded preset textures were found.", "Downloaded loaded preset textures");
+    }
+    static async downloadCurrentFormImagesZip() {
+        const imagePaths = this.collectCurrentFormImagePaths();
+        const entries = await this.buildImageAssetEntries(imagePaths);
+        if (entries.length === 0) {
+            new Notification("No images used in the current form were found.", 3000, "warning");
+            return;
+        }
+        triggerBlobDownload(createZipBlob(entries), `${this.getDownloadBaseName()}_images.zip`);
+        new Notification(`Downloaded current form images ZIP (${entries.length})`, 3500, "notif");
+    }
+    static async downloadLoadedPresetTexturesZip() {
+        const imagePaths = this.collectLoadedPresetImagePaths();
+        const entries = await this.buildImageAssetEntries(imagePaths);
+        if (entries.length === 0) {
+            new Notification("No loaded preset textures were found.", 3000, "warning");
+            return;
+        }
+        triggerBlobDownload(createZipBlob(entries), "loaded_preset_textures.zip");
+        new Notification(`Downloaded loaded preset textures ZIP (${entries.length})`, 3500, "notif");
     }
     static setFormIdentity(name) {
         const trimmedName = name.trim();

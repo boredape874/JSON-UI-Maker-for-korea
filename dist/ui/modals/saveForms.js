@@ -108,11 +108,21 @@ export function saveFormsModal() {
                 void Builder.downloadCurrentFormImages();
             });
         }),
+        createActionButton("ZIP", () => {
+            void runAction(() => {
+                void Builder.downloadCurrentFormImagesZip();
+            });
+        }),
     ]));
     cardGrid.appendChild(createActionCard("Loaded Presets", "Download every preset texture currently loaded in the site, including matching nineslice JSON files.", [
         createActionButton("Download", () => {
             void runAction(() => {
                 void Builder.downloadLoadedPresetTextures();
+            });
+        }),
+        createActionButton("ZIP", () => {
+            void runAction(() => {
+                void Builder.downloadLoadedPresetTexturesZip();
             });
         }),
     ]));

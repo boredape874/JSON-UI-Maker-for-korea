@@ -45,6 +45,7 @@ import "./elements/groupedEventlisteners.js";
 import "./ui/scale.js";
 import { undoRedoManager } from "./keyboard/undoRedo.js";
 import { createSyntheticFormFromWorkspace, loadUiWorkspace } from "./ui/uiWorkspace.js";
+import { createZipBlob, ZipEntry } from "./util/zip.js";
 
 initI18n();
 
@@ -210,6 +211,10 @@ async function createPngBlobFromImageData(imageData: ImageData): Promise<Blob> {
     });
 }
 
+async function blobToUint8Array(blob: Blob): Promise<Uint8Array> {
+    return new Uint8Array(await blob.arrayBuffer());
+}
+
 function triggerBlobDownload(blob: Blob, fileName: string): void {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -217,6 +222,10 @@ function triggerBlobDownload(blob: Blob, fileName: string): void {
     link.download = fileName;
     link.click();
     URL.revokeObjectURL(url);
+}
+
+function uint8ArrayToArrayBuffer(data: Uint8Array): ArrayBuffer {
+    return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
 }
 
 /**
@@ -346,13 +355,8 @@ export class Builder {
         return Array.from(imagePaths);
     }
 
-    private static async downloadImageAssets(imagePaths: string[], emptyMessage: string, successMessage: string): Promise<void> {
-        if (imagePaths.length === 0) {
-            new Notification(emptyMessage, 3000, "warning");
-            return;
-        }
-
-        let downloadCount = 0;
+    private static async buildImageAssetEntries(imagePaths: string[]): Promise<ZipEntry[]> {
+        const entries: ZipEntry[] = [];
 
         for (const imagePath of imagePaths) {
             const imageInfo = images.get(imagePath);
@@ -360,15 +364,34 @@ export class Builder {
 
             if (imageInfo.png) {
                 const pngBlob = await createPngBlobFromImageData(imageInfo.png);
-                triggerBlobDownload(pngBlob, `${imagePath.split("/").pop() ?? imagePath}.png`);
-                downloadCount++;
+                entries.push({
+                    name: `${imagePath}.png`,
+                    data: await blobToUint8Array(pngBlob),
+                });
             }
 
             if (imageInfo.json) {
-                const jsonBlob = new Blob([JSON.stringify(imageInfo.json, null, 2)], { type: "application/json" });
-                triggerBlobDownload(jsonBlob, `${imagePath.split("/").pop() ?? imagePath}.json`);
-                downloadCount++;
+                entries.push({
+                    name: `${imagePath}.json`,
+                    data: new TextEncoder().encode(JSON.stringify(imageInfo.json, null, 2)),
+                });
             }
+        }
+
+        return entries;
+    }
+
+    private static async downloadImageAssets(imagePaths: string[], emptyMessage: string, successMessage: string): Promise<void> {
+        if (imagePaths.length === 0) {
+            new Notification(emptyMessage, 3000, "warning");
+            return;
+        }
+
+        const entries = await this.buildImageAssetEntries(imagePaths);
+        let downloadCount = 0;
+        for (const entry of entries) {
+            triggerBlobDownload(new Blob([uint8ArrayToArrayBuffer(entry.data)]), entry.name.split("/").pop() ?? entry.name);
+            downloadCount++;
         }
 
         if (downloadCount === 0) {
@@ -393,6 +416,30 @@ export class Builder {
             "No loaded preset textures were found.",
             "Downloaded loaded preset textures"
         );
+    }
+
+    public static async downloadCurrentFormImagesZip(): Promise<void> {
+        const imagePaths = this.collectCurrentFormImagePaths();
+        const entries = await this.buildImageAssetEntries(imagePaths);
+        if (entries.length === 0) {
+            new Notification("No images used in the current form were found.", 3000, "warning");
+            return;
+        }
+
+        triggerBlobDownload(createZipBlob(entries), `${this.getDownloadBaseName()}_images.zip`);
+        new Notification(`Downloaded current form images ZIP (${entries.length})`, 3500, "notif");
+    }
+
+    public static async downloadLoadedPresetTexturesZip(): Promise<void> {
+        const imagePaths = this.collectLoadedPresetImagePaths();
+        const entries = await this.buildImageAssetEntries(imagePaths);
+        if (entries.length === 0) {
+            new Notification("No loaded preset textures were found.", 3000, "warning");
+            return;
+        }
+
+        triggerBlobDownload(createZipBlob(entries), "loaded_preset_textures.zip");
+        new Notification(`Downloaded loaded preset textures ZIP (${entries.length})`, 3500, "notif");
     }
 
     public static setFormIdentity(name: string): boolean {
