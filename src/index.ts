@@ -228,6 +228,10 @@ function uint8ArrayToArrayBuffer(data: Uint8Array): ArrayBuffer {
     return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
 }
 
+function normalizeArchivePath(path: string): string {
+    return path.replace(/^\/+/, "").replace(/\\/g, "/");
+}
+
 /**
  * Constructs the main panel, which is a non-interactive draggable panel.
  * The panel is added to the global element map.
@@ -381,6 +385,14 @@ export class Builder {
         return entries;
     }
 
+    private static async buildTextureArchiveEntries(imagePaths: string[]): Promise<ZipEntry[]> {
+        const rawEntries = await this.buildImageAssetEntries(imagePaths);
+        return rawEntries.map((entry) => ({
+            name: normalizeArchivePath(`textures/${entry.name}`),
+            data: entry.data,
+        }));
+    }
+
     private static async downloadImageAssets(imagePaths: string[], emptyMessage: string, successMessage: string): Promise<void> {
         if (imagePaths.length === 0) {
             new Notification(emptyMessage, 3000, "warning");
@@ -420,7 +432,7 @@ export class Builder {
 
     public static async downloadCurrentFormImagesZip(): Promise<void> {
         const imagePaths = this.collectCurrentFormImagePaths();
-        const entries = await this.buildImageAssetEntries(imagePaths);
+        const entries = await this.buildTextureArchiveEntries(imagePaths);
         if (entries.length === 0) {
             new Notification("No images used in the current form were found.", 3000, "warning");
             return;
@@ -432,7 +444,7 @@ export class Builder {
 
     public static async downloadLoadedPresetTexturesZip(): Promise<void> {
         const imagePaths = this.collectLoadedPresetImagePaths();
-        const entries = await this.buildImageAssetEntries(imagePaths);
+        const entries = await this.buildTextureArchiveEntries(imagePaths);
         if (entries.length === 0) {
             new Notification("No loaded preset textures were found.", 3000, "warning");
             return;
@@ -440,6 +452,32 @@ export class Builder {
 
         triggerBlobDownload(createZipBlob(entries), "loaded_preset_textures.zip");
         new Notification(`Downloaded loaded preset textures ZIP (${entries.length})`, 3500, "notif");
+    }
+
+    public static async downloadFormPackageZip(includeServerForm: boolean = true): Promise<void> {
+        const imagePaths = this.collectCurrentFormImagePaths();
+        const textureEntries = await this.buildTextureArchiveEntries(imagePaths);
+        const jsonUI = Converter.convertToJsonUi(panelContainer, 0);
+        const entries: ZipEntry[] = [
+            {
+                name: normalizeArchivePath(`ui/${this.getDownloadBaseName()}.json`),
+                data: new TextEncoder().encode(jsonUI),
+            },
+            ...textureEntries,
+        ];
+
+        if (includeServerForm) {
+            const func = JSON_TYPES_GENERATOR.get("server_form");
+            if (func) {
+                entries.push({
+                    name: "ui/server_form.json",
+                    data: new TextEncoder().encode(func(config.nameSpace)),
+                });
+            }
+        }
+
+        triggerBlobDownload(createZipBlob(entries), `${this.getDownloadBaseName()}_ui_package.zip`);
+        new Notification(`Downloaded UI package ZIP (${entries.length})`, 3500, "notif");
     }
 
     public static setFormIdentity(name: string): boolean {

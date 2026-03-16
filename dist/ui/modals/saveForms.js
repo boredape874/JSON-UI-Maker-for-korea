@@ -97,12 +97,17 @@ export function saveFormsModal() {
     cardGrid.appendChild(createActionCard("Form", "Copy or download the standard form JSON.", [
         createActionButton("Copy", () => runAction(() => Builder.generateAndCopyJsonUI("copy"))),
         createActionButton("Download", () => runAction(() => Builder.generateAndCopyJsonUI("download"))),
+        createActionButton("Package ZIP", () => {
+            void runAction(() => {
+                void Builder.downloadFormPackageZip(true);
+            });
+        }),
     ]));
     cardGrid.appendChild(createActionCard("Server-Form", "Copy or download the server form that points to this form.", [
         createActionButton("Copy", () => runAction(() => Builder.downloadServerForm("copy"))),
         createActionButton("Download", () => runAction(() => Builder.downloadServerForm("download"))),
     ]));
-    cardGrid.appendChild(createActionCard("Used Images", "Download the textures currently used by this form, including button states and nineslice JSON when available.", [
+    cardGrid.appendChild(createActionCard("Used Images", "Download the textures currently used by this form. ZIP keeps the in-game textures/... folder structure.", [
         createActionButton("Download", () => {
             void runAction(() => {
                 void Builder.downloadCurrentFormImages();
@@ -114,7 +119,7 @@ export function saveFormsModal() {
             });
         }),
     ]));
-    cardGrid.appendChild(createActionCard("Loaded Presets", "Download every preset texture currently loaded in the site, including matching nineslice JSON files.", [
+    cardGrid.appendChild(createActionCard("Loaded Presets", "Download every preset texture currently loaded in the site. ZIP keeps the textures/... folder structure.", [
         createActionButton("Download", () => {
             void runAction(() => {
                 void Builder.downloadLoadedPresetTextures();

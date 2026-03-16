@@ -31,11 +31,13 @@ export declare class Builder {
     private static collectCurrentFormImagePaths;
     private static collectLoadedPresetImagePaths;
     private static buildImageAssetEntries;
+    private static buildTextureArchiveEntries;
     private static downloadImageAssets;
     static downloadCurrentFormImages(): Promise<void>;
     static downloadLoadedPresetTextures(): Promise<void>;
     static downloadCurrentFormImagesZip(): Promise<void>;
     static downloadLoadedPresetTexturesZip(): Promise<void>;
+    static downloadFormPackageZip(includeServerForm?: boolean): Promise<void>;
     static setFormIdentity(name: string): boolean;
     static openSaveFormsModal(): void;
     static uploadForm(): void;
