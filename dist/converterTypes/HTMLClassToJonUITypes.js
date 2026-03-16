@@ -1,6 +1,11 @@
 import { config } from "../CONFIG.js";
 import { GeneralUtil } from "../util/generalUtil.js";
 import { StringUtil } from "../util/stringUtil.js";
+function toExportTexturePath(imagePath) {
+    const normalized = (imagePath ?? "").replace(/\\/g, "/");
+    const fileName = normalized.split("/").pop() ?? normalized;
+    return `textures/ui/${fileName}`;
+}
 export const classToJsonUI = new Map([
     [
         "draggable-panel",
@@ -83,7 +88,7 @@ export const classToJsonUI = new Map([
                 size: [processedWidth * ui_scaler, processedHeight * ui_scaler],
                 layer: Number(element.style.zIndex),
                 type: "image",
-                texture: `textures/${element.dataset.imagePath}`,
+                texture: toExportTexturePath(element.dataset.imagePath),
                 anchor_from: "top_left",
                 anchor_to: "top_left",
                 bindings: bindings,
@@ -100,9 +105,9 @@ export const classToJsonUI = new Map([
             const parent = element.parentElement;
             const processedWidth = StringUtil.cssDimToNumber(element.style.width);
             const processedHeight = StringUtil.cssDimToNumber(element.style.height);
-            const defaultTex = `textures/${element.dataset.defaultImagePath}`;
-            const hoverTex = `textures/${element.dataset.hoverImagePath}`;
-            const pressedTex = `textures/${element.dataset.pressedImagePath}`;
+            const defaultTex = toExportTexturePath(element.dataset.defaultImagePath);
+            const hoverTex = toExportTexturePath(element.dataset.hoverImagePath);
+            const pressedTex = toExportTexturePath(element.dataset.pressedImagePath);
             console.warn(element.dataset.defaultImagePath, element.dataset.hoverImagePath, element.dataset.pressedImagePath, defaultTex, hoverTex, pressedTex);
             const collectionIndex = Number(element.dataset.collectionIndex);
             const offset = [StringUtil.cssDimToNumber(element.style.left), StringUtil.cssDimToNumber(element.style.top)];

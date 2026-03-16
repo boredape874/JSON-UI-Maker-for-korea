@@ -196,6 +196,11 @@ function uint8ArrayToArrayBuffer(data) {
 function normalizeArchivePath(path) {
     return path.replace(/^\/+/, "").replace(/\\/g, "/");
 }
+function toExportTextureFilePath(imagePath, extension) {
+    const normalized = normalizeArchivePath(imagePath);
+    const fileName = normalized.split("/").pop() ?? normalized;
+    return `textures/ui/${fileName}.${extension}`;
+}
 /**
  * Constructs the main panel, which is a non-interactive draggable panel.
  * The panel is added to the global element map.
@@ -317,11 +322,26 @@ export class Builder {
         return entries;
     }
     static async buildTextureArchiveEntries(imagePaths) {
-        const rawEntries = await this.buildImageAssetEntries(imagePaths);
-        return rawEntries.map((entry) => ({
-            name: normalizeArchivePath(`textures/${entry.name}`),
-            data: entry.data,
-        }));
+        const entries = [];
+        for (const imagePath of imagePaths) {
+            const imageInfo = images.get(imagePath);
+            if (!imageInfo)
+                continue;
+            if (imageInfo.png) {
+                const pngBlob = await createPngBlobFromImageData(imageInfo.png);
+                entries.push({
+                    name: toExportTextureFilePath(imagePath, "png"),
+                    data: await blobToUint8Array(pngBlob),
+                });
+            }
+            if (imageInfo.json) {
+                entries.push({
+                    name: toExportTextureFilePath(imagePath, "json"),
+                    data: new TextEncoder().encode(JSON.stringify(imageInfo.json, null, 2)),
+                });
+            }
+        }
+        return entries;
     }
     static async downloadImageAssets(imagePaths, emptyMessage, successMessage) {
         if (imagePaths.length === 0) {

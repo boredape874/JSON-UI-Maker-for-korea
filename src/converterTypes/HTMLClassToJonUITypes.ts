@@ -14,6 +14,12 @@ export interface JsonUISimpleElement {
     controls?: object[];
 }
 
+function toExportTexturePath(imagePath: string | undefined): string {
+    const normalized = (imagePath ?? "").replace(/\\/g, "/");
+    const fileName = normalized.split("/").pop() ?? normalized;
+    return `textures/ui/${fileName}`;
+}
+
 export const classToJsonUI: Map<string, (element: HTMLElement, nameSpace: string) => TreeData> = new Map([
     [
         "draggable-panel",
@@ -123,7 +129,7 @@ export const classToJsonUI: Map<string, (element: HTMLElement, nameSpace: string
                 size: [processedWidth * ui_scaler, processedHeight * ui_scaler],
                 layer: Number(element.style.zIndex),
                 type: "image",
-                texture: `textures/${element.dataset.imagePath!}`,
+                texture: toExportTexturePath(element.dataset.imagePath),
                 anchor_from: "top_left",
                 anchor_to: "top_left",
 
@@ -144,9 +150,9 @@ export const classToJsonUI: Map<string, (element: HTMLElement, nameSpace: string
             const processedWidth = StringUtil.cssDimToNumber(element.style.width);
             const processedHeight = StringUtil.cssDimToNumber(element.style.height);
 
-            const defaultTex = `textures/${element.dataset.defaultImagePath}`!;
-            const hoverTex = `textures/${element.dataset.hoverImagePath}`!;
-            const pressedTex = `textures/${element.dataset.pressedImagePath}`!;
+            const defaultTex = toExportTexturePath(element.dataset.defaultImagePath);
+            const hoverTex = toExportTexturePath(element.dataset.hoverImagePath);
+            const pressedTex = toExportTexturePath(element.dataset.pressedImagePath);
 
             console.warn(element.dataset.defaultImagePath, element.dataset.hoverImagePath, element.dataset.pressedImagePath, defaultTex, hoverTex, pressedTex);
 
