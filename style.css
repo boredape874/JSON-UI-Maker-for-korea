@@ -1744,8 +1744,15 @@ input[type="file"] {
     word-break: break-word;
 }
 
-.chooseImagePreviewButton {
+.chooseImagePreviewActionRow {
     margin-top: auto;
+    display: flex;
+    gap: 10px;
+}
+
+.chooseImagePreviewButton {
+    margin-top: 0;
+    flex: 1 1 0;
     padding: 12px 14px;
     border: none;
     border-radius: 8px;
@@ -1766,7 +1773,6 @@ input[type="file"] {
     opacity: 0.45;
     cursor: not-allowed;
     box-shadow: none;
-}
 }
 
 @font-face {

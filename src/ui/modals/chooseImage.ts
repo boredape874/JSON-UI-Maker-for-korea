@@ -173,7 +173,10 @@ function createTranslatedPreviewPanel(): HTMLDivElement {
         <div class="chooseImagePreviewPath" data-no-translate="true"></div>
         <div class="chooseImagePreviewBadgeRow"></div>
         <div class="chooseImagePreviewMeta"></div>
-        <button type="button" class="chooseImagePreviewButton" disabled>${translateText("Use This Texture")}</button>
+        <div class="chooseImagePreviewActionRow">
+            <button type="button" class="chooseImagePreviewButton chooseImagePreviewDownloadButton" disabled>${translateText("Download")}</button>
+            <button type="button" class="chooseImagePreviewButton chooseImagePreviewUseButton" disabled>${translateText("Use This Texture")}</button>
+        </div>
     `;
 
     return previewPanel;
@@ -220,8 +223,59 @@ function getPreviewElements(previewPanel: HTMLElement) {
         path: previewPanel.querySelector(".chooseImagePreviewPath") as HTMLDivElement,
         badges: previewPanel.querySelector(".chooseImagePreviewBadgeRow") as HTMLDivElement,
         meta: previewPanel.querySelector(".chooseImagePreviewMeta") as HTMLDivElement,
-        button: previewPanel.querySelector(".chooseImagePreviewButton") as HTMLButtonElement,
+        downloadButton: previewPanel.querySelector(".chooseImagePreviewDownloadButton") as HTMLButtonElement,
+        button: previewPanel.querySelector(".chooseImagePreviewUseButton") as HTMLButtonElement,
     };
+}
+
+function downloadBlob(blob: Blob, fileName: string): void {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
+function imageDataToBlob(imageData: ImageData): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+            reject(new Error("Could not create canvas context."));
+            return;
+        }
+
+        canvas.width = imageData.width;
+        canvas.height = imageData.height;
+        ctx.putImageData(imageData, 0, 0);
+        canvas.toBlob((blob) => {
+            if (!blob) {
+                reject(new Error("Could not create PNG blob."));
+                return;
+            }
+            resolve(blob);
+        }, "image/png");
+    });
+}
+
+async function downloadSelectedImageAsset(imagePath: string): Promise<void> {
+    const imageState = getImagesMap().get(imagePath);
+    if (!imageState?.png && !imageState?.json) {
+        throw new Error(translateText("Could not download the selected image."));
+    }
+
+    const fileName = getImageLabel(imagePath);
+
+    if (imageState?.png) {
+        const pngBlob = await imageDataToBlob(imageState.png);
+        downloadBlob(pngBlob, `${fileName}.png`);
+    }
+
+    if (imageState?.json) {
+        const jsonBlob = new Blob([JSON.stringify(imageState.json, null, 2)], { type: "application/json" });
+        downloadBlob(jsonBlob, `${fileName}.json`);
+    }
 }
 
 function resetPreview(previewPanel: HTMLElement): void {
@@ -236,6 +290,8 @@ function resetPreview(previewPanel: HTMLElement): void {
     preview.path.textContent = "";
     preview.badges.innerHTML = "";
     preview.meta.innerHTML = "";
+    preview.downloadButton.disabled = true;
+    preview.downloadButton.onclick = null;
     preview.button.disabled = true;
     preview.button.textContent = "Use This Texture";
     preview.button.onclick = null;
@@ -254,6 +310,8 @@ function resetTranslatedPreview(previewPanel: HTMLElement): void {
     preview.path.textContent = "";
     preview.badges.innerHTML = "";
     preview.meta.innerHTML = "";
+    preview.downloadButton.disabled = true;
+    preview.downloadButton.onclick = null;
     preview.button.disabled = true;
     preview.button.textContent = translateText("Use This Texture");
     preview.button.onclick = null;
@@ -441,10 +499,20 @@ function renderPreviewState(
     }
 
     preview.button.disabled = !hasPreviewableData;
+    preview.downloadButton.disabled = !hasPreviewableData;
 
     if (imagePath) {
+        preview.downloadButton.onclick = async () => {
+            try {
+                await downloadSelectedImageAsset(imagePath);
+            } catch (error) {
+                console.error(error);
+                new Notification(error instanceof Error ? error.message : translateText("Could not download the selected image."), 3000, "error");
+            }
+        };
         preview.button.dataset.imagePath = imagePath;
     } else {
+        preview.downloadButton.onclick = null;
         delete preview.button.dataset.imagePath;
     }
 
