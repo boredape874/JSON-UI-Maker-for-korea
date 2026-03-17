@@ -11,395 +11,26 @@ const BACKGROUND_TEXTURES = {
     hpBarFill: "textures/ui/hp_bar/hp_bar_full",
 };
 const state = {
-    overlays: [],
+    panels: [],
     selectedId: "",
     nextId: 1,
-    drag: { overlayId: null, pointerOffsetX: 0, pointerOffsetY: 0 },
+    drag: { panelId: null, pointerOffsetX: 0, pointerOffsetY: 0 },
 };
 const getModal = () => document.getElementById("modalHudEditor");
 const getCloseButton = () => document.getElementById("modalHudEditorClose");
 const getForm = () => document.getElementsByClassName("modalHudEditorForm")[0];
-const selected = () => state.overlays.find((overlay) => overlay.id === state.selectedId) ?? state.overlays[0];
-const escapeHtml = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-const escapeBindingText = (value) => value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+const selectedPanel = () => state.panels.find((panel) => panel.id === state.selectedId) ?? state.panels[0];
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-const TEMPLATE_PATCHES = {
-    info: {
-        label: "정보 패널",
-        sourceType: "title",
-        parseMode: "trigger",
-        outputType: "label",
-        triggerText: "info:",
-        sampleText: "info: 공지입니다",
-        preserveValue: true,
-        stripTriggerText: true,
-        hideVanilla: true,
-        backgroundType: "vanilla",
-        color: "#ffffff",
-        anchor: "top_right",
-        x: -4,
-        y: 50,
-        width: 500,
-        height: 64,
-    },
-    coin: {
-        label: "코인 패널",
-        sourceType: "title",
-        parseMode: "slice",
-        outputType: "label",
-        triggerText: "coin:",
-        sampleText: "coin:1200\t\t\t\t\t",
-        preserveValue: true,
-        stripTriggerText: true,
-        sliceStart: 200,
-        sliceEnd: 400,
-        hideVanilla: true,
-        backgroundType: "vanilla",
-        color: "#f6d96b",
-        anchor: "top_right",
-        x: -40,
-        y: 50,
-        width: 280,
-        height: 48,
-    },
-    hp_text: {
-        label: "체력 텍스트",
-        sourceType: "title",
-        parseMode: "slice",
-        outputType: "label",
-        triggerText: "hp_text:",
-        sampleText: "hp_text:84/100\t\t\t",
-        preserveValue: true,
-        stripTriggerText: true,
-        sliceStart: 400,
-        sliceEnd: 600,
-        hideVanilla: true,
-        backgroundType: "none",
-        color: "#ffffff",
-        anchor: "bottom_middle",
-        x: -85,
-        y: -86,
-        width: 170,
-        height: 32,
-    },
-    hp_clip: {
-        label: "체력 바",
-        sourceType: "title",
-        parseMode: "slice",
-        outputType: "progress_bar",
-        triggerText: "hp_clip:",
-        sampleText: "hp_clip:84\t\t\t\t",
-        preserveValue: true,
-        stripTriggerText: true,
-        sliceStart: 600,
-        sliceEnd: 800,
-        maxValue: 100,
-        hideVanilla: true,
-        backgroundType: "vanilla",
-        color: "#ffffff",
-        anchor: "bottom_middle",
-        x: -50,
-        y: -48,
-        width: 180,
-        height: 28,
-    },
-    t1_preserve: {
-        label: "t1 보존 패널",
-        sourceType: "title",
-        parseMode: "trigger",
-        outputType: "label",
-        triggerText: "t1:",
-        sampleText: "t1:안녕하세요",
-        preserveValue: true,
-        stripTriggerText: true,
-        hideVanilla: true,
-        backgroundType: "vanilla",
-        color: "#ffffff",
-        anchor: "top_left",
-        x: 24,
-        y: 24,
-        width: 320,
-        height: 48,
-    },
-    t2_preserve: {
-        label: "t2 보존 패널",
-        sourceType: "title",
-        parseMode: "trigger",
-        outputType: "label",
-        triggerText: "t2:",
-        sampleText: "t2:반갑습니다",
-        preserveValue: true,
-        stripTriggerText: true,
-        hideVanilla: true,
-        backgroundType: "vanilla",
-        color: "#ffffff",
-        anchor: "bottom_right",
-        x: -24,
-        y: -24,
-        width: 320,
-        height: 48,
-    },
-    split_t1: {
-        label: "분리 t1 패널",
-        sourceType: "title",
-        parseMode: "split_pair",
-        outputType: "label",
-        triggerText: "",
-        sampleText: "t1:안녕하세요:/: t2:반갑습니다",
-        preserveValue: true,
-        stripTriggerText: true,
-        splitDelimiter: ":/: ",
-        splitPart: "first",
-        splitPrefix: "t1:",
-        hideVanilla: true,
-        backgroundType: "vanilla",
-        color: "#ffffff",
-        anchor: "top_left",
-        x: 24,
-        y: 24,
-        width: 320,
-        height: 48,
-    },
-    split_t2: {
-        label: "분리 t2 패널",
-        sourceType: "title",
-        parseMode: "split_pair",
-        outputType: "label",
-        triggerText: "",
-        sampleText: "t1:안녕하세요:/: t2:반갑습니다",
-        preserveValue: true,
-        stripTriggerText: true,
-        splitDelimiter: ":/: ",
-        splitPart: "second",
-        splitPrefix: "t2:",
-        hideVanilla: true,
-        backgroundType: "vanilla",
-        color: "#ffffff",
-        anchor: "bottom_right",
-        x: -24,
-        y: -24,
-        width: 320,
-        height: 48,
-    },
-    actionbar_info: {
-        label: "액션바 정보 패널",
-        sourceType: "actionbar",
-        parseMode: "trigger",
-        outputType: "label",
-        triggerText: "info:",
-        sampleText: "info: 오른쪽 표시",
-        preserveValue: false,
-        stripTriggerText: true,
-        hideVanilla: true,
-        backgroundType: "vanilla",
-        color: "#ffffff",
-        anchor: "top_right",
-        x: -4,
-        y: 4,
-        width: 280,
-        height: 36,
-    },
-    subtitle_slots_5: {
-        label: "서브타이틀 5슬롯",
-        sourceType: "subtitle",
-        parseMode: "slice",
-        outputType: "label",
-        triggerText: "",
-        sampleText: "slot1\t\t\t\t\t\t\t\t\t\t\t\tslot2\t\t\t\t\t\t\t\t\t\t\t\tslot3\t\t\t\t\t\t\t\t\t\t\t\tslot4\t\t\t\t\t\t\t\t\t\t\t\tslot5",
-        preserveValue: false,
-        stripTriggerText: false,
-        hideVanilla: true,
-        backgroundType: "vanilla",
-        color: "#dfe9ff",
-        anchor: "top_left",
-        x: 4,
-        y: 28,
-        width: 200,
-        height: 32,
-    },
-};
-function baseOverlay(sourceType) {
-    const id = `overlay_${state.nextId++}`;
-    const defaults = {
-        title: {
-            label: "타이틀 패널",
-            sourceType: "title",
-            parseMode: "trigger",
-            outputType: "label",
-            triggerText: "info:",
-            sampleText: "info: 안내 문구",
-            preserveValue: true,
-            stripTriggerText: true,
-            anchor: "top_middle",
-            x: 0,
-            y: 120,
-            width: 500,
-            height: 64,
-            layer: 30,
-            hideVanilla: true,
-            backgroundType: "vanilla",
-            backgroundTexture: "",
-            backgroundAlpha: 0.75,
-            backgroundColor: "#253a82",
-            ninesliceSize: 0,
-            color: "#ffffff",
-        },
-        subtitle: {
-            label: "서브타이틀 패널",
-            sourceType: "subtitle",
-            parseMode: "trigger",
-            outputType: "label",
-            triggerText: "",
-            sampleText: "서브타이틀 문구",
-            preserveValue: false,
-            stripTriggerText: false,
-            anchor: "top_middle",
-            x: 0,
-            y: 190,
-            width: 420,
-            height: 46,
-            layer: 31,
-            hideVanilla: true,
-            backgroundType: "none",
-            backgroundTexture: "",
-            backgroundAlpha: 0.75,
-            backgroundColor: "#253a82",
-            ninesliceSize: 0,
-            color: "#dfe9ff",
-        },
-        actionbar: {
-            label: "액션바 패널",
-            sourceType: "actionbar",
-            parseMode: "trigger",
-            outputType: "label",
-            triggerText: "info:",
-            sampleText: "info: 액션바 안내",
-            preserveValue: false,
-            stripTriggerText: true,
-            anchor: "bottom_middle",
-            x: 0,
-            y: -96,
-            width: 380,
-            height: 42,
-            layer: 32,
-            hideVanilla: true,
-            backgroundType: "vanilla",
-            backgroundTexture: "",
-            backgroundAlpha: 0.75,
-            backgroundColor: "#253a82",
-            ninesliceSize: 0,
-            color: "#ffffff",
-        },
-    };
-    return normalizeOverlay({
-        id,
-        label: "",
-        sourceType,
-        parseMode: "trigger",
-        outputType: "label",
-        triggerText: "",
-        sampleText: "",
-        preserveValue: false,
-        stripTriggerText: false,
-        sliceStart: 0,
-        sliceEnd: 200,
-        splitDelimiter: ":/: ",
-        splitPart: "first",
-        splitPrefix: "t1:",
-        maxValue: 100,
-        anchor: "top_left",
-        x: 0,
-        y: 0,
-        width: 320,
-        height: 48,
-        layer: 10,
-        visible: true,
-        hideVanilla: true,
-        backgroundType: "none",
-        backgroundTexture: "",
-        backgroundAlpha: 0.75,
-        backgroundColor: "#253a82",
-        ninesliceSize: 0,
-        color: "#ffffff",
-        ...defaults[sourceType],
-    });
-}
-function createTemplateOverlay(template) {
-    return normalizeOverlay({
-        ...baseOverlay(TEMPLATE_PATCHES[template].sourceType ?? "title"),
-        ...TEMPLATE_PATCHES[template],
-    });
-}
-function createSubtitleSlotOverlays() {
-    const positions = [
-        { anchor: "top_left", x: 4, y: 28 },
-        { anchor: "top_right", x: -4, y: 28 },
-        { anchor: "top_left", x: 4, y: 48 },
-        { anchor: "top_right", x: -4, y: 48 },
-        { anchor: "top_middle", x: 0, y: 68 },
-    ];
-    return positions.map((position, index) => normalizeOverlay({
-        ...baseOverlay("subtitle"),
-        label: `서브타이틀 슬롯 ${index + 1}`,
-        parseMode: "slice",
-        outputType: "label",
-        hideVanilla: true,
-        backgroundType: "vanilla",
-        color: "#dfe9ff",
-        width: 210,
-        height: 34,
-        sliceStart: index * 20,
-        sliceEnd: (index + 1) * 20,
-        sampleText: "slot1\t\t\t\t\t\t\t\t\t\t\t\tslot2\t\t\t\t\t\t\t\t\t\t\t\tslot3\t\t\t\t\t\t\t\t\t\t\t\tslot4\t\t\t\t\t\t\t\t\t\t\t\tslot5",
-        ...position,
-    }));
-}
-function buildTemplateOverlays(template) {
-    if (template === "subtitle_slots_5")
-        return createSubtitleSlotOverlays();
-    return [createTemplateOverlay(template)];
-}
-function normalizeOverlay(overlay) {
-    overlay.label = overlay.label.trim() || "HUD 패널";
-    overlay.triggerText = overlay.triggerText ?? "";
-    overlay.sampleText = overlay.sampleText ?? "";
-    overlay.splitDelimiter = overlay.splitDelimiter || ":/: ";
-    overlay.splitPrefix = overlay.splitPrefix ?? "";
-    overlay.width = clamp(Math.round(overlay.width || 0), 40, PREVIEW_WIDTH);
-    overlay.height = clamp(Math.round(overlay.height || 0), 20, PREVIEW_HEIGHT);
-    overlay.layer = Math.round(overlay.layer || 0);
-    overlay.sliceStart = Math.max(0, Math.round(overlay.sliceStart || 0));
-    overlay.sliceEnd = Math.max(overlay.sliceStart, Math.round(overlay.sliceEnd || 0));
-    overlay.maxValue = Math.max(1, Math.round(overlay.maxValue || 1));
-    overlay.backgroundAlpha = clamp(Number.isFinite(overlay.backgroundAlpha) ? overlay.backgroundAlpha : 0.75, 0, 1);
-    overlay.ninesliceSize = Math.max(0, Math.round(overlay.ninesliceSize || 0));
-    if (overlay.sourceType === "subtitle")
-        overlay.preserveValue = false;
-    if (overlay.sourceType === "actionbar") {
-        overlay.parseMode = "trigger";
-        overlay.outputType = "label";
-    }
-    if (overlay.outputType === "progress_bar") {
-        overlay.backgroundType = overlay.backgroundType === "none" ? "vanilla" : overlay.backgroundType;
-    }
-    return overlay;
-}
-function resetHudEditorState() {
-    state.nextId = 1;
-    state.overlays = [
-        createTemplateOverlay("info"),
-        ...createSubtitleSlotOverlays(),
-        createTemplateOverlay("actionbar_info"),
-    ];
-    state.selectedId = state.overlays[0].id;
-    state.drag = { overlayId: null, pointerOffsetX: 0, pointerOffsetY: 0 };
-}
-function bindingName(sourceType) {
-    if (sourceType === "title")
-        return TITLE_BINDING;
-    if (sourceType === "subtitle")
-        return SUBTITLE_BINDING;
-    return ACTIONBAR_VARIABLE;
+const escapeHtml = (text) => text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+const escapeBindingText = (text) => text.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+function colorHexToRgb(color) {
+    const value = Number.parseInt(color.replace("#", ""), 16);
+    return [((value >> 16) & 255) / 255, ((value >> 8) & 255) / 255, (value & 255) / 255];
 }
 function anchorBase(anchor) {
     switch (anchor) {
@@ -427,64 +58,148 @@ function selfAnchorOffset(anchor, width, height) {
         case "bottom_right": return { x: width, y: height };
     }
 }
-function actualPosition(overlay) {
-    const base = anchorBase(overlay.anchor);
-    const self = selfAnchorOffset(overlay.anchor, overlay.width, overlay.height);
-    return {
-        left: base.x + overlay.x - self.x,
-        top: base.y + overlay.y - self.y,
+function actualPosition(panel) {
+    const base = anchorBase(panel.anchor);
+    const self = selfAnchorOffset(panel.anchor, panel.width, panel.height);
+    return { left: base.x + panel.x - self.x, top: base.y + panel.y - self.y };
+}
+function applyActualPosition(panel, left, top) {
+    const base = anchorBase(panel.anchor);
+    const self = selfAnchorOffset(panel.anchor, panel.width, panel.height);
+    panel.x = Math.round(left + self.x - base.x);
+    panel.y = Math.round(top + self.y - base.y);
+}
+function normalizePanel(panel) {
+    panel.name = panel.name.trim() || "HUD 패널";
+    panel.sliceStart = Math.max(0, Math.round(panel.sliceStart || 0));
+    panel.sliceEnd = Math.max(panel.sliceStart, Math.round(panel.sliceEnd || 0));
+    panel.maxValue = Math.max(1, Math.round(panel.maxValue || 1));
+    panel.width = clamp(Math.round(panel.width || 0), 40, PREVIEW_WIDTH);
+    panel.height = clamp(Math.round(panel.height || 0), 20, PREVIEW_HEIGHT);
+    panel.layer = Math.round(panel.layer || 0);
+    panel.backgroundAlpha = clamp(panel.backgroundAlpha, 0, 1);
+    panel.ninesliceSize = Math.max(0, Math.round(panel.ninesliceSize || 0));
+    if (panel.channel === "subtitle_slot") {
+        panel.parseMode = "slice";
+        panel.preserveValue = false;
+    }
+    if (panel.channel === "actionbar") {
+        panel.parseMode = "trigger";
+        panel.outputMode = "label";
+        panel.preserveValue = false;
+    }
+    if (panel.channel === "actionbar_preserve") {
+        panel.parseMode = "trigger";
+        panel.outputMode = "label";
+        panel.preserveValue = true;
+    }
+    if (panel.outputMode === "progress_bar" && panel.backgroundType === "none") {
+        panel.backgroundType = "vanilla";
+    }
+    return panel;
+}
+function createPanel(channel, overrides = {}) {
+    const id = `hud_panel_${state.nextId++}`;
+    const base = {
+        title: { name: "타이틀 패널", channel, parseMode: "trigger", outputMode: "label", triggerText: "info:", stripTriggerText: true, preserveValue: false, sliceStart: 0, sliceEnd: 200, maxValue: 100, anchor: "top_right", x: -4, y: 50, width: 500, height: 64, layer: 30, hideVanilla: true, enabled: true, backgroundType: "vanilla", backgroundTexture: "", backgroundAlpha: 0.75, backgroundColor: "#253a82", ninesliceSize: 0, textColor: "#ffffff", sampleText: "info: 공지입니다" },
+        subtitle_slot: { name: "서브타이틀 슬롯", channel, parseMode: "slice", outputMode: "label", triggerText: "", stripTriggerText: false, preserveValue: false, sliceStart: 0, sliceEnd: 20, maxValue: 100, anchor: "top_left", x: 4, y: 28, width: 210, height: 34, layer: 31, hideVanilla: true, enabled: true, backgroundType: "vanilla", backgroundTexture: "", backgroundAlpha: 0.75, backgroundColor: "#253a82", ninesliceSize: 0, textColor: "#dfe9ff", sampleText: "slot1\t\t\t\t\t\t\t\t\t\t\t\tslot2\t\t\t\t\t\t\t\t\t\t\t\tslot3\t\t\t\t\t\t\t\t\t\t\t\tslot4\t\t\t\t\t\t\t\t\t\t\t\tslot5" },
+        actionbar: { name: "액션바 패널", channel, parseMode: "trigger", outputMode: "label", triggerText: "info:", stripTriggerText: true, preserveValue: false, sliceStart: 0, sliceEnd: 0, maxValue: 100, anchor: "top_right", x: -4, y: 4, width: 280, height: 36, layer: 30, hideVanilla: true, enabled: true, backgroundType: "vanilla", backgroundTexture: "", backgroundAlpha: 0.75, backgroundColor: "#253a82", ninesliceSize: 0, textColor: "#ffffff", sampleText: "info: 오른쪽 표시" },
+        actionbar_preserve: { name: "액션바 보존 패널", channel, parseMode: "trigger", outputMode: "label", triggerText: "info:", stripTriggerText: true, preserveValue: true, sliceStart: 0, sliceEnd: 0, maxValue: 100, anchor: "top_right", x: -4, y: 4, width: 280, height: 36, layer: 30, hideVanilla: true, enabled: true, backgroundType: "vanilla", backgroundTexture: "", backgroundAlpha: 0.75, backgroundColor: "#253a82", ninesliceSize: 0, textColor: "#ffffff", sampleText: "info: 오른쪽 표시" },
     };
+    return normalizePanel({
+        id,
+        name: "",
+        channel,
+        parseMode: "trigger",
+        outputMode: "label",
+        triggerText: "",
+        stripTriggerText: false,
+        preserveValue: false,
+        sliceStart: 0,
+        sliceEnd: 0,
+        maxValue: 100,
+        anchor: "top_left",
+        x: 0,
+        y: 0,
+        width: 200,
+        height: 40,
+        layer: 10,
+        hideVanilla: true,
+        enabled: true,
+        backgroundType: "none",
+        backgroundTexture: "",
+        backgroundAlpha: 0.75,
+        backgroundColor: "#253a82",
+        ninesliceSize: 0,
+        textColor: "#ffffff",
+        sampleText: "",
+        ...base[channel],
+        ...overrides,
+    });
 }
-function applyActualPosition(overlay, left, top) {
-    const base = anchorBase(overlay.anchor);
-    const self = selfAnchorOffset(overlay.anchor, overlay.width, overlay.height);
-    overlay.x = Math.round(left + self.x - base.x);
-    overlay.y = Math.round(top + self.y - base.y);
-}
-function overlayJsonName(overlay) {
-    return `hud_${overlay.id}`;
-}
-function parseDescription(overlay) {
-    if (overlay.sourceType === "actionbar") {
-        return "액션바는 `$actionbar_text` 변수와 factory control_ids를 사용합니다. 그래서 현재 편집기는 액션바를 접두사 기반 라벨 패널로 안정적으로 생성하는 쪽에 맞춰져 있습니다.";
+function createTemplate(template) {
+    if (template === "subtitle_slots_5") {
+        const positions = [
+            { anchor: "top_left", x: 4, y: 28 },
+            { anchor: "top_right", x: -4, y: 28 },
+            { anchor: "top_left", x: 4, y: 48 },
+            { anchor: "top_right", x: -4, y: 48 },
+            { anchor: "top_middle", x: 0, y: 68 },
+        ];
+        return positions.map((position, index) => createPanel("subtitle_slot", { name: `서브타이틀 슬롯 ${index + 1}`, sliceStart: index * 20, sliceEnd: (index + 1) * 20, ...position }));
     }
-    if (overlay.parseMode === "trigger") {
-        return "접두사 또는 특정 문자열이 들어왔을 때만 패널을 표시합니다. 타이틀은 preserve와 함께 쓰면 마지막 값을 계속 유지할 수 있습니다.";
-    }
-    if (overlay.parseMode === "slice") {
-        return "긴 문자열의 고정 구간을 잘라서 표시합니다. `\\t` 패딩 기반 슬롯이나 HP/코인 같은 고정 영역에 적합합니다.";
-    }
-    return "하나의 문자열을 구분자 기준으로 둘로 나누어 서로 다른 패널에 띄웁니다. 예: `t1:안녕하세요:/: t2:반갑습니다`";
+    if (template === "title_coin")
+        return [createPanel("title", { name: "코인 타이틀", parseMode: "slice", preserveValue: true, triggerText: "coin:", sliceStart: 200, sliceEnd: 400, width: 280, height: 48, sampleText: "coin:1200\t\t\t\t\t", textColor: "#f6d96b" })];
+    if (template === "title_hp_text")
+        return [createPanel("title", { name: "체력 텍스트", parseMode: "slice", preserveValue: true, triggerText: "hp_text:", sliceStart: 400, sliceEnd: 600, anchor: "bottom_middle", x: -85, y: -86, width: 170, height: 32, backgroundType: "none", sampleText: "hp_text:84/100\t\t\t" })];
+    if (template === "title_hp_bar")
+        return [createPanel("title", { name: "체력 바", parseMode: "slice", outputMode: "progress_bar", preserveValue: true, triggerText: "hp_clip:", sliceStart: 600, sliceEnd: 800, anchor: "bottom_middle", x: -50, y: -48, width: 180, height: 28, sampleText: "hp_clip:84\t\t\t\t" })];
+    if (template === "actionbar_info")
+        return [createPanel("actionbar")];
+    if (template === "actionbar_preserve")
+        return [createPanel("actionbar_preserve")];
+    return [createPanel("title")];
 }
-function channelDescription(overlay) {
-    if (overlay.sourceType === "title")
-        return "`#hud_title_text_string` 바인딩을 사용합니다. preserve 가능.";
-    if (overlay.sourceType === "subtitle")
-        return "`#hud_subtitle_text_string` 글로벌 바인딩을 사용합니다. subtitle만 단독 전송하면 게임에서 안 뜰 수 있어서 빈 title과 같이 보내는 편이 안전합니다.";
-    return "`$actionbar_text` 변수는 factory 내부에서만 접근 가능합니다. 일반 바인딩처럼 쓰지 않고 전용 actionbar factory를 생성합니다.";
+function resetState() {
+    state.nextId = 1;
+    state.panels = [...createTemplate("title_info"), ...createTemplate("subtitle_slots_5"), ...createTemplate("actionbar_info")];
+    state.selectedId = state.panels[0].id;
+    state.drag = { panelId: null, pointerOffsetX: 0, pointerOffsetY: 0 };
 }
-function overlaySummary(overlay) {
-    const channel = overlay.sourceType === "title" ? "타이틀" : overlay.sourceType === "subtitle" ? "서브타이틀" : "액션바";
-    const parse = overlay.parseMode === "trigger"
-        ? (overlay.triggerText ? `접두사:${overlay.triggerText}` : "문자열 표시")
-        : overlay.parseMode === "slice"
-            ? `${overlay.sliceStart}-${overlay.sliceEnd}`
-            : `${overlay.splitPart === "first" ? "앞부분" : "뒷부분"} / ${overlay.splitDelimiter}`;
-    const preserve = overlay.preserveValue ? "보존" : "실시간";
-    return `${channel} / ${parse} / ${overlay.outputType === "progress_bar" ? "바" : "라벨"} / ${preserve}`;
+function panelSummary(panel) {
+    const channel = panel.channel === "title" ? "타이틀" : panel.channel === "subtitle_slot" ? "서브슬롯" : panel.channel === "actionbar" ? "액션바" : "보존액션바";
+    const parse = panel.parseMode === "trigger" ? (panel.triggerText || "문자 감지") : `${panel.sliceStart}-${panel.sliceEnd}`;
+    const output = panel.outputMode === "progress_bar" ? "바" : "라벨";
+    return `${channel} / ${parse} / ${output}`;
 }
-function previewText(overlay) {
-    if (overlay.outputType === "progress_bar")
-        return overlay.sampleText || "hp_clip:84";
-    if (overlay.parseMode === "trigger" && overlay.stripTriggerText && overlay.triggerText) {
-        return overlay.sampleText.replace(overlay.triggerText, "") || "표시 텍스트";
-    }
-    if (overlay.parseMode === "split_pair" && overlay.stripTriggerText && overlay.splitPrefix) {
-        return overlay.splitPart === "first" ? "안녕하세요" : "반갑습니다";
-    }
-    return overlay.sampleText || "표시 텍스트";
+function previewText(panel) {
+    if (panel.outputMode === "progress_bar")
+        return "70%";
+    if (panel.channel === "subtitle_slot")
+        return `슬롯 ${Math.floor(panel.sliceStart / 20) + 1}`;
+    return panel.stripTriggerText ? panel.sampleText.replace(panel.triggerText, "") : panel.sampleText;
 }
-function buildHudEditor() {
+function previewStyle(panel) {
+    const position = actualPosition(panel);
+    return [
+        `left:${(position.left / PREVIEW_WIDTH) * 100}%`,
+        `top:${(position.top / PREVIEW_HEIGHT) * 100}%`,
+        `width:${(panel.width / PREVIEW_WIDTH) * 100}%`,
+        `height:${(panel.height / PREVIEW_HEIGHT) * 100}%`,
+        `z-index:${panel.layer}`,
+        `color:${panel.textColor}`,
+    ].join(";");
+}
+function bindingLabel(channel) {
+    if (channel === "title")
+        return TITLE_BINDING;
+    if (channel === "subtitle_slot")
+        return SUBTITLE_BINDING;
+    if (channel === "actionbar")
+        return ACTIONBAR_VARIABLE;
+    return "#hud_actionbar_text_string";
+}
+function buildEditor() {
     const form = getForm();
     if (form.dataset.initialized === "true")
         return;
@@ -497,46 +212,37 @@ function buildHudEditor() {
                     <div class="hudEditorOverlayList"></div>
                     <div class="hudEditorSectionTitle hudEditorSectionSpacer">패널 추가</div>
                     <div class="hudEditorTemplateButtons">
-                        <button type="button" class="propertyInputButton hudAddOverlayBtn" data-source="title">타이틀 추가</button>
-                        <button type="button" class="propertyInputButton hudAddOverlayBtn" data-source="subtitle">서브타이틀 추가</button>
-                        <button type="button" class="propertyInputButton hudAddOverlayBtn" data-source="actionbar">액션바 추가</button>
+                        <button type="button" class="propertyInputButton hudAddPanelBtn" data-channel="title">타이틀</button>
+                        <button type="button" class="propertyInputButton hudAddPanelBtn" data-channel="subtitle_slot">서브슬롯</button>
+                        <button type="button" class="propertyInputButton hudAddPanelBtn" data-channel="actionbar">액션바</button>
+                        <button type="button" class="propertyInputButton hudAddPanelBtn" data-channel="actionbar_preserve">보존 액션바</button>
                     </div>
                     <div class="hudEditorSectionTitle hudEditorSectionSpacer">예시 템플릿</div>
                     <div class="hudEditorTemplateButtons">
-                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="info">정보 패널</button>
-                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="coin">코인</button>
-                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="hp_text">체력 텍스트</button>
-                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="hp_clip">체력 바</button>
-                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="actionbar_info">액션바 info</button>
+                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="title_info">타이틀 info</button>
+                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="title_coin">코인</button>
+                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="title_hp_text">체력 텍스트</button>
+                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="title_hp_bar">체력 바</button>
                         <button type="button" class="propertyInputButton hudTemplateBtn" data-template="subtitle_slots_5">서브타이틀 5슬롯</button>
-                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="t1_preserve">t1 보존</button>
-                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="t2_preserve">t2 보존</button>
-                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="split_t1">분리 t1</button>
-                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="split_t2">분리 t2</button>
+                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="actionbar_info">액션바 info</button>
+                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="actionbar_preserve">보존 액션바</button>
                     </div>
                     <div class="hudEditorSidebarActions">
-                        <button type="button" class="propertyInputButton hudEditorDeleteBtn">선택 패널 삭제</button>
-                        <button type="button" class="propertyInputButton hudEditorResetBtn">기본 상태로 초기화</button>
+                        <button type="button" class="propertyInputButton hudDeleteBtn">선택 패널 삭제</button>
+                        <button type="button" class="propertyInputButton hudResetBtn">처음 상태로 초기화</button>
                     </div>
                 </div>
             </div>
             <div class="hudEditorCanvasPanel">
-                <div class="glyphEditorCanvasHeader">가운데 미리보기에서 패널을 드래그해 위치를 잡고, 오른쪽에서 채널/파싱/배경/앵커를 조정하세요.</div>
+                <div class="glyphEditorCanvasHeader">이 에디터는 title / subtitle slot / actionbar 구조만 정확하게 뽑는 새 HUD 메이커입니다.</div>
                 <div class="hudEditorPreviewFrame"><div class="hudEditorPreview" id="hudEditorPreview"></div></div>
                 <div class="hudEditorHelpCard">
-                    <div class="hudEditorSectionTitle">HUD 에디터 핵심 규칙</div>
+                    <div class="hudEditorSectionTitle">생성 기준</div>
                     <div class="hudEditorHelpList">
-                        <div><strong>타이틀</strong>: <code>#hud_title_text_string</code> 바인딩. preserve 가능.</div>
-                        <div><strong>서브타이틀</strong>: <code>#hud_subtitle_text_string</code> 글로벌 바인딩. subtitle만 단독 전송하면 안 뜰 수 있습니다.</div>
-                        <div><strong>액션바</strong>: <code>$actionbar_text</code> 변수. factory 내부에서만 접근하므로 전용 actionbar factory JSON으로 생성합니다.</div>
-                        <div><strong>슬라이스</strong>: <code>'%.Ns' * 문자열</code> 방식으로 구간을 잘라 씁니다. 한글은 바이트 길이 주의가 필요합니다.</div>
-                        <div><strong>분리</strong>: <code>t1:안녕하세요:/: t2:반갑습니다</code> 같은 문자열을 둘로 쪼개서 다른 위치에 띄울 수 있습니다.</div>
-                    </div>
-                    <div class="hudEditorHelpExamples">
-                        <div class="hudEditorHelpExample"><strong>예시 1</strong> <code>/title @a title "info:공지입니다"</code></div>
-                        <div class="hudEditorHelpExample"><strong>예시 2</strong> <code>/title @a title "t1:안녕하세요"</code> 뒤에 <code>/title @a title "t2:반갑습니다"</code></div>
-                        <div class="hudEditorHelpExample"><strong>예시 3</strong> <code>/title @a title "t1:안녕하세요:/: t2:반갑습니다"</code></div>
-                        <div class="hudEditorHelpExample"><strong>예시 4</strong> <code>0~200 info / 200~400 coin / 400~600 hp_text / 600~800 hp_clip</code></div>
+                        <div><strong>타이틀</strong>: <code>title_control</code> 계열로 생성</div>
+                        <div><strong>서브타이틀</strong>: <code>subtitle_data</code> + <code>subtitle_slot_template</code> 구조</div>
+                        <div><strong>액션바</strong>: <code>custom_actionbar_factory</code>와 <code>my_custom_actionbar</code> 구조</div>
+                        <div><strong>보존 액션바</strong>: <code>preserved_actionbar_display</code> 구조</div>
                     </div>
                 </div>
             </div>
@@ -546,91 +252,59 @@ function buildHudEditor() {
                     <div class="hudEditorInspectorSummary"></div>
                     <div class="hudEditorInspectorFields"></div>
                     <div class="hudEditorSidebarActions">
-                        <button type="button" class="propertyInputButton hudEditorCopyBtn">HUD JSON 복사</button>
-                        <button type="button" class="propertyInputButton hudEditorDownloadBtn">HUD JSON 다운로드</button>
+                        <button type="button" class="propertyInputButton hudCopyBtn">HUD JSON 복사</button>
+                        <button type="button" class="propertyInputButton hudDownloadBtn">HUD JSON 다운로드</button>
                     </div>
                 </div>
             </div>
         </div>`;
-    form.querySelector(".hudEditorResetBtn").onclick = () => {
-        resetHudEditorState();
-        renderHudEditor();
-        new Notification("HUD 편집기를 기본 상태로 되돌렸습니다.", 2200, "notif");
+    form.querySelector(".hudResetBtn").onclick = () => {
+        resetState();
+        render();
+        new Notification("HUD 에디터를 처음 상태로 되돌렸습니다.", 2200, "notif");
     };
-    form.querySelector(".hudEditorDeleteBtn").onclick = () => {
-        if (state.overlays.length <= 1) {
-            new Notification("패널은 최소 1개 이상 남아 있어야 합니다.", 2500, "error");
+    form.querySelector(".hudDeleteBtn").onclick = () => {
+        if (state.panels.length <= 1) {
+            new Notification("패널은 최소 1개 이상 남아 있어야 합니다.", 2200, "error");
             return;
         }
-        state.overlays = state.overlays.filter((overlay) => overlay.id !== state.selectedId);
-        state.selectedId = state.overlays[0].id;
-        renderHudEditor();
-        new Notification("선택한 HUD 패널을 삭제했습니다.", 2200, "notif");
+        state.panels = state.panels.filter((panel) => panel.id !== state.selectedId);
+        state.selectedId = state.panels[0].id;
+        render();
     };
-    form.querySelectorAll(".hudAddOverlayBtn").forEach((button) => {
+    form.querySelectorAll(".hudAddPanelBtn").forEach((button) => {
         button.onclick = () => {
-            const overlay = baseOverlay(button.dataset.source);
-            state.overlays.push(overlay);
-            state.selectedId = overlay.id;
-            renderHudEditor();
-            new Notification(`${button.textContent} 패널을 추가했습니다.`, 2200, "notif");
+            const panel = createPanel(button.dataset.channel);
+            state.panels.push(panel);
+            state.selectedId = panel.id;
+            render();
         };
     });
     form.querySelectorAll(".hudTemplateBtn").forEach((button) => {
         button.onclick = () => {
-            const overlays = buildTemplateOverlays(button.dataset.template);
-            state.overlays.push(...overlays);
-            state.selectedId = overlays[overlays.length - 1].id;
-            renderHudEditor();
-            new Notification(`${button.textContent} 템플릿을 추가했습니다.`, 2200, "notif");
+            const panels = createTemplate(button.dataset.template);
+            state.panels.push(...panels);
+            state.selectedId = panels[panels.length - 1].id;
+            render();
         };
     });
-    form.querySelector(".hudEditorCopyBtn").onclick = async () => {
-        try {
-            await navigator.clipboard.writeText(generateHudJson());
-            new Notification("HUD JSON을 복사했습니다.", 2200, "notif");
-        }
-        catch (error) {
-            console.error(error);
-            new Notification("HUD JSON을 복사하지 못했습니다.", 2800, "error");
-        }
-    };
-    form.querySelector(".hudEditorDownloadBtn").onclick = () => {
-        const blob = new Blob([generateHudJson()], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "hud_screen.json";
-        link.click();
-        URL.revokeObjectURL(url);
-    };
 }
-function renderOverlayList() {
+function renderList() {
     const container = getForm().querySelector(".hudEditorOverlayList");
     if (!container)
         return;
-    container.innerHTML = state.overlays.map((overlay) => `
-        <button type="button" class="hudEditorOverlayListItem${overlay.id === state.selectedId ? " hudEditorOverlayListItemActive" : ""}" data-overlay-id="${overlay.id}">
-            <span>${escapeHtml(overlay.label)}</span>
-            <span>${escapeHtml(overlaySummary(overlay))}</span>
-        </button>`).join("");
+    container.innerHTML = state.panels.map((panel) => `
+        <button type="button" class="hudEditorOverlayListItem${panel.id === state.selectedId ? " hudEditorOverlayListItemActive" : ""}" data-panel-id="${panel.id}">
+            <span>${escapeHtml(panel.name)}</span>
+            <span>${escapeHtml(panelSummary(panel))}</span>
+        </button>
+    `).join("");
     container.querySelectorAll(".hudEditorOverlayListItem").forEach((button) => {
         button.onclick = () => {
-            state.selectedId = button.dataset.overlayId;
-            renderHudEditor();
+            state.selectedId = button.dataset.panelId;
+            render();
         };
     });
-}
-function previewStyle(overlay) {
-    const position = actualPosition(overlay);
-    return [
-        `left:${position.left / PREVIEW_WIDTH * 100}%`,
-        `top:${position.top / PREVIEW_HEIGHT * 100}%`,
-        `width:${overlay.width / PREVIEW_WIDTH * 100}%`,
-        `height:${overlay.height / PREVIEW_HEIGHT * 100}%`,
-        `z-index:${overlay.layer}`,
-        `color:${overlay.color}`,
-    ].join(";");
 }
 function renderPreview() {
     const preview = getForm().querySelector("#hudEditorPreview");
@@ -641,150 +315,134 @@ function renderPreview() {
         <div class="hudEditorHotbarGuide"></div>
         <div class="hudEditorHealthGuide"></div>
         <div class="hudEditorHungerGuide"></div>
-        ${state.overlays.filter((overlay) => overlay.visible).map((overlay) => `
-            <div class="hudEditorOverlay${overlay.id === state.selectedId ? " hudEditorOverlayActive" : ""}${overlay.backgroundType !== "none" || overlay.outputType === "progress_bar" ? " hudEditorOverlayWithBg" : ""}"
-                data-overlay-id="${overlay.id}"
-                style="${previewStyle(overlay)}">
-                ${overlay.outputType === "progress_bar"
+        ${state.panels.filter((panel) => panel.enabled).map((panel) => `
+            <div class="hudEditorOverlay${panel.id === state.selectedId ? " hudEditorOverlayActive" : ""}${panel.backgroundType !== "none" || panel.outputMode === "progress_bar" ? " hudEditorOverlayWithBg" : ""}" data-panel-id="${panel.id}" style="${previewStyle(panel)}">
+                ${panel.outputMode === "progress_bar"
         ? `<div class="hudEditorProgressShell"><div class="hudEditorProgressFill" style="width:70%"></div></div>`
-        : `<div class="hudEditorOverlayLabel">${escapeHtml(previewText(overlay))}</div>`}
-            </div>`).join("")}`;
+        : `<div class="hudEditorOverlayLabel">${escapeHtml(previewText(panel))}</div>`}
+            </div>
+        `).join("")}
+    `;
     preview.querySelectorAll(".hudEditorOverlay").forEach((element) => {
         element.onmousedown = (event) => {
-            const overlay = state.overlays.find((entry) => entry.id === element.dataset.overlayId);
-            if (!overlay)
+            const panel = state.panels.find((entry) => entry.id === element.dataset.panelId);
+            if (!panel)
                 return;
-            const elementRect = element.getBoundingClientRect();
-            state.selectedId = overlay.id;
-            state.drag = {
-                overlayId: overlay.id,
-                pointerOffsetX: event.clientX - elementRect.left,
-                pointerOffsetY: event.clientY - elementRect.top,
-            };
-            renderHudEditor();
+            const rect = element.getBoundingClientRect();
+            state.selectedId = panel.id;
+            state.drag = { panelId: panel.id, pointerOffsetX: event.clientX - rect.left, pointerOffsetY: event.clientY - rect.top };
+            render();
             event.preventDefault();
         };
     });
     preview.onmousemove = (event) => {
-        if (!state.drag.overlayId)
+        if (!state.drag.panelId)
             return;
-        const overlay = state.overlays.find((entry) => entry.id === state.drag.overlayId);
-        if (!overlay)
+        const panel = state.panels.find((entry) => entry.id === state.drag.panelId);
+        if (!panel)
             return;
         const previewRect = preview.getBoundingClientRect();
-        const widthPx = (overlay.width / PREVIEW_WIDTH) * previewRect.width;
-        const heightPx = (overlay.height / PREVIEW_HEIGHT) * previewRect.height;
+        const widthPx = (panel.width / PREVIEW_WIDTH) * previewRect.width;
+        const heightPx = (panel.height / PREVIEW_HEIGHT) * previewRect.height;
         const leftPx = clamp(event.clientX - previewRect.left - state.drag.pointerOffsetX, 0, previewRect.width - widthPx);
         const topPx = clamp(event.clientY - previewRect.top - state.drag.pointerOffsetY, 0, previewRect.height - heightPx);
-        const left = (leftPx / previewRect.width) * PREVIEW_WIDTH;
-        const top = (topPx / previewRect.height) * PREVIEW_HEIGHT;
-        applyActualPosition(overlay, left, top);
+        applyActualPosition(panel, (leftPx / previewRect.width) * PREVIEW_WIDTH, (topPx / previewRect.height) * PREVIEW_HEIGHT);
         renderPreview();
         renderInspector();
     };
-    preview.onmouseup = () => { state.drag.overlayId = null; };
-    preview.onmouseleave = () => { state.drag.overlayId = null; };
+    preview.onmouseup = () => { state.drag.panelId = null; };
+    preview.onmouseleave = () => { state.drag.panelId = null; };
 }
 function renderInspector() {
     const summary = getForm().querySelector(".hudEditorInspectorSummary");
     const container = getForm().querySelector(".hudEditorInspectorFields");
     if (!summary || !container)
         return;
-    const overlay = selected();
-    const preserveDisabled = overlay.sourceType === "subtitle" ? "disabled" : "";
-    const splitDisabled = overlay.sourceType === "actionbar" || overlay.parseMode !== "split_pair" ? "disabled" : "";
-    const sliceDisabled = overlay.sourceType === "actionbar" || overlay.parseMode !== "slice" ? "disabled" : "";
-    const triggerDisabled = overlay.parseMode !== "trigger" ? "disabled" : "";
-    const progressDisabled = overlay.outputType !== "progress_bar" || overlay.sourceType === "actionbar" ? "disabled" : "";
-    const backgroundTextureDisabled = overlay.backgroundType !== "custom" ? "disabled" : "";
-    const backgroundColorDisabled = overlay.backgroundType !== "solid" ? "disabled" : "";
-    const ninesliceDisabled = overlay.backgroundType !== "custom" ? "disabled" : "";
+    const panel = selectedPanel();
+    const parseDisabled = panel.channel === "subtitle_slot" || panel.channel === "actionbar" || panel.channel === "actionbar_preserve" ? "disabled" : "";
+    const sliceDisabled = panel.parseMode !== "slice" ? "disabled" : "";
+    const triggerDisabled = panel.parseMode !== "trigger" ? "disabled" : "";
+    const preserveDisabled = panel.channel === "subtitle_slot" || panel.channel === "actionbar" ? "disabled" : "";
+    const progressDisabled = panel.outputMode !== "progress_bar" || panel.channel === "actionbar" || panel.channel === "actionbar_preserve" ? "disabled" : "";
+    const colorDisabled = panel.backgroundType !== "solid" ? "disabled" : "";
+    const textureDisabled = panel.backgroundType !== "custom" ? "disabled" : "";
+    const ninesliceDisabled = panel.backgroundType !== "custom" ? "disabled" : "";
     summary.innerHTML = `
         <div class="hudEditorHelpCard hudEditorInspectorCard">
-            <div class="hudEditorHelpText"><strong>${escapeHtml(overlay.label)}</strong>는 <strong>${escapeHtml(bindingName(overlay.sourceType))}</strong> 채널을 사용합니다.</div>
-            <div class="hudEditorHelpText">${escapeHtml(channelDescription(overlay))}</div>
-            <div class="hudEditorHelpText">${escapeHtml(parseDescription(overlay))}</div>
-            <div class="hudEditorHelpExample">현재 미리보기 예시: <code>${escapeHtml(overlay.sampleText || "(빈 문자열)")}</code></div>
-        </div>`;
+            <div class="hudEditorHelpText"><strong>${escapeHtml(panel.name)}</strong>는 <strong>${escapeHtml(bindingLabel(panel.channel))}</strong>를 사용합니다.</div>
+            <div class="hudEditorHelpText">${escapeHtml(panelSummary(panel))}</div>
+            <div class="hudEditorHelpExample">예시 문자열: <code>${escapeHtml(panel.sampleText || "(빈 문자열)")}</code></div>
+        </div>
+    `;
     container.innerHTML = `
-        <label class="hudEditorFieldLabel">이름</label><input class="hudEditorFieldInput" type="text" data-field="label" value="${escapeHtml(overlay.label)}">
+        <label class="hudEditorFieldLabel">이름</label><input class="hudEditorFieldInput" type="text" data-field="name" value="${escapeHtml(panel.name)}">
         <label class="hudEditorFieldLabel">채널</label>
-        <select class="hudEditorFieldInput" data-field="sourceType">
-            <option value="title" ${overlay.sourceType === "title" ? "selected" : ""}>타이틀</option>
-            <option value="subtitle" ${overlay.sourceType === "subtitle" ? "selected" : ""}>서브타이틀</option>
-            <option value="actionbar" ${overlay.sourceType === "actionbar" ? "selected" : ""}>액션바</option>
+        <select class="hudEditorFieldInput" data-field="channel">
+            <option value="title" ${panel.channel === "title" ? "selected" : ""}>title</option>
+            <option value="subtitle_slot" ${panel.channel === "subtitle_slot" ? "selected" : ""}>subtitle slot</option>
+            <option value="actionbar" ${panel.channel === "actionbar" ? "selected" : ""}>actionbar</option>
+            <option value="actionbar_preserve" ${panel.channel === "actionbar_preserve" ? "selected" : ""}>actionbar preserve</option>
         </select>
-        <label class="hudEditorFieldLabel">파싱 방식</label>
-        <select class="hudEditorFieldInput" data-field="parseMode">
-            <option value="trigger" ${overlay.parseMode === "trigger" ? "selected" : ""}>접두사 감지</option>
-            <option value="slice" ${overlay.parseMode === "slice" ? "selected" : ""} ${overlay.sourceType === "actionbar" ? "disabled" : ""}>슬라이스</option>
-            <option value="split_pair" ${overlay.parseMode === "split_pair" ? "selected" : ""} ${overlay.sourceType === "actionbar" ? "disabled" : ""}>문자열 분리</option>
+        <label class="hudEditorFieldLabel">파싱</label>
+        <select class="hudEditorFieldInput" data-field="parseMode" ${parseDisabled}>
+            <option value="trigger" ${panel.parseMode === "trigger" ? "selected" : ""}>trigger</option>
+            <option value="slice" ${panel.parseMode === "slice" ? "selected" : ""}>slice</option>
         </select>
         <label class="hudEditorFieldLabel">출력</label>
-        <select class="hudEditorFieldInput" data-field="outputType">
-            <option value="label" ${overlay.outputType === "label" ? "selected" : ""}>라벨</option>
-            <option value="progress_bar" ${overlay.outputType === "progress_bar" ? "selected" : ""} ${overlay.sourceType === "actionbar" ? "disabled" : ""}>프로그레스 바</option>
+        <select class="hudEditorFieldInput" data-field="outputMode">
+            <option value="label" ${panel.outputMode === "label" ? "selected" : ""}>label</option>
+            <option value="progress_bar" ${panel.outputMode === "progress_bar" ? "selected" : ""} ${panel.channel === "actionbar" || panel.channel === "actionbar_preserve" ? "disabled" : ""}>progress</option>
         </select>
-        <label class="hudEditorFieldLabel">접두사</label><input class="hudEditorFieldInput" type="text" data-field="triggerText" value="${escapeHtml(overlay.triggerText)}" placeholder="예: info:" ${triggerDisabled}>
-        <label class="hudEditorFieldLabel">슬라이스 시작</label><input class="hudEditorFieldInput" type="number" data-field="sliceStart" value="${overlay.sliceStart}" ${sliceDisabled}>
-        <label class="hudEditorFieldLabel">슬라이스 끝</label><input class="hudEditorFieldInput" type="number" data-field="sliceEnd" value="${overlay.sliceEnd}" ${sliceDisabled}>
-        <label class="hudEditorFieldLabel">구분자</label><input class="hudEditorFieldInput" type="text" data-field="splitDelimiter" value="${escapeHtml(overlay.splitDelimiter)}" placeholder="예: :/: " ${splitDisabled}>
-        <label class="hudEditorFieldLabel">분리 방향</label>
-        <select class="hudEditorFieldInput" data-field="splitPart" ${splitDisabled}>
-            <option value="first" ${overlay.splitPart === "first" ? "selected" : ""}>앞부분</option>
-            <option value="second" ${overlay.splitPart === "second" ? "selected" : ""}>뒷부분</option>
-        </select>
-        <label class="hudEditorFieldLabel">분리 접두사</label><input class="hudEditorFieldInput" type="text" data-field="splitPrefix" value="${escapeHtml(overlay.splitPrefix)}" placeholder="예: t1:" ${splitDisabled}>
-        <label class="hudEditorFieldLabel">예시 문자열</label><input class="hudEditorFieldInput" type="text" data-field="sampleText" value="${escapeHtml(overlay.sampleText)}">
-        <label class="hudEditorFieldLabel">값 보존</label><input class="hudEditorFieldCheckbox" type="checkbox" data-field="preserveValue" ${overlay.preserveValue ? "checked" : ""} ${preserveDisabled}>
-        <label class="hudEditorFieldLabel">접두사 제거</label><input class="hudEditorFieldCheckbox" type="checkbox" data-field="stripTriggerText" ${overlay.stripTriggerText ? "checked" : ""}>
-        <label class="hudEditorFieldLabel">바닐라 숨김</label><input class="hudEditorFieldCheckbox" type="checkbox" data-field="hideVanilla" ${overlay.hideVanilla ? "checked" : ""}>
-        <label class="hudEditorFieldLabel">최대값</label><input class="hudEditorFieldInput" type="number" data-field="maxValue" value="${overlay.maxValue}" ${progressDisabled}>
+        <label class="hudEditorFieldLabel">접두사</label><input class="hudEditorFieldInput" type="text" data-field="triggerText" value="${escapeHtml(panel.triggerText)}" ${triggerDisabled}>
+        <label class="hudEditorFieldLabel">슬라이스 시작</label><input class="hudEditorFieldInput" type="number" data-field="sliceStart" value="${panel.sliceStart}" ${sliceDisabled}>
+        <label class="hudEditorFieldLabel">슬라이스 끝</label><input class="hudEditorFieldInput" type="number" data-field="sliceEnd" value="${panel.sliceEnd}" ${sliceDisabled}>
+        <label class="hudEditorFieldLabel">최대값</label><input class="hudEditorFieldInput" type="number" data-field="maxValue" value="${panel.maxValue}" ${progressDisabled}>
+        <label class="hudEditorFieldLabel">예시 문자열</label><input class="hudEditorFieldInput" type="text" data-field="sampleText" value="${escapeHtml(panel.sampleText)}">
+        <label class="hudEditorFieldLabel">접두사 제거</label><input class="hudEditorFieldCheckbox" type="checkbox" data-field="stripTriggerText" ${panel.stripTriggerText ? "checked" : ""}>
+        <label class="hudEditorFieldLabel">값 보존</label><input class="hudEditorFieldCheckbox" type="checkbox" data-field="preserveValue" ${panel.preserveValue ? "checked" : ""} ${preserveDisabled}>
+        <label class="hudEditorFieldLabel">바닐라 숨김</label><input class="hudEditorFieldCheckbox" type="checkbox" data-field="hideVanilla" ${panel.hideVanilla ? "checked" : ""}>
         <label class="hudEditorFieldLabel">앵커</label>
         <select class="hudEditorFieldInput" data-field="anchor">
-            <option value="top_left" ${overlay.anchor === "top_left" ? "selected" : ""}>top_left</option>
-            <option value="top_middle" ${overlay.anchor === "top_middle" ? "selected" : ""}>top_middle</option>
-            <option value="top_right" ${overlay.anchor === "top_right" ? "selected" : ""}>top_right</option>
-            <option value="left_middle" ${overlay.anchor === "left_middle" ? "selected" : ""}>left_middle</option>
-            <option value="center" ${overlay.anchor === "center" ? "selected" : ""}>center</option>
-            <option value="right_middle" ${overlay.anchor === "right_middle" ? "selected" : ""}>right_middle</option>
-            <option value="bottom_left" ${overlay.anchor === "bottom_left" ? "selected" : ""}>bottom_left</option>
-            <option value="bottom_middle" ${overlay.anchor === "bottom_middle" ? "selected" : ""}>bottom_middle</option>
-            <option value="bottom_right" ${overlay.anchor === "bottom_right" ? "selected" : ""}>bottom_right</option>
+            <option value="top_left" ${panel.anchor === "top_left" ? "selected" : ""}>top_left</option>
+            <option value="top_middle" ${panel.anchor === "top_middle" ? "selected" : ""}>top_middle</option>
+            <option value="top_right" ${panel.anchor === "top_right" ? "selected" : ""}>top_right</option>
+            <option value="left_middle" ${panel.anchor === "left_middle" ? "selected" : ""}>left_middle</option>
+            <option value="center" ${panel.anchor === "center" ? "selected" : ""}>center</option>
+            <option value="right_middle" ${panel.anchor === "right_middle" ? "selected" : ""}>right_middle</option>
+            <option value="bottom_left" ${panel.anchor === "bottom_left" ? "selected" : ""}>bottom_left</option>
+            <option value="bottom_middle" ${panel.anchor === "bottom_middle" ? "selected" : ""}>bottom_middle</option>
+            <option value="bottom_right" ${panel.anchor === "bottom_right" ? "selected" : ""}>bottom_right</option>
         </select>
-        <label class="hudEditorFieldLabel">Offset X</label><input class="hudEditorFieldInput" type="number" data-field="x" value="${overlay.x}">
-        <label class="hudEditorFieldLabel">Offset Y</label><input class="hudEditorFieldInput" type="number" data-field="y" value="${overlay.y}">
-        <label class="hudEditorFieldLabel">너비</label><input class="hudEditorFieldInput" type="number" data-field="width" value="${overlay.width}">
-        <label class="hudEditorFieldLabel">높이</label><input class="hudEditorFieldInput" type="number" data-field="height" value="${overlay.height}">
-        <label class="hudEditorFieldLabel">레이어</label><input class="hudEditorFieldInput" type="number" data-field="layer" value="${overlay.layer}">
+        <label class="hudEditorFieldLabel">Offset X</label><input class="hudEditorFieldInput" type="number" data-field="x" value="${panel.x}">
+        <label class="hudEditorFieldLabel">Offset Y</label><input class="hudEditorFieldInput" type="number" data-field="y" value="${panel.y}">
+        <label class="hudEditorFieldLabel">너비</label><input class="hudEditorFieldInput" type="number" data-field="width" value="${panel.width}">
+        <label class="hudEditorFieldLabel">높이</label><input class="hudEditorFieldInput" type="number" data-field="height" value="${panel.height}">
+        <label class="hudEditorFieldLabel">레이어</label><input class="hudEditorFieldInput" type="number" data-field="layer" value="${panel.layer}">
         <label class="hudEditorFieldLabel">배경 타입</label>
         <select class="hudEditorFieldInput" data-field="backgroundType">
-            <option value="none" ${overlay.backgroundType === "none" ? "selected" : ""}>없음</option>
-            <option value="vanilla" ${overlay.backgroundType === "vanilla" ? "selected" : ""}>바닐라</option>
-            <option value="solid" ${overlay.backgroundType === "solid" ? "selected" : ""}>단색</option>
-            <option value="custom" ${overlay.backgroundType === "custom" ? "selected" : ""}>커스텀</option>
+            <option value="none" ${panel.backgroundType === "none" ? "selected" : ""}>none</option>
+            <option value="vanilla" ${panel.backgroundType === "vanilla" ? "selected" : ""}>vanilla</option>
+            <option value="solid" ${panel.backgroundType === "solid" ? "selected" : ""}>solid</option>
+            <option value="custom" ${panel.backgroundType === "custom" ? "selected" : ""}>custom</option>
         </select>
-        <label class="hudEditorFieldLabel">배경 알파</label><input class="hudEditorFieldInput" type="number" step="0.05" min="0" max="1" data-field="backgroundAlpha" value="${overlay.backgroundAlpha}">
-        <label class="hudEditorFieldLabel">배경 색상</label><input class="hudEditorFieldInput" type="color" data-field="backgroundColor" value="${overlay.backgroundColor}" ${backgroundColorDisabled}>
-        <label class="hudEditorFieldLabel">배경 텍스처</label><input class="hudEditorFieldInput" type="text" data-field="backgroundTexture" value="${escapeHtml(overlay.backgroundTexture)}" placeholder="textures/ui/my_bg" ${backgroundTextureDisabled}>
-        <label class="hudEditorFieldLabel">나인슬라이스</label><input class="hudEditorFieldInput" type="number" min="0" data-field="ninesliceSize" value="${overlay.ninesliceSize}" ${ninesliceDisabled}>
-        <label class="hudEditorFieldLabel">텍스트 색상</label><input class="hudEditorFieldInput" type="color" data-field="color" value="${overlay.color}">
-        <label class="hudEditorFieldLabel">사용 여부</label><input class="hudEditorFieldCheckbox" type="checkbox" data-field="visible" ${overlay.visible ? "checked" : ""}>`;
+        <label class="hudEditorFieldLabel">배경 알파</label><input class="hudEditorFieldInput" type="number" min="0" max="1" step="0.05" data-field="backgroundAlpha" value="${panel.backgroundAlpha}">
+        <label class="hudEditorFieldLabel">배경 색상</label><input class="hudEditorFieldInput" type="color" data-field="backgroundColor" value="${panel.backgroundColor}" ${colorDisabled}>
+        <label class="hudEditorFieldLabel">배경 텍스처</label><input class="hudEditorFieldInput" type="text" data-field="backgroundTexture" value="${escapeHtml(panel.backgroundTexture)}" ${textureDisabled}>
+        <label class="hudEditorFieldLabel">나인슬라이스</label><input class="hudEditorFieldInput" type="number" data-field="ninesliceSize" value="${panel.ninesliceSize}" ${ninesliceDisabled}>
+        <label class="hudEditorFieldLabel">텍스트 색상</label><input class="hudEditorFieldInput" type="color" data-field="textColor" value="${panel.textColor}">
+        <label class="hudEditorFieldLabel">활성</label><input class="hudEditorFieldCheckbox" type="checkbox" data-field="enabled" ${panel.enabled ? "checked" : ""}>
+    `;
     container.querySelectorAll("[data-field]").forEach((input) => {
         const field = input.dataset.field;
         const handler = () => {
-            const current = selected();
-            const beforePosition = actualPosition(current);
-            if (field === "sourceType")
-                current.sourceType = input.value;
+            const current = selectedPanel();
+            const before = actualPosition(current);
+            if (field === "channel")
+                current.channel = input.value;
             else if (field === "parseMode")
                 current.parseMode = input.value;
-            else if (field === "outputType")
-                current.outputType = input.value;
-            else if (field === "splitPart")
-                current.splitPart = input.value;
-            else if (field === "backgroundType")
-                current.backgroundType = input.value;
+            else if (field === "outputMode")
+                current.outputMode = input.value;
             else if (field === "anchor")
                 current.anchor = input.value;
             else if (input instanceof HTMLInputElement && input.type === "checkbox")
@@ -793,178 +451,86 @@ function renderInspector() {
                 current[field] = Number(input.value);
             else
                 current[field] = input.value;
-            normalizeOverlay(current);
+            normalizePanel(current);
             if (field === "anchor")
-                applyActualPosition(current, beforePosition.left, beforePosition.top);
-            renderHudEditor();
+                applyActualPosition(current, before.left, before.top);
+            render();
         };
         input.oninput = handler;
         input.onchange = handler;
     });
 }
-const colorHexToRgb = (color) => {
-    const normalized = color.replace("#", "");
-    const bigint = Number.parseInt(normalized, 16);
-    return [((bigint >> 16) & 255) / 255, ((bigint >> 8) & 255) / 255, (bigint & 255) / 255];
-};
-function prefixMatchExpr(source, prefix) {
-    const trimmed = prefix.trim();
-    if (!trimmed)
-        return `(not (${source} = ''))`;
-    return `(('%.${trimmed.length}s' * ${source}) = '${escapeBindingText(trimmed)}')`;
+function render() {
+    renderList();
+    renderPreview();
+    renderInspector();
 }
 function containsTextExpr(source, text) {
-    const trimmed = text.trim();
-    if (!trimmed)
+    const value = text.trim();
+    if (!value)
         return `(not (${source} = ''))`;
-    return `(not ((${source} - '${escapeBindingText(trimmed)}') = ${source}))`;
+    return `(not ((${source} - '${escapeBindingText(value)}') = ${source}))`;
 }
-function missingPrefixExpr(source, prefix) {
-    const trimmed = prefix.trim();
-    if (!trimmed)
+function missingTextExpr(source, text) {
+    const value = text.trim();
+    if (!value)
         return `(${source} = '')`;
-    return `((${source} - '${escapeBindingText(trimmed)}') = ${source})`;
+    return `((${source} - '${escapeBindingText(value)}') = ${source})`;
 }
-function stripPrefixExpr(source, prefix) {
-    const trimmed = prefix.trim();
-    if (!trimmed)
+function stripTextExpr(source, text) {
+    const value = text.trim();
+    if (!value)
         return source;
-    return `(${source} - '${escapeBindingText(trimmed)}')`;
+    return `(${source} - '${escapeBindingText(value)}')`;
 }
 function sliceExpr(source, start, end) {
     if (start <= 0)
         return `(('%.${end}s' * ${source}) - '\\t')`;
     return `((('%.${end}s' * ${source}) - ('%.${start}s' * ${source})) - '\\t')`;
 }
-function splitLengthExpr() {
-    return "(#length + 1 * (not (('%.'+#length+'s') * #string = #string)))";
+function finalTextExpr(panel, source) {
+    const raw = panel.parseMode === "slice" ? sliceExpr(source, panel.sliceStart, panel.sliceEnd) : source;
+    return panel.stripTriggerText && panel.triggerText.trim() ? stripTextExpr(raw, panel.triggerText) : raw;
 }
-function splitSearchExpr(delimiter) {
-    return `(#search + 1 * (#search < #length and (('%.'+#search+'s') * #string = (('%.'+#search+'s') * #string - '${escapeBindingText(delimiter)}'))))`;
+function panelVisibleExpr(panel, source) {
+    if (panel.parseMode === "slice") {
+        const raw = sliceExpr(source, panel.sliceStart, panel.sliceEnd);
+        return panel.triggerText.trim() ? containsTextExpr(raw, panel.triggerText) : `(not (${raw} = ''))`;
+    }
+    return containsTextExpr(source, panel.triggerText);
 }
-function rawValueExpr(overlay, source) {
-    if (overlay.parseMode === "slice")
-        return sliceExpr(source, overlay.sliceStart, overlay.sliceEnd);
-    if (overlay.parseMode === "split_pair") {
-        if (overlay.splitPart === "first")
-            return `(('%.'+#search+'s') * #string)`;
-        return `(#string - (('%.'+#search+'s') * #string) - '${escapeBindingText(overlay.splitDelimiter)}')`;
+function applyRootBackground(control, panel, defaultTexture = BACKGROUND_TEXTURES.vanilla) {
+    if (panel.backgroundType === "none") {
+        control.type = "panel";
+        return;
     }
-    return source;
+    control.type = "image";
+    control.texture = panel.backgroundType === "custom" ? (panel.backgroundTexture || defaultTexture) : panel.backgroundType === "solid" ? BACKGROUND_TEXTURES.solid : defaultTexture;
+    control.alpha = panel.backgroundAlpha;
+    if (panel.backgroundType === "solid")
+        control.color = colorHexToRgb(panel.backgroundColor);
+    if (panel.backgroundType === "custom" && panel.ninesliceSize > 0)
+        control.nineslice_size = panel.ninesliceSize;
 }
-function finalValueExpr(overlay, source) {
-    let expression = rawValueExpr(overlay, source);
-    if (overlay.parseMode === "trigger" && overlay.stripTriggerText && overlay.triggerText.trim()) {
-        expression = stripPrefixExpr(expression, overlay.triggerText);
-    }
-    if (overlay.parseMode === "slice" && overlay.stripTriggerText && overlay.triggerText.trim()) {
-        expression = `(${expression} - '${escapeBindingText(overlay.triggerText)}')`;
-    }
-    if (overlay.parseMode === "split_pair" && overlay.stripTriggerText && overlay.splitPrefix.trim()) {
-        expression = `(${expression} - '${escapeBindingText(overlay.splitPrefix)}')`;
-    }
-    return expression;
-}
-function visibleExpr(overlay, source) {
-    if (overlay.parseMode === "trigger")
-        return containsTextExpr(source, overlay.triggerText);
-    if (overlay.parseMode === "slice") {
-        const raw = rawValueExpr(overlay, source);
-        if (overlay.triggerText.trim())
-            return containsTextExpr(raw, overlay.triggerText);
-        return `(not (${raw} = ''))`;
-    }
-    return `(not (${finalValueExpr(overlay, source)} = ''))`;
-}
-function buildSourceBinding(overlay, targetPropertyName, condition) {
-    const binding = {
-        binding_name: bindingName(overlay.sourceType),
-        binding_name_override: targetPropertyName,
-    };
-    if (overlay.sourceType === "subtitle")
-        binding.binding_type = "global";
-    if (condition)
-        binding.binding_condition = condition;
-    return binding;
-}
-function buildDataControlBindings(overlay) {
-    const bindings = [buildSourceBinding(overlay, "#source_text")];
-    if (overlay.sourceType === "title" && overlay.preserveValue) {
-        bindings.push(buildSourceBinding(overlay, "#preserved_text", "visibility_changed"));
-        bindings.push({
-            binding_type: "view",
-            source_property_name: `(not (#source_text = #preserved_text) and ${visibleExpr(overlay, "#source_text")})`,
-            target_property_name: "#visible",
-        });
-    }
-    else {
-        bindings.push({
-            binding_type: "view",
-            source_property_name: visibleExpr(overlay, "#source_text"),
-            target_property_name: "#visible",
-        });
-    }
-    if (overlay.parseMode === "split_pair") {
-        bindings.push({
-            binding_type: "view",
-            source_property_name: overlay.sourceType === "title" && overlay.preserveValue ? "#preserved_text" : "#source_text",
-            target_property_name: "#string",
-        });
-        bindings.push({
-            binding_condition: "always",
-            binding_type: "view",
-            source_property_name: splitLengthExpr(),
-            target_property_name: "#length",
-        });
-        bindings.push({
-            binding_condition: "always",
-            binding_type: "view",
-            source_property_name: splitSearchExpr(overlay.splitDelimiter),
-            target_property_name: "#search",
-        });
-    }
-    return bindings;
-}
-function backgroundControl(overlay, name) {
-    if (overlay.backgroundType === "none")
-        return null;
-    const background = {
-        type: "image",
-        size: ["100%", "100%"],
-        alpha: overlay.backgroundAlpha,
-    };
-    if (overlay.backgroundType === "vanilla") {
-        background.texture = overlay.outputType === "progress_bar" ? BACKGROUND_TEXTURES.hpBarBackground : BACKGROUND_TEXTURES.vanilla;
-    }
-    else if (overlay.backgroundType === "solid") {
-        background.texture = BACKGROUND_TEXTURES.solid;
-        background.color = colorHexToRgb(overlay.backgroundColor);
-    }
-    else {
-        background.texture = overlay.backgroundTexture || BACKGROUND_TEXTURES.vanilla;
-        if (overlay.ninesliceSize > 0)
-            background.nineslice_size = overlay.ninesliceSize;
-    }
-    return { [name]: background };
-}
-function buildTitleOrSubtitleControl(overlay) {
-    const controlName = overlayJsonName(overlay);
-    const dataControlName = `${controlName}_data`;
-    const sourceValue = overlay.sourceType === "title" && overlay.preserveValue ? "#preserved_text" : "#source_text";
-    const controls = [{
-            [dataControlName]: {
+function buildTitlePanel(panel, name) {
+    const root = { size: [panel.width, panel.height], anchor_from: panel.anchor, anchor_to: panel.anchor, offset: [panel.x, panel.y], layer: panel.layer };
+    applyRootBackground(root, panel, panel.outputMode === "progress_bar" ? BACKGROUND_TEXTURES.hpBarBackground : BACKGROUND_TEXTURES.vanilla);
+    const sourceExpr = panel.preserveValue ? "#preserved_text" : "#source_text";
+    root.controls = [{
+            title_data_control: {
                 type: "panel",
                 size: [0, 0],
-                property_bag: { "#preserved_text": "", "#source_text": "", "#string": "", "#length": 0, "#search": 0 },
-                bindings: buildDataControlBindings(overlay),
+                property_bag: { "#source_text": "", "#preserved_text": "" },
+                bindings: [
+                    { binding_name: TITLE_BINDING, binding_name_override: "#source_text" },
+                    ...(panel.preserveValue ? [{ binding_name: TITLE_BINDING, binding_name_override: "#preserved_text", binding_condition: "visibility_changed" }] : []),
+                    { binding_type: "view", source_property_name: panel.preserveValue ? `(not (#source_text = #preserved_text) and ${panelVisibleExpr(panel, "#source_text")})` : panelVisibleExpr(panel, "#source_text"), target_property_name: "#visible" },
+                ],
             },
         }];
-    const background = backgroundControl(overlay, `${controlName}_background`);
-    if (background)
-        controls.push(background);
-    if (overlay.outputType === "progress_bar") {
-        controls.push({
-            [`${controlName}_fill`]: {
+    if (panel.outputMode === "progress_bar") {
+        root.controls.push({
+            title_fill: {
                 type: "image",
                 size: ["100%", "100%"],
                 texture: BACKGROUND_TEXTURES.hpBarFill,
@@ -972,477 +538,144 @@ function buildTitleOrSubtitleControl(overlay) {
                 clip_direction: "left",
                 clip_pixelperfect: false,
                 bindings: [
-                    {
-                        binding_type: "view",
-                        source_control_name: dataControlName,
-                        source_property_name: `(${finalValueExpr(overlay, sourceValue)} + 0)`,
-                        target_property_name: "#health",
-                    },
-                    {
-                        binding_type: "view",
-                        source_property_name: `(((${overlay.maxValue} - #health) / ${overlay.maxValue}))`,
-                        target_property_name: "#clip_ratio",
-                    },
+                    { binding_type: "view", source_control_name: "title_data_control", source_property_name: `(${finalTextExpr(panel, sourceExpr)} + 0)`, target_property_name: "#health" },
+                    { binding_type: "view", source_property_name: `(((${panel.maxValue} - #health) / ${panel.maxValue}))`, target_property_name: "#clip_ratio" },
                 ],
             },
         });
     }
     else {
-        controls.push({
-            [`${controlName}_label`]: {
+        root.controls.push({
+            title_label: {
                 type: "label",
                 text: "#text",
                 localize: false,
-                size: ["100%", "default"],
-                max_size: ["100%", "default"],
-                offset: [0, Math.max(0, Math.round((overlay.height - 20) / 2))],
-                color: colorHexToRgb(overlay.color),
-                text_alignment: "center",
+                size: ["default", "default"],
+                anchor_from: "center",
+                anchor_to: "center",
+                color: colorHexToRgb(panel.textColor),
                 shadow: true,
-                bindings: [{
-                        binding_type: "view",
-                        source_control_name: dataControlName,
-                        source_property_name: finalValueExpr(overlay, sourceValue),
-                        target_property_name: "#text",
-                    }],
+                layer: 2,
+                bindings: [{ binding_type: "view", source_control_name: "title_data_control", source_property_name: finalTextExpr(panel, sourceExpr), target_property_name: "#text" }],
             },
         });
     }
-    return {
-        [controlName]: {
-            type: "panel",
-            size: [overlay.width, overlay.height],
-            anchor_from: overlay.anchor,
-            anchor_to: overlay.anchor,
-            offset: [overlay.x, overlay.y],
-            layer: overlay.layer,
-            controls,
-            bindings: [{
-                    binding_type: "view",
-                    source_control_name: dataControlName,
-                    source_property_name: overlay.sourceType === "title" && overlay.preserveValue ? "(not (#preserved_text = ''))" : "#visible",
-                    target_property_name: "#visible",
-                }],
-        },
-    };
-}
-function actionbarVisibleExpr(overlay) {
-    return visibleExpr(overlay, "$atext");
-}
-function actionbarTextExpr(overlay) {
-    return finalValueExpr(overlay, "$atext");
-}
-function buildActionbarControl(overlay) {
-    return buildNamedActionbarControl(overlay, overlayJsonName(overlay));
-}
-function buildNamedActionbarControl(overlay, controlName) {
-    const controls = [];
-    controls.push({
-        [`${controlName}_label`]: {
-            type: "label",
-            text: "$display_text",
-            localize: false,
-            "$atext": ACTIONBAR_VARIABLE,
-            "$display_text|default": "$atext",
-            size: ["default", "default"],
-            anchor_from: "right_middle",
-            anchor_to: "right_middle",
-            offset: [-5, 0],
-            color: colorHexToRgb(overlay.color),
-            shadow: true,
-            layer: 2,
-            variables: [{
-                    requires: actionbarVisibleExpr(overlay),
-                    "$display_text": actionbarTextExpr(overlay),
-                }],
-        },
-    });
-    return {
-        [controlName]: {
-            type: overlay.backgroundType === "none" ? "panel" : "image",
-            texture: overlay.backgroundType === "custom"
-                ? (overlay.backgroundTexture || BACKGROUND_TEXTURES.vanilla)
-                : overlay.backgroundType === "solid"
-                    ? BACKGROUND_TEXTURES.solid
-                    : overlay.backgroundType === "none"
-                        ? undefined
-                        : BACKGROUND_TEXTURES.vanilla,
-            alpha: overlay.backgroundType === "none" ? undefined : overlay.backgroundAlpha,
-            color: overlay.backgroundType === "solid" ? colorHexToRgb(overlay.backgroundColor) : undefined,
-            nineslice_size: overlay.backgroundType === "custom" && overlay.ninesliceSize > 0 ? overlay.ninesliceSize : undefined,
-            size: [overlay.width, overlay.height],
-            anchor_from: overlay.anchor,
-            anchor_to: overlay.anchor,
-            offset: [overlay.x, overlay.y],
-            layer: overlay.layer,
-            "$atext": ACTIONBAR_VARIABLE,
-            visible: actionbarVisibleExpr(overlay),
-            controls,
-        },
-    };
+    root.bindings = [{ binding_type: "view", source_control_name: "title_data_control", source_property_name: panel.preserveValue ? "(not (#preserved_text = ''))" : "#visible", target_property_name: "#visible" }];
+    return { [name]: root };
 }
 function subtitleTextBindingName(index) {
     return `#text${index + 1}`;
 }
-function subtitleVisibleBindingName(index) {
-    return `#visible${index + 1}`;
-}
-function buildSubtitleDataPanel(overlays) {
+function buildSubtitleData(panels) {
     const bindings = [
-        {
-            binding_name: SUBTITLE_BINDING,
-            binding_name_override: "#sub_raw",
-            binding_type: "global",
-        },
-        {
-            binding_type: "view",
-            source_property_name: "(not (#sub_raw = ''))",
-            target_property_name: "#visible",
-        },
-        {
-            binding_type: "view",
-            source_property_name: "#sub_raw",
-            target_property_name: "#text_data",
-        },
+        { binding_name: SUBTITLE_BINDING, binding_name_override: "#sub_raw", binding_type: "global" },
+        { binding_type: "view", source_property_name: "(not (#sub_raw = ''))", target_property_name: "#visible" },
+        { binding_type: "view", source_property_name: "#sub_raw", target_property_name: "#text_data" },
     ];
-    overlays.forEach((overlay, index) => {
-        bindings.push({
-            binding_type: "view",
-            source_property_name: finalValueExpr(overlay, "#text_data"),
-            target_property_name: subtitleTextBindingName(index),
-        });
-        bindings.push({
-            binding_type: "view",
-            source_property_name: visibleExpr(overlay, "#text_data"),
-            target_property_name: subtitleVisibleBindingName(index),
-        });
-    });
-    return {
-        subtitle_data: {
-            type: "panel",
-            size: [0, 0],
-            bindings,
-        },
-    };
+    panels.forEach((panel, index) => bindings.push({ binding_type: "view", source_property_name: finalTextExpr(panel, "#text_data"), target_property_name: subtitleTextBindingName(index) }));
+    return { subtitle_data: { type: "panel", size: [0, 0], bindings } };
 }
-function buildSubtitleSlotTemplate(overlay) {
-    const controls = [];
-    if (overlay.outputType === "progress_bar") {
-        controls.push({
-            subtitle_slot_fill: {
-                type: "image",
-                size: ["100%", "100%"],
-                texture: BACKGROUND_TEXTURES.hpBarFill,
-                clip_ratio: 0,
-                clip_direction: "left",
-                clip_pixelperfect: false,
-                bindings: [
-                    {
-                        binding_type: "view",
-                        source_control_name: "subtitle_data",
-                        resolve_sibling_scope: true,
-                        source_property_name: `($slot_binding + 0)`,
-                        target_property_name: "#health",
-                    },
-                    {
-                        binding_type: "view",
-                        source_property_name: `(((${overlay.maxValue} - #health) / ${overlay.maxValue}))`,
-                        target_property_name: "#clip_ratio",
-                    },
-                ],
-            },
-        });
+function buildSubtitleSlotTemplate(panel) {
+    const root = { size: [panel.width, panel.height], layer: panel.layer, "$slot_binding": "#text1", controls: [], bindings: [{ binding_type: "view", source_control_name: "subtitle_data", resolve_sibling_scope: true, source_property_name: "(not ($slot_binding = ''))", target_property_name: "#visible" }] };
+    applyRootBackground(root, panel);
+    if (panel.outputMode === "progress_bar") {
+        root.controls.push({ slot_fill: { type: "image", size: ["100%", "100%"], texture: BACKGROUND_TEXTURES.hpBarFill, clip_ratio: 0, clip_direction: "left", clip_pixelperfect: false, bindings: [{ binding_type: "view", source_control_name: "subtitle_data", resolve_sibling_scope: true, source_property_name: "($slot_binding + 0)", target_property_name: "#health" }, { binding_type: "view", source_property_name: `(((${panel.maxValue} - #health) / ${panel.maxValue}))`, target_property_name: "#clip_ratio" }] } });
     }
     else {
-        controls.push({
-            label: {
-                type: "label",
-                text: "#text",
-                localize: false,
-                size: ["100%", "default"],
-                max_size: ["100%", "default"],
-                anchor_from: "center",
-                anchor_to: "center",
-                color: colorHexToRgb(overlay.color),
-                text_alignment: "center",
-                shadow: true,
-                layer: 2,
-                bindings: [{
-                        binding_type: "view",
-                        source_control_name: "subtitle_data",
-                        resolve_sibling_scope: true,
-                        source_property_name: "$slot_binding",
-                        target_property_name: "#text",
-                    }],
-            },
-        });
+        root.controls.push({ label: { type: "label", text: "#text", localize: false, size: ["default", "default"], anchor_from: "center", anchor_to: "center", color: colorHexToRgb(panel.textColor), shadow: true, layer: 2, bindings: [{ binding_type: "view", source_control_name: "subtitle_data", resolve_sibling_scope: true, source_property_name: "$slot_binding", target_property_name: "#text" }] } });
     }
-    return {
-        subtitle_slot_template: {
-            type: overlay.backgroundType === "none" ? "panel" : "image",
-            texture: overlay.backgroundType === "none" ? undefined : (overlay.backgroundType === "solid"
-                ? BACKGROUND_TEXTURES.solid
-                : overlay.backgroundType === "custom"
-                    ? (overlay.backgroundTexture || BACKGROUND_TEXTURES.vanilla)
-                    : BACKGROUND_TEXTURES.vanilla),
-            alpha: overlay.backgroundType === "none" ? undefined : overlay.backgroundAlpha,
-            color: overlay.backgroundType === "solid" ? colorHexToRgb(overlay.backgroundColor) : undefined,
-            nineslice_size: overlay.backgroundType === "custom" && overlay.ninesliceSize > 0 ? overlay.ninesliceSize : undefined,
-            size: [overlay.width, overlay.height],
-            layer: overlay.layer,
-            "$slot_binding": "#text1",
-            controls,
-            bindings: [{
-                    binding_type: "view",
-                    source_control_name: "subtitle_data",
-                    resolve_sibling_scope: true,
-                    source_property_name: "(not ($slot_binding = ''))",
-                    target_property_name: "#visible",
-                }],
-        },
-    };
+    return { subtitle_slot_template: root };
 }
-function buildSubtitleSlotInsertion(overlay, index) {
-    return {
-        [`sub_slot${index + 1}@hud.subtitle_slot_template`]: {
-            "$slot_binding": subtitleTextBindingName(index),
-            anchor_from: overlay.anchor,
-            anchor_to: overlay.anchor,
-            offset: [overlay.x, overlay.y],
-            size: [overlay.width, overlay.height],
-            layer: overlay.layer,
-        },
-    };
+function buildActionbarPanel(panel, name) {
+    const root = { size: [panel.width, panel.height], anchor_from: panel.anchor, anchor_to: panel.anchor, offset: [panel.x, panel.y], layer: panel.layer, "$atext": ACTIONBAR_VARIABLE, visible: panelVisibleExpr(panel, "$atext") };
+    applyRootBackground(root, panel);
+    root.controls = [{ actionbar_label: { type: "label", size: ["default", "default"], anchor_from: "right_middle", anchor_to: "right_middle", offset: [-5, 0], shadow: true, layer: 2, "$atext": ACTIONBAR_VARIABLE, "$display_text|default": "$atext", text: "$display_text", color: colorHexToRgb(panel.textColor), variables: [{ requires: panelVisibleExpr(panel, "$atext"), "$display_text": finalTextExpr(panel, "$atext") }] } }];
+    return { [name]: root };
 }
-function buildNamedTitleOrSubtitleControl(overlay, controlName) {
-    const generated = buildTitleOrSubtitleControl(overlay);
-    const originalName = overlayJsonName(overlay);
-    if (controlName === originalName)
-        return generated;
-    const definition = generated[originalName];
-    delete generated[originalName];
-    generated[controlName] = definition;
-    return generated;
-}
-function buildNamedActionbarPreserveDisplay(overlay, controlName) {
-    const visibleSource = visibleExpr(overlay, "#source_text");
-    return {
-        [controlName]: {
-            type: overlay.backgroundType === "none" ? "panel" : "image",
-            texture: overlay.backgroundType === "custom"
-                ? (overlay.backgroundTexture || BACKGROUND_TEXTURES.vanilla)
-                : overlay.backgroundType === "solid"
-                    ? BACKGROUND_TEXTURES.solid
-                    : overlay.backgroundType === "none"
-                        ? undefined
-                        : BACKGROUND_TEXTURES.vanilla,
-            alpha: overlay.backgroundType === "none" ? undefined : overlay.backgroundAlpha,
-            color: overlay.backgroundType === "solid" ? colorHexToRgb(overlay.backgroundColor) : undefined,
-            nineslice_size: overlay.backgroundType === "custom" && overlay.ninesliceSize > 0 ? overlay.ninesliceSize : undefined,
-            size: [overlay.width, overlay.height],
-            anchor_from: overlay.anchor,
-            anchor_to: overlay.anchor,
-            offset: [overlay.x, overlay.y],
-            layer: overlay.layer,
-            controls: [
-                {
-                    data_control: {
-                        type: "panel",
-                        size: [0, 0],
-                        property_bag: { "#preserved_text": "", "#source_text": "" },
-                        bindings: [
-                            {
-                                binding_name: "#hud_actionbar_text_string",
-                                binding_name_override: "#source_text",
-                                binding_type: "global",
-                            },
-                            {
-                                binding_name: "#hud_actionbar_text_string",
-                                binding_name_override: "#preserved_text",
-                                binding_condition: "visibility_changed",
-                                binding_type: "global",
-                            },
-                            {
-                                binding_type: "view",
-                                source_property_name: `(not (#source_text = #preserved_text) and ${visibleSource})`,
-                                target_property_name: "#visible",
-                            },
-                        ],
-                    },
-                },
-                {
-                    actionbar_label: {
-                        type: "label",
-                        text: "#text",
-                        localize: false,
-                        size: ["default", "default"],
-                        anchor_from: "right_middle",
-                        anchor_to: "right_middle",
-                        offset: [-5, 0],
-                        shadow: true,
-                        layer: 2,
-                        color: colorHexToRgb(overlay.color),
-                        bindings: [
-                            {
-                                binding_type: "view",
-                                source_control_name: "data_control",
-                                source_property_name: finalValueExpr(overlay, "#preserved_text"),
-                                target_property_name: "#text",
-                            },
-                        ],
-                    },
-                },
-            ],
-            bindings: [
-                {
-                    binding_type: "view",
-                    source_control_name: "data_control",
-                    source_property_name: "(not (#preserved_text = ''))",
-                    target_property_name: "#visible",
-                },
-            ],
-        },
-    };
-}
-function buildTitleHideOverride(overlays) {
-    const targets = overlays.filter((overlay) => overlay.visible && overlay.sourceType === "title" && overlay.hideVanilla);
-    if (!targets.length)
-        return null;
-    if (targets.some((overlay) => overlay.parseMode !== "trigger" || !overlay.triggerText.trim()))
-        return { visible: false };
-    const source = targets.map((overlay) => missingPrefixExpr("#text", overlay.triggerText)).join(" and ");
-    return {
-        bindings: [{
-                binding_type: "view",
-                source_control_name: "title",
-                source_property_name: `(${source})`,
-                target_property_name: "#visible",
-            }],
-    };
-}
-function buildSubtitleHideOverride(overlays) {
-    const targets = overlays.filter((overlay) => overlay.visible && overlay.sourceType === "subtitle" && overlay.hideVanilla);
-    if (!targets.length)
-        return null;
-    return { visible: false };
-}
-function buildActionbarHideOverride(overlays) {
-    const targets = overlays.filter((overlay) => overlay.visible && overlay.sourceType === "actionbar" && overlay.hideVanilla);
-    if (!targets.length)
-        return null;
-    if (targets.some((overlay) => !overlay.triggerText.trim()))
-        return { "$atext": ACTIONBAR_VARIABLE, visible: false };
-    const source = targets.map((overlay) => missingPrefixExpr("$atext", overlay.triggerText)).join(" and ");
-    return { "$atext": ACTIONBAR_VARIABLE, visible: `(${source})` };
+function buildPreservedActionbarPanel(panel, name) {
+    const root = { size: [panel.width, panel.height], anchor_from: panel.anchor, anchor_to: panel.anchor, offset: [panel.x, panel.y], layer: panel.layer };
+    applyRootBackground(root, panel);
+    root.controls = [
+        { data_control: { type: "panel", size: [0, 0], property_bag: { "#source_text": "", "#preserved_text": "" }, bindings: [{ binding_name: "#hud_actionbar_text_string", binding_name_override: "#source_text", binding_type: "global" }, { binding_name: "#hud_actionbar_text_string", binding_name_override: "#preserved_text", binding_condition: "visibility_changed", binding_type: "global" }, { binding_type: "view", source_property_name: `(not (#source_text = #preserved_text) and ${panelVisibleExpr(panel, "#source_text")})`, target_property_name: "#visible" }] } },
+        { actionbar_label: { type: "label", text: "#text", localize: false, size: ["default", "default"], anchor_from: "right_middle", anchor_to: "right_middle", offset: [-5, 0], shadow: true, layer: 2, color: colorHexToRgb(panel.textColor), bindings: [{ binding_type: "view", source_control_name: "data_control", source_property_name: finalTextExpr(panel, "#preserved_text"), target_property_name: "#text" }] } },
+    ];
+    root.bindings = [{ binding_type: "view", source_control_name: "data_control", source_property_name: "(not (#preserved_text = ''))", target_property_name: "#visible" }];
+    return { [name]: root };
 }
 function generateHudJson() {
-    const overlays = state.overlays.filter((overlay) => overlay.visible).map((overlay) => normalizeOverlay({ ...overlay }));
+    const panels = state.panels.filter((panel) => panel.enabled).map((panel) => normalizePanel({ ...panel }));
     const payload = { namespace: "hud" };
     const rootInsertions = [];
-    const titles = overlays.filter((overlay) => overlay.sourceType === "title");
-    const subtitles = overlays.filter((overlay) => overlay.sourceType === "subtitle");
-    const subtitleSlices = subtitles.filter((overlay) => overlay.parseMode === "slice");
-    const subtitleDirect = subtitles.filter((overlay) => overlay.parseMode !== "slice");
-    titles.forEach((overlay, index) => {
-        const controlName = index === 0 ? "title_control" : `title_control_${index + 1}`;
-        const instanceName = index === 0 ? "title_ctrl" : `title_ctrl_${index + 1}`;
-        rootInsertions.push({ [`${instanceName}@hud.${controlName}`]: {} });
-        Object.assign(payload, buildNamedTitleOrSubtitleControl(overlay, controlName));
+    const titlePanels = panels.filter((panel) => panel.channel === "title");
+    titlePanels.forEach((panel, index) => {
+        const def = index === 0 ? "title_control" : `title_control_${index + 1}`;
+        const inst = index === 0 ? "title_ctrl" : `title_ctrl_${index + 1}`;
+        rootInsertions.push({ [`${inst}@hud.${def}`]: {} });
+        Object.assign(payload, buildTitlePanel(panel, def));
     });
-    subtitleDirect.forEach((overlay, index) => {
-        const controlName = index === 0 ? "subtitle_control" : `subtitle_control_${index + 1}`;
-        const instanceName = index === 0 ? "subtitle_ctrl" : `subtitle_ctrl_${index + 1}`;
-        rootInsertions.push({ [`${instanceName}@hud.${controlName}`]: {} });
-        Object.assign(payload, buildNamedTitleOrSubtitleControl(overlay, controlName));
-    });
-    if (subtitleSlices.length) {
+    const subtitlePanels = panels.filter((panel) => panel.channel === "subtitle_slot");
+    if (subtitlePanels.length) {
         rootInsertions.push({ "subtitle_data@hud.subtitle_data": {} });
-        Object.assign(payload, buildSubtitleDataPanel(subtitleSlices));
-        Object.assign(payload, buildSubtitleSlotTemplate(subtitleSlices[0]));
-        subtitleSlices.forEach((overlay, index) => {
-            rootInsertions.push(buildSubtitleSlotInsertion(overlay, index));
+        Object.assign(payload, buildSubtitleData(subtitlePanels));
+        Object.assign(payload, buildSubtitleSlotTemplate(subtitlePanels[0]));
+        subtitlePanels.forEach((panel, index) => {
+            rootInsertions.push({ [`sub_slot${index + 1}@hud.subtitle_slot_template`]: { "$slot_binding": subtitleTextBindingName(index), anchor_from: panel.anchor, anchor_to: panel.anchor, offset: [panel.x, panel.y], size: [panel.width, panel.height], layer: panel.layer } });
         });
     }
-    const actionbars = overlays.filter((overlay) => overlay.sourceType === "actionbar");
-    actionbars.filter((overlay) => overlay.preserveValue).forEach((overlay, index) => {
-        const controlName = index === 0 ? "preserved_actionbar_display" : `preserved_actionbar_display_${index + 1}`;
-        const instanceName = index === 0 ? "preserved_actionbar" : `preserved_actionbar_${index + 1}`;
-        rootInsertions.push({ [`${instanceName}@hud.${controlName}`]: {} });
-        Object.assign(payload, buildNamedActionbarPreserveDisplay(overlay, controlName));
+    const preservePanels = panels.filter((panel) => panel.channel === "actionbar_preserve");
+    preservePanels.forEach((panel, index) => {
+        const def = index === 0 ? "preserved_actionbar_display" : `preserved_actionbar_display_${index + 1}`;
+        const inst = index === 0 ? "preserved_actionbar" : `preserved_actionbar_${index + 1}`;
+        rootInsertions.push({ [`${inst}@hud.${def}`]: {} });
+        Object.assign(payload, buildPreservedActionbarPanel(panel, def));
     });
-    if (rootInsertions.length) {
-        payload.root_panel = {
-            modifications: [{
-                    array_name: "controls",
-                    operation: "insert_back",
-                    value: rootInsertions,
-                }],
-        };
-    }
+    if (rootInsertions.length)
+        payload.root_panel = { modifications: [{ array_name: "controls", operation: "insert_back", value: rootInsertions }] };
+    const actionbars = panels.filter((panel) => panel.channel === "actionbar");
     if (actionbars.length) {
-        const singleActionbar = actionbars.length === 1 ? actionbars[0] : null;
-        payload["root_panel/hud_actionbar_text_area"] = {
-            modifications: [{
-                    array_name: "controls",
-                    operation: "insert_back",
-                    value: [{
-                            custom_actionbar_factory: {
-                                type: "panel",
-                                factory: {
-                                    name: "hud_actionbar_text_factory",
-                                    control_ids: {
-                                        hud_actionbar_text: singleActionbar ? "@hud.my_custom_actionbar" : "@hud.hud_actionbar_factory_root",
-                                    },
-                                },
-                            },
-                        }],
-                }],
-        };
-        if (singleActionbar) {
-            Object.assign(payload, buildNamedActionbarControl(singleActionbar, "my_custom_actionbar"));
-        }
-        else {
-            payload.hud_actionbar_factory_root = {
-                type: "panel",
-                size: ["100%", "100%"],
-                controls: actionbars.map((overlay, index) => {
-                    const controlName = index === 0 ? "my_custom_actionbar" : `my_custom_actionbar_${index + 1}`;
-                    Object.assign(payload, buildNamedActionbarControl(overlay, controlName));
-                    return { [`${controlName}@hud.${controlName}`]: {} };
-                }),
-            };
-        }
+        const single = actionbars.length === 1 ? actionbars[0] : null;
+        payload["root_panel/hud_actionbar_text_area"] = { modifications: [{ array_name: "controls", operation: "insert_back", value: [{ custom_actionbar_factory: { type: "panel", factory: { name: "hud_actionbar_text_factory", control_ids: { hud_actionbar_text: single ? "@hud.my_custom_actionbar" : "@hud.hud_actionbar_factory_root" } } } }] }] };
+        if (single)
+            Object.assign(payload, buildActionbarPanel(single, "my_custom_actionbar"));
+        else
+            payload.hud_actionbar_factory_root = { type: "panel", size: ["100%", "100%"], controls: actionbars.map((panel, index) => { const def = index === 0 ? "my_custom_actionbar" : `my_custom_actionbar_${index + 1}`; Object.assign(payload, buildActionbarPanel(panel, def)); return { [`${def}@hud.${def}`]: {} }; }) };
     }
-    const titleOverride = buildTitleHideOverride(overlays);
-    if (titleOverride)
-        payload["hud_title_text/title_frame"] = titleOverride;
-    const subtitleOverride = buildSubtitleHideOverride(overlays);
-    if (subtitleOverride)
-        payload["hud_title_text/subtitle_frame"] = subtitleOverride;
-    const actionbarOverride = buildActionbarHideOverride(overlays);
-    if (actionbarOverride)
-        payload.hud_actionbar_text = actionbarOverride;
+    if (titlePanels.some((panel) => panel.hideVanilla))
+        payload["hud_title_text/title_frame"] = { bindings: [{ binding_type: "view", source_control_name: "title", source_property_name: `(${titlePanels.filter((panel) => panel.hideVanilla).map((panel) => missingTextExpr("#text", panel.triggerText)).join(" and ")})`, target_property_name: "#visible" }] };
+    if (subtitlePanels.some((panel) => panel.hideVanilla))
+        payload["hud_title_text/subtitle_frame"] = { visible: false };
+    const hiddenActionbars = panels.filter((panel) => (panel.channel === "actionbar" || panel.channel === "actionbar_preserve") && panel.hideVanilla);
+    if (hiddenActionbars.length)
+        payload.hud_actionbar_text = { "$atext": ACTIONBAR_VARIABLE, visible: `(${hiddenActionbars.map((panel) => missingTextExpr("$atext", panel.triggerText)).join(" and ")})` };
     return JSON.stringify(payload, null, 2);
-}
-function renderHudEditor() {
-    renderOverlayList();
-    renderPreview();
-    renderInspector();
 }
 function closeHudEditor() {
     getModal().style.display = "none";
-    state.drag.overlayId = null;
+    state.drag.panelId = null;
 }
 export async function hudEditorModal() {
-    buildHudEditor();
-    if (!state.overlays.length)
-        resetHudEditorState();
-    renderHudEditor();
+    buildEditor();
+    if (!state.panels.length)
+        resetState();
+    render();
     getModal().style.display = "block";
     getCloseButton().onclick = () => closeHudEditor();
+    getForm().querySelector(".hudCopyBtn").onclick = async () => {
+        await navigator.clipboard.writeText(generateHudJson());
+        new Notification("HUD JSON을 복사했습니다.", 2200, "notif");
+    };
+    getForm().querySelector(".hudDownloadBtn").onclick = () => {
+        const blob = new Blob([generateHudJson()], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "hud_screen.json";
+        link.click();
+        URL.revokeObjectURL(url);
+    };
 }
-window.addEventListener("mouseup", () => { state.drag.overlayId = null; });
+window.addEventListener("mouseup", () => { state.drag.panelId = null; });
 window.addEventListener("click", (event) => { if (event.target === getModal())
     closeHudEditor(); });
-resetHudEditorState();
+resetState();
 //# sourceMappingURL=hudEditorModal.js.map
