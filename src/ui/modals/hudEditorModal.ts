@@ -824,7 +824,7 @@ function missingPrefixExpr(source: string, prefix: string): string {
 function stripPrefixExpr(source: string, prefix: string): string {
     const trimmed = prefix.trim();
     if (!trimmed) return source;
-    return `(${source} - ('%.${trimmed.length}s' * ${source}))`;
+    return `(${source} - '${escapeBindingText(trimmed)}')`;
 }
 
 function sliceExpr(source: string, start: number, end: number): string {

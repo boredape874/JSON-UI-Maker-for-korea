@@ -749,7 +749,7 @@ function stripPrefixExpr(source, prefix) {
     const trimmed = prefix.trim();
     if (!trimmed)
         return source;
-    return `(${source} - ('%.${trimmed.length}s' * ${source}))`;
+    return `(${source} - '${escapeBindingText(trimmed)}')`;
 }
 function sliceExpr(source, start, end) {
     if (start <= 0)
