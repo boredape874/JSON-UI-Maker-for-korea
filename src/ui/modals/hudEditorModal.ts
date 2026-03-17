@@ -5,7 +5,17 @@ type HudParseMode = "trigger" | "slice" | "split_pair";
 type HudOutputType = "label" | "progress_bar";
 type HudSplitPart = "first" | "second";
 type HudBackgroundType = "none" | "vanilla" | "solid" | "custom";
-type HudTemplateName = "info" | "coin" | "hp_text" | "hp_clip" | "t1_preserve" | "t2_preserve" | "split_t1" | "split_t2";
+type HudTemplateName =
+    | "info"
+    | "coin"
+    | "hp_text"
+    | "hp_clip"
+    | "t1_preserve"
+    | "t2_preserve"
+    | "split_t1"
+    | "split_t2"
+    | "actionbar_info"
+    | "subtitle_slots_5";
 type HudAnchor =
     | "top_left"
     | "top_middle"
@@ -245,6 +255,42 @@ const TEMPLATE_PATCHES: Record<HudTemplateName, Partial<HudOverlay>> = {
         width: 320,
         height: 48,
     },
+    actionbar_info: {
+        label: "액션바 정보 패널",
+        sourceType: "actionbar",
+        parseMode: "trigger",
+        outputType: "label",
+        triggerText: "info:",
+        sampleText: "info: 오른쪽 표시",
+        preserveValue: false,
+        stripTriggerText: true,
+        hideVanilla: true,
+        backgroundType: "vanilla",
+        color: "#ffffff",
+        anchor: "top_right",
+        x: -4,
+        y: 4,
+        width: 280,
+        height: 36,
+    },
+    subtitle_slots_5: {
+        label: "서브타이틀 5슬롯",
+        sourceType: "subtitle",
+        parseMode: "slice",
+        outputType: "label",
+        triggerText: "",
+        sampleText: "slot1\t\t\t\t\t\t\t\t\t\t\t\tslot2\t\t\t\t\t\t\t\t\t\t\t\tslot3\t\t\t\t\t\t\t\t\t\t\t\tslot4\t\t\t\t\t\t\t\t\t\t\t\tslot5",
+        preserveValue: false,
+        stripTriggerText: false,
+        hideVanilla: true,
+        backgroundType: "vanilla",
+        color: "#dfe9ff",
+        anchor: "top_left",
+        x: 4,
+        y: 28,
+        width: 200,
+        height: 32,
+    },
 };
 
 function baseOverlay(sourceType: HudSourceType): HudOverlay {
@@ -362,6 +408,37 @@ function createTemplateOverlay(template: HudTemplateName): HudOverlay {
     });
 }
 
+function createSubtitleSlotOverlays(): HudOverlay[] {
+    const positions: Array<Pick<HudOverlay, "anchor" | "x" | "y">> = [
+        { anchor: "top_left", x: 4, y: 28 },
+        { anchor: "top_right", x: -4, y: 28 },
+        { anchor: "top_left", x: 4, y: 48 },
+        { anchor: "top_right", x: -4, y: 48 },
+        { anchor: "top_middle", x: 0, y: 68 },
+    ];
+
+    return positions.map((position, index) => normalizeOverlay({
+        ...baseOverlay("subtitle"),
+        label: `서브타이틀 슬롯 ${index + 1}`,
+        parseMode: "slice",
+        outputType: "label",
+        hideVanilla: true,
+        backgroundType: "vanilla",
+        color: "#dfe9ff",
+        width: 210,
+        height: 34,
+        sliceStart: index * 20,
+        sliceEnd: (index + 1) * 20,
+        sampleText: "slot1\t\t\t\t\t\t\t\t\t\t\t\tslot2\t\t\t\t\t\t\t\t\t\t\t\tslot3\t\t\t\t\t\t\t\t\t\t\t\tslot4\t\t\t\t\t\t\t\t\t\t\t\tslot5",
+        ...position,
+    }));
+}
+
+function buildTemplateOverlays(template: HudTemplateName): HudOverlay[] {
+    if (template === "subtitle_slots_5") return createSubtitleSlotOverlays();
+    return [createTemplateOverlay(template)];
+}
+
 function normalizeOverlay(overlay: HudOverlay): HudOverlay {
     overlay.label = overlay.label.trim() || "HUD 패널";
     overlay.triggerText = overlay.triggerText ?? "";
@@ -389,7 +466,11 @@ function normalizeOverlay(overlay: HudOverlay): HudOverlay {
 
 function resetHudEditorState(): void {
     state.nextId = 1;
-    state.overlays = [baseOverlay("title"), baseOverlay("subtitle"), baseOverlay("actionbar")];
+    state.overlays = [
+        createTemplateOverlay("info"),
+        ...createSubtitleSlotOverlays(),
+        createTemplateOverlay("actionbar_info"),
+    ];
     state.selectedId = state.overlays[0]!.id;
     state.drag = { overlayId: null, pointerOffsetX: 0, pointerOffsetY: 0 };
 }
@@ -511,6 +592,8 @@ function buildHudEditor(): void {
                         <button type="button" class="propertyInputButton hudTemplateBtn" data-template="coin">코인</button>
                         <button type="button" class="propertyInputButton hudTemplateBtn" data-template="hp_text">체력 텍스트</button>
                         <button type="button" class="propertyInputButton hudTemplateBtn" data-template="hp_clip">체력 바</button>
+                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="actionbar_info">액션바 info</button>
+                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="subtitle_slots_5">서브타이틀 5슬롯</button>
                         <button type="button" class="propertyInputButton hudTemplateBtn" data-template="t1_preserve">t1 보존</button>
                         <button type="button" class="propertyInputButton hudTemplateBtn" data-template="t2_preserve">t2 보존</button>
                         <button type="button" class="propertyInputButton hudTemplateBtn" data-template="split_t1">분리 t1</button>
@@ -584,9 +667,9 @@ function buildHudEditor(): void {
 
     form.querySelectorAll<HTMLButtonElement>(".hudTemplateBtn").forEach((button) => {
         button.onclick = () => {
-            const overlay = createTemplateOverlay(button.dataset.template as HudTemplateName);
-            state.overlays.push(overlay);
-            state.selectedId = overlay.id;
+            const overlays = buildTemplateOverlays(button.dataset.template as HudTemplateName);
+            state.overlays.push(...overlays);
+            state.selectedId = overlays[overlays.length - 1]!.id;
             renderHudEditor();
             new Notification(`${button.textContent} 템플릿을 추가했습니다.`, 2200, "notif");
         };
@@ -1069,6 +1152,133 @@ function buildActionbarControl(overlay: HudOverlay): Record<string, any> {
     };
 }
 
+function subtitleTextBindingName(index: number): string {
+    return `#text${index + 1}`;
+}
+
+function subtitleVisibleBindingName(index: number): string {
+    return `#visible${index + 1}`;
+}
+
+function buildSubtitleDataPanel(overlays: HudOverlay[]): Record<string, any> {
+    const bindings: Record<string, any>[] = [
+        {
+            binding_name: SUBTITLE_BINDING,
+            binding_name_override: "#sub_raw",
+            binding_type: "global",
+        },
+        {
+            binding_type: "view",
+            source_property_name: "(not (#sub_raw = ''))",
+            target_property_name: "#visible",
+        },
+        {
+            binding_type: "view",
+            source_property_name: "#sub_raw",
+            target_property_name: "#text_data",
+        },
+    ];
+
+    overlays.forEach((overlay, index) => {
+        bindings.push({
+            binding_type: "view",
+            source_property_name: finalValueExpr(overlay, "#text_data"),
+            target_property_name: subtitleTextBindingName(index),
+        });
+        bindings.push({
+            binding_type: "view",
+            source_property_name: visibleExpr(overlay, "#text_data"),
+            target_property_name: subtitleVisibleBindingName(index),
+        });
+    });
+
+    return {
+        subtitle_data: {
+            type: "panel",
+            size: [0, 0],
+            bindings,
+        },
+    };
+}
+
+function buildSubtitleSliceControl(overlay: HudOverlay, index: number): Record<string, any> {
+    const controlName = overlayJsonName(overlay);
+    const textBinding = subtitleTextBindingName(index);
+    const visibleBinding = subtitleVisibleBindingName(index);
+    const controls: Record<string, any>[] = [];
+    const background = backgroundControl(overlay, `${controlName}_background`);
+    if (background) controls.push(background);
+
+    if (overlay.outputType === "progress_bar") {
+        controls.push({
+            [`${controlName}_fill`]: {
+                type: "image",
+                size: ["100%", "100%"],
+                texture: BACKGROUND_TEXTURES.hpBarFill,
+                clip_ratio: 0,
+                clip_direction: "left",
+                clip_pixelperfect: false,
+                bindings: [
+                    {
+                        binding_type: "view",
+                        source_control_name: "subtitle_data",
+                        resolve_sibling_scope: true,
+                        source_property_name: `(${textBinding} + 0)`,
+                        target_property_name: "#health",
+                    },
+                    {
+                        binding_type: "view",
+                        source_property_name: `(((${overlay.maxValue} - #health) / ${overlay.maxValue}))`,
+                        target_property_name: "#clip_ratio",
+                    },
+                ],
+            },
+        });
+    } else {
+        controls.push({
+            [`${controlName}_label`]: {
+                type: "label",
+                text: "#text",
+                localize: false,
+                size: ["100%", "default"],
+                max_size: ["100%", "default"],
+                anchor_from: "center",
+                anchor_to: "center",
+                color: colorHexToRgb(overlay.color),
+                text_alignment: "center",
+                shadow: true,
+                layer: 2,
+                bindings: [{
+                    binding_type: "view",
+                    source_control_name: "subtitle_data",
+                    resolve_sibling_scope: true,
+                    source_property_name: textBinding,
+                    target_property_name: "#text",
+                }],
+            },
+        });
+    }
+
+    return {
+        [controlName]: {
+            type: "panel",
+            size: [overlay.width, overlay.height],
+            anchor_from: overlay.anchor,
+            anchor_to: overlay.anchor,
+            offset: [overlay.x, overlay.y],
+            layer: overlay.layer,
+            controls,
+            bindings: [{
+                binding_type: "view",
+                source_control_name: "subtitle_data",
+                resolve_sibling_scope: true,
+                source_property_name: visibleBinding,
+                target_property_name: "#visible",
+            }],
+        },
+    };
+}
+
 function buildTitleHideOverride(overlays: HudOverlay[]): Record<string, any> | null {
     const targets = overlays.filter((overlay) => overlay.visible && overlay.sourceType === "title" && overlay.hideVanilla);
     if (!targets.length) return null;
@@ -1101,21 +1311,42 @@ function buildActionbarHideOverride(overlays: HudOverlay[]): Record<string, any>
 function generateHudJson(): string {
     const overlays = state.overlays.filter((overlay) => overlay.visible).map((overlay) => normalizeOverlay({ ...overlay }));
     const payload: Record<string, any> = { namespace: "hud" };
-    const titleAndSubtitle = overlays.filter((overlay) => overlay.sourceType !== "actionbar");
-    if (titleAndSubtitle.length) {
+    const rootInsertions: Record<string, any>[] = [];
+    const titles = overlays.filter((overlay) => overlay.sourceType === "title");
+    const subtitles = overlays.filter((overlay) => overlay.sourceType === "subtitle");
+    const subtitleSlices = subtitles.filter((overlay) => overlay.parseMode === "slice");
+    const subtitleDirect = subtitles.filter((overlay) => overlay.parseMode !== "slice");
+
+    for (const overlay of titles) {
+        const controlName = overlayJsonName(overlay);
+        rootInsertions.push({ [`${controlName}@hud.${controlName}`]: {} });
+        Object.assign(payload, buildTitleOrSubtitleControl(overlay));
+    }
+
+    for (const overlay of subtitleDirect) {
+        const controlName = overlayJsonName(overlay);
+        rootInsertions.push({ [`${controlName}@hud.${controlName}`]: {} });
+        Object.assign(payload, buildTitleOrSubtitleControl(overlay));
+    }
+
+    if (subtitleSlices.length) {
+        rootInsertions.push({ "subtitle_data@hud.subtitle_data": {} });
+        Object.assign(payload, buildSubtitleDataPanel(subtitleSlices));
+        subtitleSlices.forEach((overlay, index) => {
+            const controlName = overlayJsonName(overlay);
+            rootInsertions.push({ [`${controlName}@hud.${controlName}`]: {} });
+            Object.assign(payload, buildSubtitleSliceControl(overlay, index));
+        });
+    }
+
+    if (rootInsertions.length) {
         payload.root_panel = {
             modifications: [{
                 array_name: "controls",
                 operation: "insert_back",
-                value: [{ "hud_text_editor_panel@hud.hud_text_editor_panel": {} }],
+                value: rootInsertions,
             }],
         };
-        payload.hud_text_editor_panel = {
-            type: "panel",
-            size: ["100%", "100%"],
-            controls: titleAndSubtitle.map((overlay) => ({ [`${overlayJsonName(overlay)}@hud.${overlayJsonName(overlay)}`]: {} })),
-        };
-        for (const overlay of titleAndSubtitle) Object.assign(payload, buildTitleOrSubtitleControl(overlay));
     }
 
     const actionbars = overlays.filter((overlay) => overlay.sourceType === "actionbar");
