@@ -36,9 +36,9 @@ const TEMPLATE_PATCHES = {
         hideVanilla: true,
         backgroundType: "vanilla",
         color: "#ffffff",
-        anchor: "top_middle",
-        x: 0,
-        y: 120,
+        anchor: "top_right",
+        x: -4,
+        y: 50,
         width: 500,
         height: 64,
     },
@@ -373,7 +373,7 @@ function normalizeOverlay(overlay) {
     overlay.maxValue = Math.max(1, Math.round(overlay.maxValue || 1));
     overlay.backgroundAlpha = clamp(Number.isFinite(overlay.backgroundAlpha) ? overlay.backgroundAlpha : 0.75, 0, 1);
     overlay.ninesliceSize = Math.max(0, Math.round(overlay.ninesliceSize || 0));
-    if (overlay.sourceType !== "title")
+    if (overlay.sourceType === "subtitle")
         overlay.preserveValue = false;
     if (overlay.sourceType === "actionbar") {
         overlay.parseMode = "trigger";
@@ -691,7 +691,7 @@ function renderInspector() {
     if (!summary || !container)
         return;
     const overlay = selected();
-    const preserveDisabled = overlay.sourceType !== "title" ? "disabled" : "";
+    const preserveDisabled = overlay.sourceType === "subtitle" ? "disabled" : "";
     const splitDisabled = overlay.sourceType === "actionbar" || overlay.parseMode !== "split_pair" ? "disabled" : "";
     const sliceDisabled = overlay.sourceType === "actionbar" || overlay.parseMode !== "slice" ? "disabled" : "";
     const triggerDisabled = overlay.parseMode !== "trigger" ? "disabled" : "";
@@ -813,8 +813,17 @@ function prefixMatchExpr(source, prefix) {
         return `(not (${source} = ''))`;
     return `(('%.${trimmed.length}s' * ${source}) = '${escapeBindingText(trimmed)}')`;
 }
+function containsTextExpr(source, text) {
+    const trimmed = text.trim();
+    if (!trimmed)
+        return `(not (${source} = ''))`;
+    return `(not ((${source} - '${escapeBindingText(trimmed)}') = ${source}))`;
+}
 function missingPrefixExpr(source, prefix) {
-    return `(not ${prefixMatchExpr(source, prefix)})`;
+    const trimmed = prefix.trim();
+    if (!trimmed)
+        return `(${source} = '')`;
+    return `((${source} - '${escapeBindingText(trimmed)}') = ${source})`;
 }
 function stripPrefixExpr(source, prefix) {
     const trimmed = prefix.trim();
@@ -858,11 +867,11 @@ function finalValueExpr(overlay, source) {
 }
 function visibleExpr(overlay, source) {
     if (overlay.parseMode === "trigger")
-        return prefixMatchExpr(source, overlay.triggerText);
+        return containsTextExpr(source, overlay.triggerText);
     if (overlay.parseMode === "slice") {
         const raw = rawValueExpr(overlay, source);
         if (overlay.triggerText.trim())
-            return prefixMatchExpr(raw, overlay.triggerText);
+            return containsTextExpr(raw, overlay.triggerText);
         return `(not (${raw} = ''))`;
     }
     return `(not (${finalValueExpr(overlay, source)} = ''))`;
@@ -1024,11 +1033,10 @@ function actionbarTextExpr(overlay) {
     return finalValueExpr(overlay, "$atext");
 }
 function buildActionbarControl(overlay) {
-    const controlName = overlayJsonName(overlay);
+    return buildNamedActionbarControl(overlay, overlayJsonName(overlay));
+}
+function buildNamedActionbarControl(overlay, controlName) {
     const controls = [];
-    const background = backgroundControl(overlay, `${controlName}_background`);
-    if (background)
-        controls.push(background);
     controls.push({
         [`${controlName}_label`]: {
             type: "label",
@@ -1036,12 +1044,13 @@ function buildActionbarControl(overlay) {
             localize: false,
             "$atext": ACTIONBAR_VARIABLE,
             "$display_text|default": "$atext",
-            size: ["100%", "default"],
-            max_size: ["100%", "default"],
-            offset: [0, Math.max(0, Math.round((overlay.height - 20) / 2))],
+            size: ["default", "default"],
+            anchor_from: "right_middle",
+            anchor_to: "right_middle",
+            offset: [-5, 0],
             color: colorHexToRgb(overlay.color),
-            text_alignment: "center",
             shadow: true,
+            layer: 2,
             variables: [{
                     requires: actionbarVisibleExpr(overlay),
                     "$display_text": actionbarTextExpr(overlay),
@@ -1050,7 +1059,17 @@ function buildActionbarControl(overlay) {
     });
     return {
         [controlName]: {
-            type: "panel",
+            type: overlay.backgroundType === "none" ? "panel" : "image",
+            texture: overlay.backgroundType === "custom"
+                ? (overlay.backgroundTexture || BACKGROUND_TEXTURES.vanilla)
+                : overlay.backgroundType === "solid"
+                    ? BACKGROUND_TEXTURES.solid
+                    : overlay.backgroundType === "none"
+                        ? undefined
+                        : BACKGROUND_TEXTURES.vanilla,
+            alpha: overlay.backgroundType === "none" ? undefined : overlay.backgroundAlpha,
+            color: overlay.backgroundType === "solid" ? colorHexToRgb(overlay.backgroundColor) : undefined,
+            nineslice_size: overlay.backgroundType === "custom" && overlay.ninesliceSize > 0 ? overlay.ninesliceSize : undefined,
             size: [overlay.width, overlay.height],
             anchor_from: overlay.anchor,
             anchor_to: overlay.anchor,
@@ -1106,17 +1125,11 @@ function buildSubtitleDataPanel(overlays) {
         },
     };
 }
-function buildSubtitleSliceControl(overlay, index) {
-    const controlName = overlayJsonName(overlay);
-    const textBinding = subtitleTextBindingName(index);
-    const visibleBinding = subtitleVisibleBindingName(index);
+function buildSubtitleSlotTemplate(overlay) {
     const controls = [];
-    const background = backgroundControl(overlay, `${controlName}_background`);
-    if (background)
-        controls.push(background);
     if (overlay.outputType === "progress_bar") {
         controls.push({
-            [`${controlName}_fill`]: {
+            subtitle_slot_fill: {
                 type: "image",
                 size: ["100%", "100%"],
                 texture: BACKGROUND_TEXTURES.hpBarFill,
@@ -1128,7 +1141,7 @@ function buildSubtitleSliceControl(overlay, index) {
                         binding_type: "view",
                         source_control_name: "subtitle_data",
                         resolve_sibling_scope: true,
-                        source_property_name: `(${textBinding} + 0)`,
+                        source_property_name: `($slot_binding + 0)`,
                         target_property_name: "#health",
                     },
                     {
@@ -1142,7 +1155,7 @@ function buildSubtitleSliceControl(overlay, index) {
     }
     else {
         controls.push({
-            [`${controlName}_label`]: {
+            label: {
                 type: "label",
                 text: "#text",
                 localize: false,
@@ -1158,28 +1171,136 @@ function buildSubtitleSliceControl(overlay, index) {
                         binding_type: "view",
                         source_control_name: "subtitle_data",
                         resolve_sibling_scope: true,
-                        source_property_name: textBinding,
+                        source_property_name: "$slot_binding",
                         target_property_name: "#text",
                     }],
             },
         });
     }
     return {
-        [controlName]: {
-            type: "panel",
+        subtitle_slot_template: {
+            type: overlay.backgroundType === "none" ? "panel" : "image",
+            texture: overlay.backgroundType === "none" ? undefined : (overlay.backgroundType === "solid"
+                ? BACKGROUND_TEXTURES.solid
+                : overlay.backgroundType === "custom"
+                    ? (overlay.backgroundTexture || BACKGROUND_TEXTURES.vanilla)
+                    : BACKGROUND_TEXTURES.vanilla),
+            alpha: overlay.backgroundType === "none" ? undefined : overlay.backgroundAlpha,
+            color: overlay.backgroundType === "solid" ? colorHexToRgb(overlay.backgroundColor) : undefined,
+            nineslice_size: overlay.backgroundType === "custom" && overlay.ninesliceSize > 0 ? overlay.ninesliceSize : undefined,
             size: [overlay.width, overlay.height],
-            anchor_from: overlay.anchor,
-            anchor_to: overlay.anchor,
-            offset: [overlay.x, overlay.y],
             layer: overlay.layer,
+            "$slot_binding": "#text1",
             controls,
             bindings: [{
                     binding_type: "view",
                     source_control_name: "subtitle_data",
                     resolve_sibling_scope: true,
-                    source_property_name: visibleBinding,
+                    source_property_name: "(not ($slot_binding = ''))",
                     target_property_name: "#visible",
                 }],
+        },
+    };
+}
+function buildSubtitleSlotInsertion(overlay, index) {
+    return {
+        [`sub_slot${index + 1}@hud.subtitle_slot_template`]: {
+            "$slot_binding": subtitleTextBindingName(index),
+            anchor_from: overlay.anchor,
+            anchor_to: overlay.anchor,
+            offset: [overlay.x, overlay.y],
+            size: [overlay.width, overlay.height],
+            layer: overlay.layer,
+        },
+    };
+}
+function buildNamedTitleOrSubtitleControl(overlay, controlName) {
+    const generated = buildTitleOrSubtitleControl(overlay);
+    const originalName = overlayJsonName(overlay);
+    if (controlName === originalName)
+        return generated;
+    const definition = generated[originalName];
+    delete generated[originalName];
+    generated[controlName] = definition;
+    return generated;
+}
+function buildNamedActionbarPreserveDisplay(overlay, controlName) {
+    const visibleSource = visibleExpr(overlay, "#source_text");
+    return {
+        [controlName]: {
+            type: overlay.backgroundType === "none" ? "panel" : "image",
+            texture: overlay.backgroundType === "custom"
+                ? (overlay.backgroundTexture || BACKGROUND_TEXTURES.vanilla)
+                : overlay.backgroundType === "solid"
+                    ? BACKGROUND_TEXTURES.solid
+                    : overlay.backgroundType === "none"
+                        ? undefined
+                        : BACKGROUND_TEXTURES.vanilla,
+            alpha: overlay.backgroundType === "none" ? undefined : overlay.backgroundAlpha,
+            color: overlay.backgroundType === "solid" ? colorHexToRgb(overlay.backgroundColor) : undefined,
+            nineslice_size: overlay.backgroundType === "custom" && overlay.ninesliceSize > 0 ? overlay.ninesliceSize : undefined,
+            size: [overlay.width, overlay.height],
+            anchor_from: overlay.anchor,
+            anchor_to: overlay.anchor,
+            offset: [overlay.x, overlay.y],
+            layer: overlay.layer,
+            controls: [
+                {
+                    data_control: {
+                        type: "panel",
+                        size: [0, 0],
+                        property_bag: { "#preserved_text": "", "#source_text": "" },
+                        bindings: [
+                            {
+                                binding_name: "#hud_actionbar_text_string",
+                                binding_name_override: "#source_text",
+                                binding_type: "global",
+                            },
+                            {
+                                binding_name: "#hud_actionbar_text_string",
+                                binding_name_override: "#preserved_text",
+                                binding_condition: "visibility_changed",
+                                binding_type: "global",
+                            },
+                            {
+                                binding_type: "view",
+                                source_property_name: `(not (#source_text = #preserved_text) and ${visibleSource})`,
+                                target_property_name: "#visible",
+                            },
+                        ],
+                    },
+                },
+                {
+                    actionbar_label: {
+                        type: "label",
+                        text: "#text",
+                        localize: false,
+                        size: ["default", "default"],
+                        anchor_from: "right_middle",
+                        anchor_to: "right_middle",
+                        offset: [-5, 0],
+                        shadow: true,
+                        layer: 2,
+                        color: colorHexToRgb(overlay.color),
+                        bindings: [
+                            {
+                                binding_type: "view",
+                                source_control_name: "data_control",
+                                source_property_name: finalValueExpr(overlay, "#preserved_text"),
+                                target_property_name: "#text",
+                            },
+                        ],
+                    },
+                },
+            ],
+            bindings: [
+                {
+                    binding_type: "view",
+                    source_control_name: "data_control",
+                    source_property_name: "(not (#preserved_text = ''))",
+                    target_property_name: "#visible",
+                },
+            ],
         },
     };
 }
@@ -1222,25 +1343,33 @@ function generateHudJson() {
     const subtitles = overlays.filter((overlay) => overlay.sourceType === "subtitle");
     const subtitleSlices = subtitles.filter((overlay) => overlay.parseMode === "slice");
     const subtitleDirect = subtitles.filter((overlay) => overlay.parseMode !== "slice");
-    for (const overlay of titles) {
-        const controlName = overlayJsonName(overlay);
-        rootInsertions.push({ [`${controlName}@hud.${controlName}`]: {} });
-        Object.assign(payload, buildTitleOrSubtitleControl(overlay));
-    }
-    for (const overlay of subtitleDirect) {
-        const controlName = overlayJsonName(overlay);
-        rootInsertions.push({ [`${controlName}@hud.${controlName}`]: {} });
-        Object.assign(payload, buildTitleOrSubtitleControl(overlay));
-    }
+    titles.forEach((overlay, index) => {
+        const controlName = index === 0 ? "title_control" : `title_control_${index + 1}`;
+        const instanceName = index === 0 ? "title_ctrl" : `title_ctrl_${index + 1}`;
+        rootInsertions.push({ [`${instanceName}@hud.${controlName}`]: {} });
+        Object.assign(payload, buildNamedTitleOrSubtitleControl(overlay, controlName));
+    });
+    subtitleDirect.forEach((overlay, index) => {
+        const controlName = index === 0 ? "subtitle_control" : `subtitle_control_${index + 1}`;
+        const instanceName = index === 0 ? "subtitle_ctrl" : `subtitle_ctrl_${index + 1}`;
+        rootInsertions.push({ [`${instanceName}@hud.${controlName}`]: {} });
+        Object.assign(payload, buildNamedTitleOrSubtitleControl(overlay, controlName));
+    });
     if (subtitleSlices.length) {
         rootInsertions.push({ "subtitle_data@hud.subtitle_data": {} });
         Object.assign(payload, buildSubtitleDataPanel(subtitleSlices));
+        Object.assign(payload, buildSubtitleSlotTemplate(subtitleSlices[0]));
         subtitleSlices.forEach((overlay, index) => {
-            const controlName = overlayJsonName(overlay);
-            rootInsertions.push({ [`${controlName}@hud.${controlName}`]: {} });
-            Object.assign(payload, buildSubtitleSliceControl(overlay, index));
+            rootInsertions.push(buildSubtitleSlotInsertion(overlay, index));
         });
     }
+    const actionbars = overlays.filter((overlay) => overlay.sourceType === "actionbar");
+    actionbars.filter((overlay) => overlay.preserveValue).forEach((overlay, index) => {
+        const controlName = index === 0 ? "preserved_actionbar_display" : `preserved_actionbar_display_${index + 1}`;
+        const instanceName = index === 0 ? "preserved_actionbar" : `preserved_actionbar_${index + 1}`;
+        rootInsertions.push({ [`${instanceName}@hud.${controlName}`]: {} });
+        Object.assign(payload, buildNamedActionbarPreserveDisplay(overlay, controlName));
+    });
     if (rootInsertions.length) {
         payload.root_panel = {
             modifications: [{
@@ -1250,30 +1379,39 @@ function generateHudJson() {
                 }],
         };
     }
-    const actionbars = overlays.filter((overlay) => overlay.sourceType === "actionbar");
     if (actionbars.length) {
+        const singleActionbar = actionbars.length === 1 ? actionbars[0] : null;
         payload["root_panel/hud_actionbar_text_area"] = {
             modifications: [{
                     array_name: "controls",
                     operation: "insert_back",
                     value: [{
-                            hud_text_editor_actionbar_factory: {
+                            custom_actionbar_factory: {
                                 type: "panel",
                                 factory: {
                                     name: "hud_actionbar_text_factory",
-                                    control_ids: { hud_actionbar_text: "@hud.hud_actionbar_factory_root" },
+                                    control_ids: {
+                                        hud_actionbar_text: singleActionbar ? "@hud.my_custom_actionbar" : "@hud.hud_actionbar_factory_root",
+                                    },
                                 },
                             },
                         }],
                 }],
         };
-        payload.hud_actionbar_factory_root = {
-            type: "panel",
-            size: ["100%", "100%"],
-            controls: actionbars.map((overlay) => ({ [`${overlayJsonName(overlay)}@hud.${overlayJsonName(overlay)}`]: {} })),
-        };
-        for (const overlay of actionbars)
-            Object.assign(payload, buildActionbarControl(overlay));
+        if (singleActionbar) {
+            Object.assign(payload, buildNamedActionbarControl(singleActionbar, "my_custom_actionbar"));
+        }
+        else {
+            payload.hud_actionbar_factory_root = {
+                type: "panel",
+                size: ["100%", "100%"],
+                controls: actionbars.map((overlay, index) => {
+                    const controlName = index === 0 ? "my_custom_actionbar" : `my_custom_actionbar_${index + 1}`;
+                    Object.assign(payload, buildNamedActionbarControl(overlay, controlName));
+                    return { [`${controlName}@hud.${controlName}`]: {} };
+                }),
+            };
+        }
     }
     const titleOverride = buildTitleHideOverride(overlays);
     if (titleOverride)
