@@ -16,7 +16,6 @@
             <div class="toolMenu">
                 <div class="toolMenuSummary">도구 목록</div>
                 <div class="importers toolMenuPanel">
-                    <button type="button" class="propertyInputButton" onclick="Builder.openHudEditorModal()">HUD Editor</button>
                     <label class="ui_textures_importer">
                         <input title="Import Textures" type="file" id="ui_textures_importer"
                             onchange="Builder.handleUiTexturesUpload()" webkitdirectory directory multiple />
@@ -34,6 +33,7 @@
                     </label>
 
                     <button type="button" class="propertyInputButton" onclick="Builder.openPasteFormModal()">Paste Form Code</button>
+                    <button type="button" class="propertyInputButton" onclick="Builder.openHudEditorModal()">HUD Editor</button>
                     <button type="button" class="propertyInputButton" onclick="Builder.openGlyphEditorModal()">Glyph Editor</button>
                 </div>
             </div>
@@ -144,22 +144,22 @@
     </div>
     <!--------------->
 
-    <!-- The Glyph Editor Modal -->
-    <div id="modalGlyphEditor" class="modal">
-        <div class="modal-content glyphEditorModalContent">
-            <span id="modalGlyphEditorClose" class="modalClose">&times;</span>
-            <h2 class="modalHeader">Glyph Editor</h2>
-            <div class="modalGlyphEditorForm"></div>
-        </div>
-    </div>
-    <!--------------->
-
     <!-- The HUD Editor Modal -->
     <div id="modalHudEditor" class="modal">
         <div class="modal-content hudEditorModalContent">
             <span id="modalHudEditorClose" class="modalClose">&times;</span>
             <h2 class="modalHeader">HUD Editor</h2>
             <div class="modalHudEditorForm"></div>
+        </div>
+    </div>
+    <!--------------->
+
+    <!-- The Glyph Editor Modal -->
+    <div id="modalGlyphEditor" class="modal">
+        <div class="modal-content glyphEditorModalContent">
+            <span id="modalGlyphEditorClose" class="modalClose">&times;</span>
+            <h2 class="modalHeader">Glyph Editor</h2>
+            <div class="modalGlyphEditorForm"></div>
         </div>
     </div>
     <!--------------->

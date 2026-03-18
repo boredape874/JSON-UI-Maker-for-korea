@@ -1,38 +1,425 @@
 import { Notification } from "../notifs/noficationMaker.js";
 const PREVIEW_WIDTH = 1500;
-const PREVIEW_HEIGHT = Math.round(1500 / 1.7777777);
-const TITLE_BINDING = "#hud_title_text_string";
-const SUBTITLE_BINDING = "#hud_subtitle_text_string";
-const ACTIONBAR_VARIABLE = "$actionbar_text";
-const BACKGROUND_TEXTURES = {
-    vanilla: "textures/ui/hud_tip_text_background",
-    solid: "textures/ui/white_background",
-    hpBarBackground: "textures/ui/hp_bar/hp_bar_bg",
-    hpBarFill: "textures/ui/hp_bar/hp_bar_full",
-};
+const PREVIEW_HEIGHT = 1500 / 1.7777777;
 const state = {
-    panels: [],
-    selectedId: "",
-    nextId: 1,
-    drag: { panelId: null, pointerOffsetX: 0, pointerOffsetY: 0 },
+    selectedId: "title",
+    elements: {
+        title: {
+            id: "title",
+            label: "Title",
+            enabled: true,
+            sampleText: "info:공지입니다",
+            prefix: "info:",
+            stripPrefix: true,
+            hideVanilla: true,
+            preserve: true,
+            anchor: "top_middle",
+            x: 0,
+            y: 130,
+            width: 440,
+            height: 56,
+            layer: 30,
+            fontSize: "extra_large",
+            textColor: "#ffffff",
+            shadow: true,
+            background: "vanilla",
+            backgroundAlpha: 0.75,
+            backgroundColor: "#1f2432",
+        },
+        subtitle: {
+            id: "subtitle",
+            label: "Subtitle",
+            enabled: true,
+            sampleText: "부제목입니다",
+            prefix: "",
+            stripPrefix: false,
+            hideVanilla: true,
+            preserve: false,
+            anchor: "top_middle",
+            x: 0,
+            y: 190,
+            width: 380,
+            height: 42,
+            layer: 31,
+            fontSize: "large",
+            textColor: "#dfe9ff",
+            shadow: true,
+            background: "vanilla",
+            backgroundAlpha: 0.75,
+            backgroundColor: "#1f2432",
+        },
+        actionbar: {
+            id: "actionbar",
+            label: "Actionbar",
+            enabled: true,
+            sampleText: "info:오른쪽 표시",
+            prefix: "info:",
+            stripPrefix: true,
+            hideVanilla: true,
+            preserve: false,
+            anchor: "bottom_middle",
+            x: 0,
+            y: -96,
+            width: 340,
+            height: 38,
+            layer: 32,
+            fontSize: "normal",
+            textColor: "#ffffff",
+            shadow: true,
+            background: "vanilla",
+            backgroundAlpha: 0.75,
+            backgroundColor: "#1f2432",
+        },
+    },
+    drag: null,
 };
-const getModal = () => document.getElementById("modalHudEditor");
-const getCloseButton = () => document.getElementById("modalHudEditorClose");
-const getForm = () => document.getElementsByClassName("modalHudEditorForm")[0];
-const selectedPanel = () => state.panels.find((panel) => panel.id === state.selectedId) ?? state.panels[0];
-const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-const escapeHtml = (text) => text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-const escapeBindingText = (text) => text.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-function colorHexToRgb(color) {
-    const value = Number.parseInt(color.replace("#", ""), 16);
-    return [((value >> 16) & 255) / 255, ((value >> 8) & 255) / 255, (value & 255) / 255];
+function getModal() {
+    return document.getElementById("modalHudEditor");
 }
-function anchorBase(anchor) {
+function getCloseButton() {
+    return document.getElementById("modalHudEditorClose");
+}
+function getForm() {
+    return document.getElementsByClassName("modalHudEditorForm")[0];
+}
+function escapeHtml(value) {
+    return value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+}
+function quoteString(value) {
+    return JSON.stringify(value);
+}
+function hexToRgb(color) {
+    const normalized = color.replace("#", "");
+    const safe = normalized.length === 3
+        ? normalized.split("").map((char) => `${char}${char}`).join("")
+        : normalized.padEnd(6, "0").slice(0, 6);
+    const number = Number.parseInt(safe, 16);
+    return [
+        ((number >> 16) & 255) / 255,
+        ((number >> 8) & 255) / 255,
+        (number & 255) / 255,
+    ];
+}
+function getSelectedElement() {
+    return state.elements[state.selectedId];
+}
+function getCanvasBackgroundHtml() {
+    const mainWindow = document.getElementById("main_window");
+    const bgImage = mainWindow?.querySelector(".bg_image");
+    if (bgImage?.src) {
+        return `<img class="hudEditorCanvasBackgroundImage" src="${bgImage.src}" alt="HUD Background">`;
+    }
+    return `<div class="hudEditorCanvasBackgroundFallback"></div>`;
+}
+function prefixMatchExpression(source, prefix) {
+    if (!prefix)
+        return "true";
+    return `(not ((${source} - ${quoteString(prefix)}) = ${source}))`;
+}
+function removePrefixExpression(source, prefix, stripPrefix) {
+    if (!prefix || !stripPrefix)
+        return source;
+    return `(${source} - ${quoteString(prefix)})`;
+}
+function backgroundDefinition(element) {
+    if (element.background === "none")
+        return null;
+    const base = {
+        type: "image",
+        size: ["100%", "100%"],
+        alpha: element.backgroundAlpha,
+    };
+    if (element.background === "vanilla") {
+        base.texture = "textures/ui/hud_tip_text_background";
+        return base;
+    }
+    base.texture = "textures/ui/white_background";
+    base.color = hexToRgb(element.backgroundColor);
+    return base;
+}
+function buildTitleControl(element) {
+    const dataBindings = [
+        {
+            binding_name: "#hud_title_text_string",
+            binding_name_override: "#source_text",
+            binding_type: "global",
+        },
+    ];
+    if (element.preserve) {
+        dataBindings.push({
+            binding_name: "#hud_title_text_string",
+            binding_name_override: "#preserved_text",
+            binding_condition: "visibility_changed",
+            binding_type: "global",
+        });
+    }
+    dataBindings.push({
+        binding_type: "view",
+        source_property_name: element.preserve
+            ? `(not (#source_text = #preserved_text) and ${prefixMatchExpression("#source_text", element.prefix)})`
+            : prefixMatchExpression("#source_text", element.prefix),
+        target_property_name: "#visible",
+    });
+    const controls = [
+        {
+            title_data: {
+                type: "panel",
+                size: [0, 0],
+                property_bag: {
+                    "#source_text": "",
+                    "#preserved_text": "",
+                },
+                bindings: dataBindings,
+            },
+        },
+    ];
+    const background = backgroundDefinition(element);
+    if (background) {
+        controls.push({
+            title_background: background,
+        });
+    }
+    controls.push({
+        title_label: {
+            type: "label",
+            text: "#text",
+            localize: false,
+            size: ["100%", "default"],
+            max_size: ["100%", "default"],
+            anchor_from: "center",
+            anchor_to: "center",
+            color: hexToRgb(element.textColor),
+            shadow: element.shadow,
+            layer: 31,
+            font_size: element.fontSize,
+            text_alignment: "center",
+            bindings: [
+                {
+                    binding_type: "view",
+                    source_control_name: "title_data",
+                    source_property_name: removePrefixExpression(element.preserve ? "#preserved_text" : "#source_text", element.prefix, element.stripPrefix),
+                    target_property_name: "#text",
+                },
+            ],
+        },
+    });
+    return {
+        type: "panel",
+        size: [element.width, element.height],
+        anchor_from: element.anchor,
+        anchor_to: element.anchor,
+        offset: [element.x, element.y],
+        layer: element.layer,
+        controls,
+        bindings: [
+            {
+                binding_type: "view",
+                source_control_name: "title_data",
+                source_property_name: element.preserve ? "(not (#preserved_text = ''))" : "#visible",
+                target_property_name: "#visible",
+            },
+        ],
+    };
+}
+function buildSubtitleControl(element) {
+    const controls = [];
+    const background = backgroundDefinition(element);
+    if (background) {
+        controls.push({
+            subtitle_background: background,
+        });
+    }
+    controls.push({
+        subtitle_label: {
+            type: "label",
+            text: "#text",
+            localize: false,
+            size: ["100%", "default"],
+            max_size: ["100%", "default"],
+            anchor_from: "center",
+            anchor_to: "center",
+            color: hexToRgb(element.textColor),
+            shadow: element.shadow,
+            layer: 31,
+            font_size: element.fontSize,
+            text_alignment: "center",
+            bindings: [
+                {
+                    binding_name: "#hud_subtitle_text_string",
+                    binding_name_override: "#text",
+                    binding_type: "global",
+                },
+                {
+                    binding_type: "view",
+                    source_property_name: removePrefixExpression("#text", element.prefix, element.stripPrefix),
+                    target_property_name: "#text",
+                },
+                {
+                    binding_type: "view",
+                    source_property_name: element.prefix
+                        ? prefixMatchExpression("#text", element.prefix)
+                        : "(not (#text = ''))",
+                    target_property_name: "#visible",
+                },
+            ],
+        },
+    });
+    return {
+        type: "panel",
+        size: [element.width, element.height],
+        anchor_from: element.anchor,
+        anchor_to: element.anchor,
+        offset: [element.x, element.y],
+        layer: element.layer,
+        controls,
+    };
+}
+function buildActionbarControl(element) {
+    const control = {
+        type: element.background === "none" ? "panel" : "image",
+        size: [element.width, element.height],
+        anchor_from: element.anchor,
+        anchor_to: element.anchor,
+        offset: [element.x, element.y],
+        layer: element.layer,
+        $atext: "$actionbar_text",
+        visible: element.prefix ? prefixMatchExpression("$atext", element.prefix) : "(not ($atext = ''))",
+        controls: [
+            {
+                actionbar_label: {
+                    type: "label",
+                    text: "$display_text",
+                    localize: false,
+                    size: ["100%", "default"],
+                    max_size: ["100%", "default"],
+                    anchor_from: "center",
+                    anchor_to: "center",
+                    color: hexToRgb(element.textColor),
+                    shadow: element.shadow,
+                    layer: 31,
+                    font_size: element.fontSize,
+                    text_alignment: "center",
+                    $atext: "$actionbar_text",
+                    "$display_text|default": "$atext",
+                    variables: [
+                        {
+                            requires: element.prefix ? prefixMatchExpression("$atext", element.prefix) : "(not ($atext = ''))",
+                            $display_text: element.prefix && element.stripPrefix
+                                ? removePrefixExpression("$atext", element.prefix, true)
+                                : "$atext",
+                        },
+                    ],
+                },
+            },
+        ],
+    };
+    if (element.background !== "none") {
+        control.texture = element.background === "vanilla" ? "textures/ui/hud_tip_text_background" : "textures/ui/white_background";
+        control.alpha = element.backgroundAlpha;
+        if (element.background === "solid") {
+            control.color = hexToRgb(element.backgroundColor);
+        }
+    }
+    return control;
+}
+function buildHudJson() {
+    const json = {
+        namespace: "hud",
+    };
+    const rootInsert = [];
+    const title = state.elements.title;
+    if (title.enabled) {
+        json.title_control = buildTitleControl(title);
+        rootInsert.push({ "title_control@hud.title_control": {} });
+        if (title.hideVanilla) {
+            json["hud_title_text/title_frame"] = {
+                bindings: [
+                    {
+                        binding_type: "view",
+                        source_control_name: "title",
+                        source_property_name: title.prefix ? `((#text - ${quoteString(title.prefix)}) = #text)` : "false",
+                        target_property_name: "#visible",
+                    },
+                ],
+            };
+        }
+    }
+    const subtitle = state.elements.subtitle;
+    if (subtitle.enabled) {
+        json.subtitle_control = buildSubtitleControl(subtitle);
+        rootInsert.push({ "subtitle_control@hud.subtitle_control": {} });
+        if (subtitle.hideVanilla) {
+            json["hud_title_text/subtitle_frame"] = subtitle.prefix
+                ? {
+                    bindings: [
+                        {
+                            binding_type: "view",
+                            source_control_name: "subtitle",
+                            source_property_name: `((#text - ${quoteString(subtitle.prefix)}) = #text)`,
+                            target_property_name: "#visible",
+                        },
+                    ],
+                }
+                : { visible: false };
+        }
+    }
+    const actionbar = state.elements.actionbar;
+    if (actionbar.enabled) {
+        json.my_custom_actionbar = buildActionbarControl(actionbar);
+        json["root_panel/hud_actionbar_text_area"] = {
+            modifications: [
+                {
+                    array_name: "controls",
+                    operation: "insert_back",
+                    value: [
+                        {
+                            custom_actionbar_factory: {
+                                type: "panel",
+                                factory: {
+                                    name: "hud_actionbar_text_factory",
+                                    control_ids: {
+                                        hud_actionbar_text: "@hud.my_custom_actionbar",
+                                    },
+                                },
+                            },
+                        },
+                    ],
+                },
+            ],
+        };
+        if (actionbar.hideVanilla) {
+            json["hud_actionbar_text"] = {
+                $atext: "$actionbar_text",
+                visible: actionbar.prefix ? `(($atext - ${quoteString(actionbar.prefix)}) = $atext)` : "false",
+            };
+        }
+    }
+    if (rootInsert.length > 0) {
+        json.root_panel = {
+            modifications: [
+                {
+                    array_name: "controls",
+                    operation: "insert_back",
+                    value: rootInsert,
+                },
+            ],
+        };
+    }
+    return JSON.stringify(json, null, 2);
+}
+function updateOutput() {
+    const output = getForm().querySelector(".hudEditorOutput");
+    if (output)
+        output.value = buildHudJson();
+}
+function getAnchorReference(anchor) {
     switch (anchor) {
         case "top_left": return { x: 0, y: 0 };
         case "top_middle": return { x: PREVIEW_WIDTH / 2, y: 0 };
@@ -45,637 +432,333 @@ function anchorBase(anchor) {
         case "bottom_right": return { x: PREVIEW_WIDTH, y: PREVIEW_HEIGHT };
     }
 }
-function selfAnchorOffset(anchor, width, height) {
-    switch (anchor) {
-        case "top_left": return { x: 0, y: 0 };
-        case "top_middle": return { x: width / 2, y: 0 };
-        case "top_right": return { x: width, y: 0 };
-        case "left_middle": return { x: 0, y: height / 2 };
-        case "center": return { x: width / 2, y: height / 2 };
-        case "right_middle": return { x: width, y: height / 2 };
-        case "bottom_left": return { x: 0, y: height };
-        case "bottom_middle": return { x: width / 2, y: height };
-        case "bottom_right": return { x: width, y: height };
+function computePreviewRect(element) {
+    const base = getAnchorReference(element.anchor);
+    let left = base.x + element.x;
+    let top = base.y + element.y;
+    if (element.anchor === "top_middle" || element.anchor === "center" || element.anchor === "bottom_middle") {
+        left -= element.width / 2;
     }
-}
-function actualPosition(panel) {
-    const base = anchorBase(panel.anchor);
-    const self = selfAnchorOffset(panel.anchor, panel.width, panel.height);
-    return { left: base.x + panel.x - self.x, top: base.y + panel.y - self.y };
-}
-function applyActualPosition(panel, left, top) {
-    const base = anchorBase(panel.anchor);
-    const self = selfAnchorOffset(panel.anchor, panel.width, panel.height);
-    panel.x = Math.round(left + self.x - base.x);
-    panel.y = Math.round(top + self.y - base.y);
-}
-function normalizePanel(panel) {
-    panel.name = panel.name.trim() || "HUD 패널";
-    panel.sliceStart = Math.max(0, Math.round(panel.sliceStart || 0));
-    panel.sliceEnd = Math.max(panel.sliceStart, Math.round(panel.sliceEnd || 0));
-    panel.maxValue = Math.max(1, Math.round(panel.maxValue || 1));
-    panel.width = clamp(Math.round(panel.width || 0), 40, PREVIEW_WIDTH);
-    panel.height = clamp(Math.round(panel.height || 0), 20, PREVIEW_HEIGHT);
-    panel.layer = Math.round(panel.layer || 0);
-    panel.backgroundAlpha = clamp(panel.backgroundAlpha, 0, 1);
-    panel.ninesliceSize = Math.max(0, Math.round(panel.ninesliceSize || 0));
-    if (panel.channel === "subtitle_slot") {
-        panel.parseMode = "slice";
-        panel.preserveValue = false;
+    else if (element.anchor === "top_right" || element.anchor === "right_middle" || element.anchor === "bottom_right") {
+        left -= element.width;
     }
-    if (panel.channel === "actionbar") {
-        panel.parseMode = "trigger";
-        panel.outputMode = "label";
-        panel.preserveValue = false;
+    if (element.anchor === "left_middle" || element.anchor === "center" || element.anchor === "right_middle") {
+        top -= element.height / 2;
     }
-    if (panel.channel === "actionbar_preserve") {
-        panel.parseMode = "trigger";
-        panel.outputMode = "label";
-        panel.preserveValue = true;
+    else if (element.anchor === "bottom_left" || element.anchor === "bottom_middle" || element.anchor === "bottom_right") {
+        top -= element.height;
     }
-    if (panel.outputMode === "progress_bar" && panel.backgroundType === "none") {
-        panel.backgroundType = "vanilla";
+    return { left, top };
+}
+function previewElementText(element) {
+    if (!element.stripPrefix || !element.prefix)
+        return element.sampleText;
+    if (element.sampleText.startsWith(element.prefix)) {
+        return element.sampleText.slice(element.prefix.length);
     }
-    return panel;
+    return element.sampleText;
 }
-function createPanel(channel, overrides = {}) {
-    const id = `hud_panel_${state.nextId++}`;
-    const base = {
-        title: { name: "타이틀 패널", channel, parseMode: "trigger", outputMode: "label", triggerText: "info:", stripTriggerText: true, preserveValue: false, sliceStart: 0, sliceEnd: 200, maxValue: 100, anchor: "top_right", x: -4, y: 50, width: 500, height: 64, layer: 30, hideVanilla: true, enabled: true, backgroundType: "vanilla", backgroundTexture: "", backgroundAlpha: 0.75, backgroundColor: "#253a82", ninesliceSize: 0, textColor: "#ffffff", sampleText: "info: 공지입니다" },
-        subtitle_slot: { name: "서브타이틀 슬롯", channel, parseMode: "slice", outputMode: "label", triggerText: "", stripTriggerText: false, preserveValue: false, sliceStart: 0, sliceEnd: 20, maxValue: 100, anchor: "top_left", x: 4, y: 28, width: 210, height: 34, layer: 31, hideVanilla: true, enabled: true, backgroundType: "vanilla", backgroundTexture: "", backgroundAlpha: 0.75, backgroundColor: "#253a82", ninesliceSize: 0, textColor: "#dfe9ff", sampleText: "slot1\t\t\t\t\t\t\t\t\t\t\t\tslot2\t\t\t\t\t\t\t\t\t\t\t\tslot3\t\t\t\t\t\t\t\t\t\t\t\tslot4\t\t\t\t\t\t\t\t\t\t\t\tslot5" },
-        actionbar: { name: "액션바 패널", channel, parseMode: "trigger", outputMode: "label", triggerText: "info:", stripTriggerText: true, preserveValue: false, sliceStart: 0, sliceEnd: 0, maxValue: 100, anchor: "top_right", x: -4, y: 4, width: 280, height: 36, layer: 30, hideVanilla: true, enabled: true, backgroundType: "vanilla", backgroundTexture: "", backgroundAlpha: 0.75, backgroundColor: "#253a82", ninesliceSize: 0, textColor: "#ffffff", sampleText: "info: 오른쪽 표시" },
-        actionbar_preserve: { name: "액션바 보존 패널", channel, parseMode: "trigger", outputMode: "label", triggerText: "info:", stripTriggerText: true, preserveValue: true, sliceStart: 0, sliceEnd: 0, maxValue: 100, anchor: "top_right", x: -4, y: 4, width: 280, height: 36, layer: 30, hideVanilla: true, enabled: true, backgroundType: "vanilla", backgroundTexture: "", backgroundAlpha: 0.75, backgroundColor: "#253a82", ninesliceSize: 0, textColor: "#ffffff", sampleText: "info: 오른쪽 표시" },
-    };
-    return normalizePanel({
-        id,
-        name: "",
-        channel,
-        parseMode: "trigger",
-        outputMode: "label",
-        triggerText: "",
-        stripTriggerText: false,
-        preserveValue: false,
-        sliceStart: 0,
-        sliceEnd: 0,
-        maxValue: 100,
-        anchor: "top_left",
-        x: 0,
-        y: 0,
-        width: 200,
-        height: 40,
-        layer: 10,
-        hideVanilla: true,
-        enabled: true,
-        backgroundType: "none",
-        backgroundTexture: "",
-        backgroundAlpha: 0.75,
-        backgroundColor: "#253a82",
-        ninesliceSize: 0,
-        textColor: "#ffffff",
-        sampleText: "",
-        ...base[channel],
-        ...overrides,
-    });
-}
-function createTemplate(template) {
-    if (template === "subtitle_slots_5") {
-        const positions = [
-            { anchor: "top_left", x: 4, y: 28 },
-            { anchor: "top_right", x: -4, y: 28 },
-            { anchor: "top_left", x: 4, y: 48 },
-            { anchor: "top_right", x: -4, y: 48 },
-            { anchor: "top_middle", x: 0, y: 68 },
-        ];
-        return positions.map((position, index) => createPanel("subtitle_slot", { name: `서브타이틀 슬롯 ${index + 1}`, sliceStart: index * 20, sliceEnd: (index + 1) * 20, ...position }));
-    }
-    if (template === "title_coin")
-        return [createPanel("title", { name: "코인 타이틀", parseMode: "slice", preserveValue: true, triggerText: "coin:", sliceStart: 200, sliceEnd: 400, width: 280, height: 48, sampleText: "coin:1200\t\t\t\t\t", textColor: "#f6d96b" })];
-    if (template === "title_hp_text")
-        return [createPanel("title", { name: "체력 텍스트", parseMode: "slice", preserveValue: true, triggerText: "hp_text:", sliceStart: 400, sliceEnd: 600, anchor: "bottom_middle", x: -85, y: -86, width: 170, height: 32, backgroundType: "none", sampleText: "hp_text:84/100\t\t\t" })];
-    if (template === "title_hp_bar")
-        return [createPanel("title", { name: "체력 바", parseMode: "slice", outputMode: "progress_bar", preserveValue: true, triggerText: "hp_clip:", sliceStart: 600, sliceEnd: 800, anchor: "bottom_middle", x: -50, y: -48, width: 180, height: 28, sampleText: "hp_clip:84\t\t\t\t" })];
-    if (template === "actionbar_info")
-        return [createPanel("actionbar")];
-    if (template === "actionbar_preserve")
-        return [createPanel("actionbar_preserve")];
-    return [createPanel("title")];
-}
-function resetState() {
-    state.nextId = 1;
-    state.panels = [...createTemplate("title_info"), ...createTemplate("subtitle_slots_5"), ...createTemplate("actionbar_info")];
-    state.selectedId = state.panels[0].id;
-    state.drag = { panelId: null, pointerOffsetX: 0, pointerOffsetY: 0 };
-}
-function panelSummary(panel) {
-    const channel = panel.channel === "title" ? "타이틀" : panel.channel === "subtitle_slot" ? "서브슬롯" : panel.channel === "actionbar" ? "액션바" : "보존액션바";
-    const parse = panel.parseMode === "trigger" ? (panel.triggerText || "문자 감지") : `${panel.sliceStart}-${panel.sliceEnd}`;
-    const output = panel.outputMode === "progress_bar" ? "바" : "라벨";
-    return `${channel} / ${parse} / ${output}`;
-}
-function previewText(panel) {
-    if (panel.outputMode === "progress_bar")
-        return "70%";
-    if (panel.channel === "subtitle_slot")
-        return `슬롯 ${Math.floor(panel.sliceStart / 20) + 1}`;
-    return panel.stripTriggerText ? panel.sampleText.replace(panel.triggerText, "") : panel.sampleText;
-}
-function previewStyle(panel) {
-    const position = actualPosition(panel);
-    return [
-        `left:${(position.left / PREVIEW_WIDTH) * 100}%`,
-        `top:${(position.top / PREVIEW_HEIGHT) * 100}%`,
-        `width:${(panel.width / PREVIEW_WIDTH) * 100}%`,
-        `height:${(panel.height / PREVIEW_HEIGHT) * 100}%`,
-        `z-index:${panel.layer}`,
-        `color:${panel.textColor}`,
-    ].join(";");
-}
-function bindingLabel(channel) {
-    if (channel === "title")
-        return TITLE_BINDING;
-    if (channel === "subtitle_slot")
-        return SUBTITLE_BINDING;
-    if (channel === "actionbar")
-        return ACTIONBAR_VARIABLE;
-    return "#hud_actionbar_text_string";
-}
-function buildEditor() {
-    const form = getForm();
-    if (form.dataset.initialized === "true")
-        return;
-    form.dataset.initialized = "true";
-    form.innerHTML = `
-        <div class="hudEditorLayout">
-            <div class="hudEditorSidebar">
-                <div class="glyphEditorMetaCard">
-                    <div class="hudEditorSectionTitle">HUD 패널 목록</div>
-                    <div class="hudEditorOverlayList"></div>
-                    <div class="hudEditorSectionTitle hudEditorSectionSpacer">패널 추가</div>
-                    <div class="hudEditorTemplateButtons">
-                        <button type="button" class="propertyInputButton hudAddPanelBtn" data-channel="title">타이틀</button>
-                        <button type="button" class="propertyInputButton hudAddPanelBtn" data-channel="subtitle_slot">서브슬롯</button>
-                        <button type="button" class="propertyInputButton hudAddPanelBtn" data-channel="actionbar">액션바</button>
-                        <button type="button" class="propertyInputButton hudAddPanelBtn" data-channel="actionbar_preserve">보존 액션바</button>
-                    </div>
-                    <div class="hudEditorSectionTitle hudEditorSectionSpacer">예시 템플릿</div>
-                    <div class="hudEditorTemplateButtons">
-                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="title_info">타이틀 info</button>
-                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="title_coin">코인</button>
-                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="title_hp_text">체력 텍스트</button>
-                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="title_hp_bar">체력 바</button>
-                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="subtitle_slots_5">서브타이틀 5슬롯</button>
-                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="actionbar_info">액션바 info</button>
-                        <button type="button" class="propertyInputButton hudTemplateBtn" data-template="actionbar_preserve">보존 액션바</button>
-                    </div>
-                    <div class="hudEditorSidebarActions">
-                        <button type="button" class="propertyInputButton hudDeleteBtn">선택 패널 삭제</button>
-                        <button type="button" class="propertyInputButton hudResetBtn">처음 상태로 초기화</button>
-                    </div>
-                </div>
-            </div>
-            <div class="hudEditorCanvasPanel">
-                <div class="glyphEditorCanvasHeader">이 에디터는 title / subtitle slot / actionbar 구조만 정확하게 뽑는 새 HUD 메이커입니다.</div>
-                <div class="hudEditorPreviewFrame"><div class="hudEditorPreview" id="hudEditorPreview"></div></div>
-                <div class="hudEditorHelpCard">
-                    <div class="hudEditorSectionTitle">생성 기준</div>
-                    <div class="hudEditorHelpList">
-                        <div><strong>타이틀</strong>: <code>title_control</code> 계열로 생성</div>
-                        <div><strong>서브타이틀</strong>: <code>subtitle_data</code> + <code>subtitle_slot_template</code> 구조</div>
-                        <div><strong>액션바</strong>: <code>custom_actionbar_factory</code>와 <code>my_custom_actionbar</code> 구조</div>
-                        <div><strong>보존 액션바</strong>: <code>preserved_actionbar_display</code> 구조</div>
-                    </div>
-                </div>
-            </div>
-            <div class="hudEditorSidebar hudEditorInspector">
-                <div class="glyphEditorMetaCard">
-                    <div class="hudEditorSectionTitle">선택 패널 속성</div>
-                    <div class="hudEditorInspectorSummary"></div>
-                    <div class="hudEditorInspectorFields"></div>
-                    <div class="hudEditorSidebarActions">
-                        <button type="button" class="propertyInputButton hudCopyBtn">HUD JSON 복사</button>
-                        <button type="button" class="propertyInputButton hudDownloadBtn">HUD JSON 다운로드</button>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-    form.querySelector(".hudResetBtn").onclick = () => {
-        resetState();
-        render();
-        new Notification("HUD 에디터를 처음 상태로 되돌렸습니다.", 2200, "notif");
-    };
-    form.querySelector(".hudDeleteBtn").onclick = () => {
-        if (state.panels.length <= 1) {
-            new Notification("패널은 최소 1개 이상 남아 있어야 합니다.", 2200, "error");
-            return;
-        }
-        state.panels = state.panels.filter((panel) => panel.id !== state.selectedId);
-        state.selectedId = state.panels[0].id;
-        render();
-    };
-    form.querySelectorAll(".hudAddPanelBtn").forEach((button) => {
-        button.onclick = () => {
-            const panel = createPanel(button.dataset.channel);
-            state.panels.push(panel);
-            state.selectedId = panel.id;
-            render();
-        };
-    });
-    form.querySelectorAll(".hudTemplateBtn").forEach((button) => {
-        button.onclick = () => {
-            const panels = createTemplate(button.dataset.template);
-            state.panels.push(...panels);
-            state.selectedId = panels[panels.length - 1].id;
-            render();
-        };
-    });
-}
-function renderList() {
-    const container = getForm().querySelector(".hudEditorOverlayList");
+function renderSidebar() {
+    const container = getForm().querySelector(".hudEditorSidebarList");
     if (!container)
         return;
-    container.innerHTML = state.panels.map((panel) => `
-        <button type="button" class="hudEditorOverlayListItem${panel.id === state.selectedId ? " hudEditorOverlayListItemActive" : ""}" data-panel-id="${panel.id}">
-            <span>${escapeHtml(panel.name)}</span>
-            <span>${escapeHtml(panelSummary(panel))}</span>
+    container.innerHTML = Object.values(state.elements).map((element) => `
+        <button type="button" class="hudEditorChannelButton${element.id === state.selectedId ? " hudEditorChannelButtonActive" : ""}" data-channel="${element.id}">
+            <span>${element.label}</span>
+            <span>${element.enabled ? "ON" : "OFF"}</span>
         </button>
     `).join("");
-    container.querySelectorAll(".hudEditorOverlayListItem").forEach((button) => {
-        button.onclick = () => {
-            state.selectedId = button.dataset.panelId;
-            render();
-        };
+    container.querySelectorAll(".hudEditorChannelButton").forEach((button) => {
+        button.addEventListener("click", () => {
+            state.selectedId = button.dataset.channel;
+            renderAll();
+        });
     });
 }
-function renderPreview() {
-    const preview = getForm().querySelector("#hudEditorPreview");
+function renderCanvas() {
+    const preview = getForm().querySelector(".hudEditorPreview");
     if (!preview)
         return;
+    const titleGuide = computePreviewRect({ ...state.elements.title, x: 0, y: 130, width: 440, height: 56, anchor: "top_middle" });
+    const subtitleGuide = computePreviewRect({ ...state.elements.subtitle, x: 0, y: 190, width: 380, height: 42, anchor: "top_middle" });
+    const actionbarGuide = computePreviewRect({ ...state.elements.actionbar, x: 0, y: -96, width: 340, height: 38, anchor: "bottom_middle" });
     preview.innerHTML = `
-        <div class="hudEditorPreviewSafezone"></div>
-        <div class="hudEditorHotbarGuide"></div>
-        <div class="hudEditorHealthGuide"></div>
-        <div class="hudEditorHungerGuide"></div>
-        ${state.panels.filter((panel) => panel.enabled).map((panel) => `
-            <div class="hudEditorOverlay${panel.id === state.selectedId ? " hudEditorOverlayActive" : ""}${panel.backgroundType !== "none" || panel.outputMode === "progress_bar" ? " hudEditorOverlayWithBg" : ""}" data-panel-id="${panel.id}" style="${previewStyle(panel)}">
-                ${panel.outputMode === "progress_bar"
-        ? `<div class="hudEditorProgressShell"><div class="hudEditorProgressFill" style="width:70%"></div></div>`
-        : `<div class="hudEditorOverlayLabel">${escapeHtml(previewText(panel))}</div>`}
-            </div>
-        `).join("")}
+        ${getCanvasBackgroundHtml()}
+        <div class="hudEditorSafeZone"></div>
+        <div class="hudEditorGuideLabel" style="left:${titleGuide.left}px;top:${titleGuide.top}px;width:440px;height:56px;">Vanilla Title</div>
+        <div class="hudEditorGuideLabel" style="left:${subtitleGuide.left}px;top:${subtitleGuide.top}px;width:380px;height:42px;">Vanilla Subtitle</div>
+        <div class="hudEditorGuideLabel" style="left:${actionbarGuide.left}px;top:${actionbarGuide.top}px;width:340px;height:38px;">Vanilla Actionbar</div>
+        ${Object.values(state.elements).filter((element) => element.enabled).map((element) => {
+        const rect = computePreviewRect(element);
+        const selectedClass = element.id === state.selectedId ? " hudEditorPreviewItemSelected" : "";
+        const withBg = element.background === "none" ? "" : " hudEditorPreviewItemWithBg";
+        const bgStyle = element.background === "solid" ? `background:${element.backgroundColor};opacity:${element.backgroundAlpha};` : "";
+        return `
+                <div class="hudEditorPreviewItem${selectedClass}${withBg}" data-element-id="${element.id}" style="left:${rect.left}px;top:${rect.top}px;width:${element.width}px;height:${element.height}px;z-index:${element.layer};">
+                    <div class="hudEditorPreviewItemBg ${element.background === "vanilla" ? "hudEditorPreviewItemBgVanilla" : ""}" style="${bgStyle}"></div>
+                    <div class="hudEditorPreviewText hudEditorFont-${element.fontSize}" style="color:${element.textColor};${element.shadow ? "text-shadow:0 2px 3px rgba(0,0,0,0.85);" : ""}">${escapeHtml(previewElementText(element))}</div>
+                </div>
+            `;
+    }).join("")}
     `;
-    preview.querySelectorAll(".hudEditorOverlay").forEach((element) => {
-        element.onmousedown = (event) => {
-            const panel = state.panels.find((entry) => entry.id === element.dataset.panelId);
-            if (!panel)
-                return;
-            const rect = element.getBoundingClientRect();
-            state.selectedId = panel.id;
-            state.drag = { panelId: panel.id, pointerOffsetX: event.clientX - rect.left, pointerOffsetY: event.clientY - rect.top };
-            render();
-            event.preventDefault();
-        };
+    preview.querySelectorAll(".hudEditorPreviewItem").forEach((item) => {
+        item.addEventListener("mousedown", (event) => {
+            const id = item.dataset.elementId;
+            const element = state.elements[id];
+            state.selectedId = id;
+            state.drag = {
+                id,
+                startMouseX: event.clientX,
+                startMouseY: event.clientY,
+                startX: element.x,
+                startY: element.y,
+            };
+            renderAll();
+        });
+        item.addEventListener("click", () => {
+            state.selectedId = item.dataset.elementId;
+            renderAll();
+        });
     });
-    preview.onmousemove = (event) => {
-        if (!state.drag.panelId)
-            return;
-        const panel = state.panels.find((entry) => entry.id === state.drag.panelId);
-        if (!panel)
-            return;
-        const previewRect = preview.getBoundingClientRect();
-        const widthPx = (panel.width / PREVIEW_WIDTH) * previewRect.width;
-        const heightPx = (panel.height / PREVIEW_HEIGHT) * previewRect.height;
-        const leftPx = clamp(event.clientX - previewRect.left - state.drag.pointerOffsetX, 0, previewRect.width - widthPx);
-        const topPx = clamp(event.clientY - previewRect.top - state.drag.pointerOffsetY, 0, previewRect.height - heightPx);
-        applyActualPosition(panel, (leftPx / previewRect.width) * PREVIEW_WIDTH, (topPx / previewRect.height) * PREVIEW_HEIGHT);
-        renderPreview();
-        renderInspector();
-    };
-    preview.onmouseup = () => { state.drag.panelId = null; };
-    preview.onmouseleave = () => { state.drag.panelId = null; };
 }
 function renderInspector() {
-    const summary = getForm().querySelector(".hudEditorInspectorSummary");
-    const container = getForm().querySelector(".hudEditorInspectorFields");
-    if (!summary || !container)
+    const element = getSelectedElement();
+    const inspector = getForm().querySelector(".hudEditorInspector");
+    if (!inspector)
         return;
-    const panel = selectedPanel();
-    const parseDisabled = panel.channel === "subtitle_slot" || panel.channel === "actionbar" || panel.channel === "actionbar_preserve" ? "disabled" : "";
-    const sliceDisabled = panel.parseMode !== "slice" ? "disabled" : "";
-    const triggerDisabled = panel.parseMode !== "trigger" ? "disabled" : "";
-    const preserveDisabled = panel.channel === "subtitle_slot" || panel.channel === "actionbar" ? "disabled" : "";
-    const progressDisabled = panel.outputMode !== "progress_bar" || panel.channel === "actionbar" || panel.channel === "actionbar_preserve" ? "disabled" : "";
-    const colorDisabled = panel.backgroundType !== "solid" ? "disabled" : "";
-    const textureDisabled = panel.backgroundType !== "custom" ? "disabled" : "";
-    const ninesliceDisabled = panel.backgroundType !== "custom" ? "disabled" : "";
-    summary.innerHTML = `
-        <div class="hudEditorHelpCard hudEditorInspectorCard">
-            <div class="hudEditorHelpText"><strong>${escapeHtml(panel.name)}</strong>는 <strong>${escapeHtml(bindingLabel(panel.channel))}</strong>를 사용합니다.</div>
-            <div class="hudEditorHelpText">${escapeHtml(panelSummary(panel))}</div>
-            <div class="hudEditorHelpExample">예시 문자열: <code>${escapeHtml(panel.sampleText || "(빈 문자열)")}</code></div>
+    inspector.innerHTML = `
+        <div class="hudEditorInspectorCard">
+            <div class="hudEditorInspectorTitle">${element.label}</div>
+            <div class="hudEditorInspectorBody">
+                <label>사용</label><input data-field="enabled" type="checkbox" ${element.enabled ? "checked" : ""}>
+                <label>예시 텍스트</label><input data-field="sampleText" type="text" value="${escapeHtml(element.sampleText)}">
+                <label>접두사</label><input data-field="prefix" type="text" value="${escapeHtml(element.prefix)}">
+                <label>접두사 제거</label><input data-field="stripPrefix" type="checkbox" ${element.stripPrefix ? "checked" : ""}>
+                <label>바닐라 숨김</label><input data-field="hideVanilla" type="checkbox" ${element.hideVanilla ? "checked" : ""}>
+                <label>값 보존</label><input data-field="preserve" type="checkbox" ${element.preserve ? "checked" : ""} ${element.id !== "title" ? "disabled" : ""}>
+                <label>앵커</label>
+                <select data-field="anchor">
+                    ${["top_left", "top_middle", "top_right", "left_middle", "center", "right_middle", "bottom_left", "bottom_middle", "bottom_right"].map((anchor) => `<option value="${anchor}" ${element.anchor === anchor ? "selected" : ""}>${anchor}</option>`).join("")}
+                </select>
+                <label>X</label><input data-field="x" type="number" value="${element.x}">
+                <label>Y</label><input data-field="y" type="number" value="${element.y}">
+                <label>너비</label><input data-field="width" type="number" min="40" value="${element.width}">
+                <label>높이</label><input data-field="height" type="number" min="20" value="${element.height}">
+                <label>레이어</label><input data-field="layer" type="number" value="${element.layer}">
+                <label>글자 크기</label>
+                <select data-field="fontSize">
+                    ${["normal", "large", "extra_large"].map((font) => `<option value="${font}" ${element.fontSize === font ? "selected" : ""}>${font}</option>`).join("")}
+                </select>
+                <label>텍스트 색상</label><input data-field="textColor" type="color" value="${element.textColor}">
+                <label>그림자</label><input data-field="shadow" type="checkbox" ${element.shadow ? "checked" : ""}>
+                <label>배경</label>
+                <select data-field="background">
+                    <option value="vanilla" ${element.background === "vanilla" ? "selected" : ""}>vanilla</option>
+                    <option value="solid" ${element.background === "solid" ? "selected" : ""}>solid</option>
+                    <option value="none" ${element.background === "none" ? "selected" : ""}>none</option>
+                </select>
+                <label>배경 알파</label><input data-field="backgroundAlpha" type="number" min="0" max="1" step="0.05" value="${element.backgroundAlpha}">
+                <label>배경 색상</label><input data-field="backgroundColor" type="color" value="${element.backgroundColor}" ${element.background === "solid" ? "" : "disabled"}>
+            </div>
+        </div>
+        <div class="hudEditorInspectorCard">
+            <div class="hudEditorInspectorTitle">채널 안내</div>
+            <div class="hudEditorDescription">
+                <div>Title: <code>#hud_title_text_string</code></div>
+                <div>Subtitle: <code>#hud_subtitle_text_string</code></div>
+                <div>Actionbar: <code>$actionbar_text</code></div>
+                <div>Actionbar는 바닐라처럼 factory 방식으로 export됩니다.</div>
+                <div>Title만 preserve 패턴을 사용합니다.</div>
+            </div>
         </div>
     `;
-    container.innerHTML = `
-        <label class="hudEditorFieldLabel">이름</label><input class="hudEditorFieldInput" type="text" data-field="name" value="${escapeHtml(panel.name)}">
-        <label class="hudEditorFieldLabel">채널</label>
-        <select class="hudEditorFieldInput" data-field="channel">
-            <option value="title" ${panel.channel === "title" ? "selected" : ""}>title</option>
-            <option value="subtitle_slot" ${panel.channel === "subtitle_slot" ? "selected" : ""}>subtitle slot</option>
-            <option value="actionbar" ${panel.channel === "actionbar" ? "selected" : ""}>actionbar</option>
-            <option value="actionbar_preserve" ${panel.channel === "actionbar_preserve" ? "selected" : ""}>actionbar preserve</option>
-        </select>
-        <label class="hudEditorFieldLabel">파싱</label>
-        <select class="hudEditorFieldInput" data-field="parseMode" ${parseDisabled}>
-            <option value="trigger" ${panel.parseMode === "trigger" ? "selected" : ""}>trigger</option>
-            <option value="slice" ${panel.parseMode === "slice" ? "selected" : ""}>slice</option>
-        </select>
-        <label class="hudEditorFieldLabel">출력</label>
-        <select class="hudEditorFieldInput" data-field="outputMode">
-            <option value="label" ${panel.outputMode === "label" ? "selected" : ""}>label</option>
-            <option value="progress_bar" ${panel.outputMode === "progress_bar" ? "selected" : ""} ${panel.channel === "actionbar" || panel.channel === "actionbar_preserve" ? "disabled" : ""}>progress</option>
-        </select>
-        <label class="hudEditorFieldLabel">접두사</label><input class="hudEditorFieldInput" type="text" data-field="triggerText" value="${escapeHtml(panel.triggerText)}" ${triggerDisabled}>
-        <label class="hudEditorFieldLabel">슬라이스 시작</label><input class="hudEditorFieldInput" type="number" data-field="sliceStart" value="${panel.sliceStart}" ${sliceDisabled}>
-        <label class="hudEditorFieldLabel">슬라이스 끝</label><input class="hudEditorFieldInput" type="number" data-field="sliceEnd" value="${panel.sliceEnd}" ${sliceDisabled}>
-        <label class="hudEditorFieldLabel">최대값</label><input class="hudEditorFieldInput" type="number" data-field="maxValue" value="${panel.maxValue}" ${progressDisabled}>
-        <label class="hudEditorFieldLabel">예시 문자열</label><input class="hudEditorFieldInput" type="text" data-field="sampleText" value="${escapeHtml(panel.sampleText)}">
-        <label class="hudEditorFieldLabel">접두사 제거</label><input class="hudEditorFieldCheckbox" type="checkbox" data-field="stripTriggerText" ${panel.stripTriggerText ? "checked" : ""}>
-        <label class="hudEditorFieldLabel">값 보존</label><input class="hudEditorFieldCheckbox" type="checkbox" data-field="preserveValue" ${panel.preserveValue ? "checked" : ""} ${preserveDisabled}>
-        <label class="hudEditorFieldLabel">바닐라 숨김</label><input class="hudEditorFieldCheckbox" type="checkbox" data-field="hideVanilla" ${panel.hideVanilla ? "checked" : ""}>
-        <label class="hudEditorFieldLabel">앵커</label>
-        <select class="hudEditorFieldInput" data-field="anchor">
-            <option value="top_left" ${panel.anchor === "top_left" ? "selected" : ""}>top_left</option>
-            <option value="top_middle" ${panel.anchor === "top_middle" ? "selected" : ""}>top_middle</option>
-            <option value="top_right" ${panel.anchor === "top_right" ? "selected" : ""}>top_right</option>
-            <option value="left_middle" ${panel.anchor === "left_middle" ? "selected" : ""}>left_middle</option>
-            <option value="center" ${panel.anchor === "center" ? "selected" : ""}>center</option>
-            <option value="right_middle" ${panel.anchor === "right_middle" ? "selected" : ""}>right_middle</option>
-            <option value="bottom_left" ${panel.anchor === "bottom_left" ? "selected" : ""}>bottom_left</option>
-            <option value="bottom_middle" ${panel.anchor === "bottom_middle" ? "selected" : ""}>bottom_middle</option>
-            <option value="bottom_right" ${panel.anchor === "bottom_right" ? "selected" : ""}>bottom_right</option>
-        </select>
-        <label class="hudEditorFieldLabel">Offset X</label><input class="hudEditorFieldInput" type="number" data-field="x" value="${panel.x}">
-        <label class="hudEditorFieldLabel">Offset Y</label><input class="hudEditorFieldInput" type="number" data-field="y" value="${panel.y}">
-        <label class="hudEditorFieldLabel">너비</label><input class="hudEditorFieldInput" type="number" data-field="width" value="${panel.width}">
-        <label class="hudEditorFieldLabel">높이</label><input class="hudEditorFieldInput" type="number" data-field="height" value="${panel.height}">
-        <label class="hudEditorFieldLabel">레이어</label><input class="hudEditorFieldInput" type="number" data-field="layer" value="${panel.layer}">
-        <label class="hudEditorFieldLabel">배경 타입</label>
-        <select class="hudEditorFieldInput" data-field="backgroundType">
-            <option value="none" ${panel.backgroundType === "none" ? "selected" : ""}>none</option>
-            <option value="vanilla" ${panel.backgroundType === "vanilla" ? "selected" : ""}>vanilla</option>
-            <option value="solid" ${panel.backgroundType === "solid" ? "selected" : ""}>solid</option>
-            <option value="custom" ${panel.backgroundType === "custom" ? "selected" : ""}>custom</option>
-        </select>
-        <label class="hudEditorFieldLabel">배경 알파</label><input class="hudEditorFieldInput" type="number" min="0" max="1" step="0.05" data-field="backgroundAlpha" value="${panel.backgroundAlpha}">
-        <label class="hudEditorFieldLabel">배경 색상</label><input class="hudEditorFieldInput" type="color" data-field="backgroundColor" value="${panel.backgroundColor}" ${colorDisabled}>
-        <label class="hudEditorFieldLabel">배경 텍스처</label><input class="hudEditorFieldInput" type="text" data-field="backgroundTexture" value="${escapeHtml(panel.backgroundTexture)}" ${textureDisabled}>
-        <label class="hudEditorFieldLabel">나인슬라이스</label><input class="hudEditorFieldInput" type="number" data-field="ninesliceSize" value="${panel.ninesliceSize}" ${ninesliceDisabled}>
-        <label class="hudEditorFieldLabel">텍스트 색상</label><input class="hudEditorFieldInput" type="color" data-field="textColor" value="${panel.textColor}">
-        <label class="hudEditorFieldLabel">활성</label><input class="hudEditorFieldCheckbox" type="checkbox" data-field="enabled" ${panel.enabled ? "checked" : ""}>
-    `;
-    container.querySelectorAll("[data-field]").forEach((input) => {
+    inspector.querySelectorAll("input[data-field], select[data-field]").forEach((input) => {
         const field = input.dataset.field;
-        const handler = () => {
-            const current = selectedPanel();
-            const before = actualPosition(current);
-            if (field === "channel")
-                current.channel = input.value;
-            else if (field === "parseMode")
-                current.parseMode = input.value;
-            else if (field === "outputMode")
-                current.outputMode = input.value;
-            else if (field === "anchor")
-                current.anchor = input.value;
-            else if (input instanceof HTMLInputElement && input.type === "checkbox")
-                current[field] = input.checked;
-            else if (input instanceof HTMLInputElement && input.type === "number")
-                current[field] = Number(input.value);
-            else
-                current[field] = input.value;
-            normalizePanel(current);
-            if (field === "anchor")
-                applyActualPosition(current, before.left, before.top);
-            render();
+        const onChange = () => {
+            const target = state.elements[state.selectedId];
+            if (input instanceof HTMLInputElement && input.type === "checkbox") {
+                target[field] = input.checked;
+            }
+            else if (field === "x" || field === "y" || field === "width" || field === "height" || field === "layer") {
+                target[field] = Number.parseInt(input.value, 10) || 0;
+            }
+            else if (field === "backgroundAlpha") {
+                target[field] = clamp(Number.parseFloat(input.value) || 0, 0, 1);
+            }
+            else {
+                target[field] = input.value;
+            }
+            renderAll();
         };
-        input.oninput = handler;
-        input.onchange = handler;
+        input.addEventListener("input", onChange);
+        input.addEventListener("change", onChange);
     });
 }
-function render() {
-    renderList();
-    renderPreview();
+function renderAll() {
+    renderSidebar();
+    renderCanvas();
     renderInspector();
+    updateOutput();
 }
-function containsTextExpr(source, text) {
-    const value = text.trim();
-    if (!value)
-        return `(not (${source} = ''))`;
-    return `(not ((${source} - '${escapeBindingText(value)}') = ${source}))`;
+function renderModalShell() {
+    getForm().innerHTML = `
+        <div class="hudEditorLayout">
+            <div class="hudEditorSidebar">
+                <div class="hudEditorSidebarCard">
+                    <div class="hudEditorSidebarTitle">HUD 요소</div>
+                    <div class="hudEditorSidebarList"></div>
+                    <div class="hudEditorSidebarActions">
+                        <button type="button" class="propertyInputButton hudEditorReset">바닐라 위치로 초기화</button>
+                    </div>
+                </div>
+            </div>
+            <div class="hudEditorCenter">
+                <div class="hudEditorCanvasWrap">
+                    <div class="hudEditorCanvasScale">
+                        <div class="hudEditorPreview"></div>
+                    </div>
+                </div>
+                <div class="hudEditorHelp">
+                    <div>가이드 상자는 바닐라 위치 기준입니다.</div>
+                    <div>실제 HUD 박스를 직접 드래그해서 위치를 옮기고, 오른쪽에서 크기와 접두사 처리까지 조정할 수 있습니다.</div>
+                </div>
+                <div class="hudEditorJsonCard">
+                    <div class="hudEditorSidebarTitle">생성되는 JSON</div>
+                    <textarea class="hudEditorOutput" spellcheck="false"></textarea>
+                    <div class="hudEditorSidebarActions">
+                        <button type="button" class="propertyInputButton hudEditorCopyJson">JSON 복사</button>
+                        <button type="button" class="propertyInputButton hudEditorDownloadJson">hud_screen.json 다운로드</button>
+                    </div>
+                </div>
+            </div>
+            <div class="hudEditorInspector"></div>
+        </div>
+    `;
 }
-function missingTextExpr(source, text) {
-    const value = text.trim();
-    if (!value)
-        return `(${source} = '')`;
-    return `((${source} - '${escapeBindingText(value)}') = ${source})`;
-}
-function stripTextExpr(source, text) {
-    const value = text.trim();
-    if (!value)
-        return source;
-    return `(${source} - '${escapeBindingText(value)}')`;
-}
-function sliceExpr(source, start, end) {
-    if (start <= 0)
-        return `(('%.${end}s' * ${source}) - '\\t')`;
-    return `((('%.${end}s' * ${source}) - ('%.${start}s' * ${source})) - '\\t')`;
-}
-function finalTextExpr(panel, source) {
-    const raw = panel.parseMode === "slice" ? sliceExpr(source, panel.sliceStart, panel.sliceEnd) : source;
-    return panel.stripTriggerText && panel.triggerText.trim() ? stripTextExpr(raw, panel.triggerText) : raw;
-}
-function panelVisibleExpr(panel, source) {
-    if (panel.parseMode === "slice") {
-        const raw = sliceExpr(source, panel.sliceStart, panel.sliceEnd);
-        return panel.triggerText.trim() ? containsTextExpr(raw, panel.triggerText) : `(not (${raw} = ''))`;
-    }
-    return containsTextExpr(source, panel.triggerText);
-}
-function applyRootBackground(control, panel, defaultTexture = BACKGROUND_TEXTURES.vanilla) {
-    if (panel.backgroundType === "none") {
-        control.type = "panel";
-        return;
-    }
-    control.type = "image";
-    control.texture = panel.backgroundType === "custom" ? (panel.backgroundTexture || defaultTexture) : panel.backgroundType === "solid" ? BACKGROUND_TEXTURES.solid : defaultTexture;
-    control.alpha = panel.backgroundAlpha;
-    if (panel.backgroundType === "solid")
-        control.color = colorHexToRgb(panel.backgroundColor);
-    if (panel.backgroundType === "custom" && panel.ninesliceSize > 0)
-        control.nineslice_size = panel.ninesliceSize;
-}
-function buildTitlePanel(panel, name) {
-    const root = { size: [panel.width, panel.height], anchor_from: panel.anchor, anchor_to: panel.anchor, offset: [panel.x, panel.y], layer: panel.layer };
-    applyRootBackground(root, panel, panel.outputMode === "progress_bar" ? BACKGROUND_TEXTURES.hpBarBackground : BACKGROUND_TEXTURES.vanilla);
-    const sourceExpr = panel.preserveValue ? "#preserved_text" : "#source_text";
-    root.controls = [{
-            title_data_control: {
-                type: "panel",
-                size: [0, 0],
-                property_bag: { "#source_text": "", "#preserved_text": "" },
-                bindings: [
-                    { binding_name: TITLE_BINDING, binding_name_override: "#source_text" },
-                    ...(panel.preserveValue ? [{ binding_name: TITLE_BINDING, binding_name_override: "#preserved_text", binding_condition: "visibility_changed" }] : []),
-                    { binding_type: "view", source_property_name: panel.preserveValue ? `(not (#source_text = #preserved_text) and ${panelVisibleExpr(panel, "#source_text")})` : panelVisibleExpr(panel, "#source_text"), target_property_name: "#visible" },
-                ],
-            },
-        }];
-    if (panel.outputMode === "progress_bar") {
-        root.controls.push({
-            title_fill: {
-                type: "image",
-                size: ["100%", "100%"],
-                texture: BACKGROUND_TEXTURES.hpBarFill,
-                clip_ratio: 0,
-                clip_direction: "left",
-                clip_pixelperfect: false,
-                bindings: [
-                    { binding_type: "view", source_control_name: "title_data_control", source_property_name: `(${finalTextExpr(panel, sourceExpr)} + 0)`, target_property_name: "#health" },
-                    { binding_type: "view", source_property_name: `(((${panel.maxValue} - #health) / ${panel.maxValue}))`, target_property_name: "#clip_ratio" },
-                ],
-            },
-        });
-    }
-    else {
-        root.controls.push({
-            title_label: {
-                type: "label",
-                text: "#text",
-                localize: false,
-                size: ["default", "default"],
-                anchor_from: "center",
-                anchor_to: "center",
-                color: colorHexToRgb(panel.textColor),
-                shadow: true,
-                layer: 2,
-                bindings: [{ binding_type: "view", source_control_name: "title_data_control", source_property_name: finalTextExpr(panel, sourceExpr), target_property_name: "#text" }],
-            },
-        });
-    }
-    root.bindings = [{ binding_type: "view", source_control_name: "title_data_control", source_property_name: panel.preserveValue ? "(not (#preserved_text = ''))" : "#visible", target_property_name: "#visible" }];
-    return { [name]: root };
-}
-function subtitleTextBindingName(index) {
-    return `#text${index + 1}`;
-}
-function buildSubtitleData(panels) {
-    const bindings = [
-        { binding_name: SUBTITLE_BINDING, binding_name_override: "#sub_raw", binding_type: "global" },
-        { binding_type: "view", source_property_name: "(not (#sub_raw = ''))", target_property_name: "#visible" },
-        { binding_type: "view", source_property_name: "#sub_raw", target_property_name: "#text_data" },
-    ];
-    panels.forEach((panel, index) => bindings.push({ binding_type: "view", source_property_name: finalTextExpr(panel, "#text_data"), target_property_name: subtitleTextBindingName(index) }));
-    return { subtitle_data: { type: "panel", size: [0, 0], bindings } };
-}
-function buildSubtitleSlotTemplate(panel) {
-    const root = { size: [panel.width, panel.height], layer: panel.layer, "$slot_binding": "#text1", controls: [], bindings: [{ binding_type: "view", source_control_name: "subtitle_data", resolve_sibling_scope: true, source_property_name: "(not ($slot_binding = ''))", target_property_name: "#visible" }] };
-    applyRootBackground(root, panel);
-    if (panel.outputMode === "progress_bar") {
-        root.controls.push({ slot_fill: { type: "image", size: ["100%", "100%"], texture: BACKGROUND_TEXTURES.hpBarFill, clip_ratio: 0, clip_direction: "left", clip_pixelperfect: false, bindings: [{ binding_type: "view", source_control_name: "subtitle_data", resolve_sibling_scope: true, source_property_name: "($slot_binding + 0)", target_property_name: "#health" }, { binding_type: "view", source_property_name: `(((${panel.maxValue} - #health) / ${panel.maxValue}))`, target_property_name: "#clip_ratio" }] } });
-    }
-    else {
-        root.controls.push({ label: { type: "label", text: "#text", localize: false, size: ["default", "default"], anchor_from: "center", anchor_to: "center", color: colorHexToRgb(panel.textColor), shadow: true, layer: 2, bindings: [{ binding_type: "view", source_control_name: "subtitle_data", resolve_sibling_scope: true, source_property_name: "$slot_binding", target_property_name: "#text" }] } });
-    }
-    return { subtitle_slot_template: root };
-}
-function buildActionbarPanel(panel, name) {
-    const root = { size: [panel.width, panel.height], anchor_from: panel.anchor, anchor_to: panel.anchor, offset: [panel.x, panel.y], layer: panel.layer, "$atext": ACTIONBAR_VARIABLE, visible: panelVisibleExpr(panel, "$atext") };
-    applyRootBackground(root, panel);
-    root.controls = [{ actionbar_label: { type: "label", size: ["default", "default"], anchor_from: "right_middle", anchor_to: "right_middle", offset: [-5, 0], shadow: true, layer: 2, "$atext": ACTIONBAR_VARIABLE, "$display_text|default": "$atext", text: "$display_text", color: colorHexToRgb(panel.textColor), variables: [{ requires: panelVisibleExpr(panel, "$atext"), "$display_text": finalTextExpr(panel, "$atext") }] } }];
-    return { [name]: root };
-}
-function buildPreservedActionbarPanel(panel, name) {
-    const root = { size: [panel.width, panel.height], anchor_from: panel.anchor, anchor_to: panel.anchor, offset: [panel.x, panel.y], layer: panel.layer };
-    applyRootBackground(root, panel);
-    root.controls = [
-        { data_control: { type: "panel", size: [0, 0], property_bag: { "#source_text": "", "#preserved_text": "" }, bindings: [{ binding_name: "#hud_actionbar_text_string", binding_name_override: "#source_text", binding_type: "global" }, { binding_name: "#hud_actionbar_text_string", binding_name_override: "#preserved_text", binding_condition: "visibility_changed", binding_type: "global" }, { binding_type: "view", source_property_name: `(not (#source_text = #preserved_text) and ${panelVisibleExpr(panel, "#source_text")})`, target_property_name: "#visible" }] } },
-        { actionbar_label: { type: "label", text: "#text", localize: false, size: ["default", "default"], anchor_from: "right_middle", anchor_to: "right_middle", offset: [-5, 0], shadow: true, layer: 2, color: colorHexToRgb(panel.textColor), bindings: [{ binding_type: "view", source_control_name: "data_control", source_property_name: finalTextExpr(panel, "#preserved_text"), target_property_name: "#text" }] } },
-    ];
-    root.bindings = [{ binding_type: "view", source_control_name: "data_control", source_property_name: "(not (#preserved_text = ''))", target_property_name: "#visible" }];
-    return { [name]: root };
-}
-function generateHudJson() {
-    const panels = state.panels.filter((panel) => panel.enabled).map((panel) => normalizePanel({ ...panel }));
-    const payload = { namespace: "hud" };
-    const rootInsertions = [];
-    const titlePanels = panels.filter((panel) => panel.channel === "title");
-    titlePanels.forEach((panel, index) => {
-        const def = index === 0 ? "title_control" : `title_control_${index + 1}`;
-        const inst = index === 0 ? "title_ctrl" : `title_ctrl_${index + 1}`;
-        rootInsertions.push({ [`${inst}@hud.${def}`]: {} });
-        Object.assign(payload, buildTitlePanel(panel, def));
+function bindStaticActions() {
+    const form = getForm();
+    const resetButton = form.querySelector(".hudEditorReset");
+    const copyButton = form.querySelector(".hudEditorCopyJson");
+    const downloadButton = form.querySelector(".hudEditorDownloadJson");
+    resetButton?.addEventListener("click", () => {
+        state.selectedId = "title";
+        state.elements.title = {
+            ...state.elements.title,
+            enabled: true,
+            sampleText: "info:공지입니다",
+            prefix: "info:",
+            stripPrefix: true,
+            hideVanilla: true,
+            preserve: true,
+            anchor: "top_middle",
+            x: 0,
+            y: 130,
+            width: 440,
+            height: 56,
+            layer: 30,
+            fontSize: "extra_large",
+            textColor: "#ffffff",
+            shadow: true,
+            background: "vanilla",
+            backgroundAlpha: 0.75,
+            backgroundColor: "#1f2432",
+        };
+        state.elements.subtitle = {
+            ...state.elements.subtitle,
+            enabled: true,
+            sampleText: "부제목입니다",
+            prefix: "",
+            stripPrefix: false,
+            hideVanilla: true,
+            preserve: false,
+            anchor: "top_middle",
+            x: 0,
+            y: 190,
+            width: 380,
+            height: 42,
+            layer: 31,
+            fontSize: "large",
+            textColor: "#dfe9ff",
+            shadow: true,
+            background: "vanilla",
+            backgroundAlpha: 0.75,
+            backgroundColor: "#1f2432",
+        };
+        state.elements.actionbar = {
+            ...state.elements.actionbar,
+            enabled: true,
+            sampleText: "info:오른쪽 표시",
+            prefix: "info:",
+            stripPrefix: true,
+            hideVanilla: true,
+            preserve: false,
+            anchor: "bottom_middle",
+            x: 0,
+            y: -96,
+            width: 340,
+            height: 38,
+            layer: 32,
+            fontSize: "normal",
+            textColor: "#ffffff",
+            shadow: true,
+            background: "vanilla",
+            backgroundAlpha: 0.75,
+            backgroundColor: "#1f2432",
+        };
+        renderAll();
+        new Notification("HUD 기본 위치로 초기화했습니다.", 2200, "notif");
     });
-    const subtitlePanels = panels.filter((panel) => panel.channel === "subtitle_slot");
-    if (subtitlePanels.length) {
-        rootInsertions.push({ "subtitle_data@hud.subtitle_data": {} });
-        Object.assign(payload, buildSubtitleData(subtitlePanels));
-        Object.assign(payload, buildSubtitleSlotTemplate(subtitlePanels[0]));
-        subtitlePanels.forEach((panel, index) => {
-            rootInsertions.push({ [`sub_slot${index + 1}@hud.subtitle_slot_template`]: { "$slot_binding": subtitleTextBindingName(index), anchor_from: panel.anchor, anchor_to: panel.anchor, offset: [panel.x, panel.y], size: [panel.width, panel.height], layer: panel.layer } });
-        });
-    }
-    const preservePanels = panels.filter((panel) => panel.channel === "actionbar_preserve");
-    preservePanels.forEach((panel, index) => {
-        const def = index === 0 ? "preserved_actionbar_display" : `preserved_actionbar_display_${index + 1}`;
-        const inst = index === 0 ? "preserved_actionbar" : `preserved_actionbar_${index + 1}`;
-        rootInsertions.push({ [`${inst}@hud.${def}`]: {} });
-        Object.assign(payload, buildPreservedActionbarPanel(panel, def));
+    copyButton?.addEventListener("click", async () => {
+        await navigator.clipboard.writeText(buildHudJson());
+        new Notification("HUD JSON을 클립보드에 복사했습니다.", 2200, "notif");
     });
-    if (rootInsertions.length)
-        payload.root_panel = { modifications: [{ array_name: "controls", operation: "insert_back", value: rootInsertions }] };
-    const actionbars = panels.filter((panel) => panel.channel === "actionbar");
-    if (actionbars.length) {
-        const single = actionbars.length === 1 ? actionbars[0] : null;
-        payload["root_panel/hud_actionbar_text_area"] = { modifications: [{ array_name: "controls", operation: "insert_back", value: [{ custom_actionbar_factory: { type: "panel", factory: { name: "hud_actionbar_text_factory", control_ids: { hud_actionbar_text: single ? "@hud.my_custom_actionbar" : "@hud.hud_actionbar_factory_root" } } } }] }] };
-        if (single)
-            Object.assign(payload, buildActionbarPanel(single, "my_custom_actionbar"));
-        else
-            payload.hud_actionbar_factory_root = { type: "panel", size: ["100%", "100%"], controls: actionbars.map((panel, index) => { const def = index === 0 ? "my_custom_actionbar" : `my_custom_actionbar_${index + 1}`; Object.assign(payload, buildActionbarPanel(panel, def)); return { [`${def}@hud.${def}`]: {} }; }) };
-    }
-    if (titlePanels.some((panel) => panel.hideVanilla))
-        payload["hud_title_text/title_frame"] = { bindings: [{ binding_type: "view", source_control_name: "title", source_property_name: `(${titlePanels.filter((panel) => panel.hideVanilla).map((panel) => missingTextExpr("#text", panel.triggerText)).join(" and ")})`, target_property_name: "#visible" }] };
-    if (subtitlePanels.some((panel) => panel.hideVanilla))
-        payload["hud_title_text/subtitle_frame"] = { visible: false };
-    const hiddenActionbars = panels.filter((panel) => (panel.channel === "actionbar" || panel.channel === "actionbar_preserve") && panel.hideVanilla);
-    if (hiddenActionbars.length)
-        payload.hud_actionbar_text = { "$atext": ACTIONBAR_VARIABLE, visible: `(${hiddenActionbars.map((panel) => missingTextExpr("$atext", panel.triggerText)).join(" and ")})` };
-    return JSON.stringify(payload, null, 2);
-}
-function closeHudEditor() {
-    getModal().style.display = "none";
-    state.drag.panelId = null;
-}
-export async function hudEditorModal() {
-    buildEditor();
-    if (!state.panels.length)
-        resetState();
-    render();
-    getModal().style.display = "block";
-    getCloseButton().onclick = () => closeHudEditor();
-    getForm().querySelector(".hudCopyBtn").onclick = async () => {
-        await navigator.clipboard.writeText(generateHudJson());
-        new Notification("HUD JSON을 복사했습니다.", 2200, "notif");
-    };
-    getForm().querySelector(".hudDownloadBtn").onclick = () => {
-        const blob = new Blob([generateHudJson()], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
+    downloadButton?.addEventListener("click", () => {
+        const blob = new Blob([buildHudJson()], { type: "application/json" });
         const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
         link.href = url;
         link.download = "hud_screen.json";
         link.click();
         URL.revokeObjectURL(url);
+        new Notification("hud_screen.json을 다운로드했습니다.", 2200, "notif");
+    });
+}
+function attachDragHandlers() {
+    const modal = getModal();
+    modal.onmousemove = (event) => {
+        if (!state.drag)
+            return;
+        const element = state.elements[state.drag.id];
+        element.x = Math.round(state.drag.startX + (event.clientX - state.drag.startMouseX));
+        element.y = Math.round(state.drag.startY + (event.clientY - state.drag.startMouseY));
+        renderAll();
+    };
+    modal.onmouseup = () => {
+        state.drag = null;
+    };
+    modal.onmouseleave = () => {
+        state.drag = null;
     };
 }
-window.addEventListener("mouseup", () => { state.drag.panelId = null; });
-window.addEventListener("click", (event) => { if (event.target === getModal())
-    closeHudEditor(); });
-resetState();
+export async function hudEditorModal() {
+    renderModalShell();
+    bindStaticActions();
+    attachDragHandlers();
+    renderAll();
+    const modal = getModal();
+    modal.style.display = "block";
+    return new Promise((resolve) => {
+        const close = () => {
+            modal.style.display = "none";
+            getCloseButton().onclick = null;
+            window.onclick = null;
+            resolve();
+        };
+        getCloseButton().onclick = close;
+        window.onclick = (event) => {
+            if (event.target === modal)
+                close();
+        };
+    });
+}
 //# sourceMappingURL=hudEditorModal.js.map
