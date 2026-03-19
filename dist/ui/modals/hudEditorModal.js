@@ -37,7 +37,7 @@ const state = {
             animHoldDuration: 2,
             animOutDuration: 0.25,
             titleMode: "single",
-            sliceSlotCount: 5,
+            sliceSlotCount: 1,
             sliceSlotSize: 20,
             sliceColumns: 2,
             sliceGapX: 8,
@@ -74,7 +74,7 @@ const state = {
             animHoldDuration: 2,
             animOutDuration: 0.2,
             subtitleMode: "single",
-            sliceSlotCount: 5,
+            sliceSlotCount: 1,
             sliceSlotSize: 20,
             sliceColumns: 2,
             sliceGapX: 8,
@@ -186,7 +186,7 @@ function getDefaultSliceSlotLayout(element, rawIndex) {
     };
 }
 function ensureSliceSlots(element) {
-    const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 30);
+    const slotCount = clamp(element.sliceSlotCount ?? 1, 1, 30);
     const slots = [...(element.sliceSlots ?? [])];
     for (let rawIndex = slots.length; rawIndex < slotCount; rawIndex++) {
         slots.push(getDefaultSliceSlotLayout(element, rawIndex));
@@ -444,7 +444,7 @@ function sliceExpression(slotSize, index) {
     return `((('%.${end}s' * #text_data) - ('%.${start}s' * #text_data)) - '\t')`;
 }
 function buildSliceData(element, bindingName, rawTarget) {
-    const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 30);
+    const slotCount = clamp(element.sliceSlotCount ?? 1, 1, 30);
     const slotSize = clamp(element.sliceSlotSize ?? 20, 1, 200);
     const bindings = [
         {
@@ -752,7 +752,7 @@ function buildHudJson() {
     const title = state.elements.title;
     if (title.enabled) {
         if (title.titleMode === "slice") {
-            const slotCount = clamp(title.sliceSlotCount ?? 5, 1, 30);
+            const slotCount = clamp(title.sliceSlotCount ?? 1, 1, 30);
             json.title_data = buildTitleSliceData(title);
             json.title_slot_template = buildTitleSlotTemplate(title);
             const titleAnimation = buildAnimationDefinitions("title_slot_template", title);
@@ -801,7 +801,7 @@ function buildHudJson() {
     const subtitle = state.elements.subtitle;
     if (subtitle.enabled) {
         if (subtitle.subtitleMode === "slice") {
-            const slotCount = clamp(subtitle.sliceSlotCount ?? 5, 1, 30);
+            const slotCount = clamp(subtitle.sliceSlotCount ?? 1, 1, 30);
             json.subtitle_data = buildSubtitleSliceData(subtitle);
             json.subtitle_slot_template = buildSubtitleSlotTemplate(subtitle);
             const subtitleAnimation = buildAnimationDefinitions("subtitle_slot_template", subtitle);
@@ -947,7 +947,7 @@ function previewElementText(element) {
     return element.sampleText;
 }
 function previewSliceSlotTexts(element) {
-    const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 30);
+    const slotCount = clamp(element.sliceSlotCount ?? 1, 1, 30);
     const slotSize = clamp(element.sliceSlotSize ?? 20, 1, 200);
     const source = previewElementText(element).replace(/\t/g, "");
     const slots = [];
@@ -973,7 +973,7 @@ function previewNumericValue(element) {
 }
 function buildSubtitleSliceScriptHelper(element) {
     const slotSize = clamp(element.sliceSlotSize ?? 20, 1, 200);
-    const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 12);
+    const slotCount = clamp(element.sliceSlotCount ?? 1, 1, 30);
     const args = Array.from({ length: slotCount }, (_, index) => `slot${index + 1}`).join(", ");
     const slotArray = Array.from({ length: slotCount }, (_, index) => `slot${index + 1}`).join(", ");
     return `function pad(text, size = ${slotSize}) {
@@ -989,7 +989,7 @@ function sendSubtitleSlots(player, ${args}) {
 }
 function buildTitleSliceScriptHelper(element) {
     const slotSize = clamp(element.sliceSlotSize ?? 20, 1, 200);
-    const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 12);
+    const slotCount = clamp(element.sliceSlotCount ?? 1, 1, 30);
     const args = Array.from({ length: slotCount }, (_, index) => `slot${index + 1}`).join(", ");
     const slotArray = Array.from({ length: slotCount }, (_, index) => `slot${index + 1}`).join(", ");
     return `function pad(text, size = ${slotSize}) {
@@ -1073,7 +1073,7 @@ function renderCanvas() {
         const ignoredStyle = element.ignored ? "opacity:0.35;" : "";
         const bgStyle = `${element.background === "solid" ? `background:${element.backgroundColor};opacity:${element.backgroundAlpha};` : ""}${ignoredStyle}`;
         if ((element.id === "title" && element.titleMode === "slice") || (element.id === "subtitle" && element.subtitleMode === "slice")) {
-            const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 12);
+            const slotCount = clamp(element.sliceSlotCount ?? 1, 1, 30);
             const slotTexts = previewSliceSlotTexts(element);
             return Array.from({ length: slotCount }, (_, rawIndex) => {
                 const slotLayout = getSliceSlotLayout(element, rawIndex);
@@ -1201,7 +1201,14 @@ function renderInspector() {
                         <option value="single" ${element.titleMode !== "slice" ? "selected" : ""}>\uB2E8\uC77C</option>
                         <option value="slice" ${element.titleMode === "slice" ? "selected" : ""}>\uC2AC\uB77C\uC774\uC2F1</option>
                     </select>
-                    <label>\uC2AC\uB86F \uC218</label><input data-field="sliceSlotCount" type="number" min="1" max="30" value="${element.sliceSlotCount ?? 5}" ${element.titleMode === "slice" ? "" : "disabled"}>
+                    ${element.titleMode === "slice" ? `
+                        <label>\uC2AC\uB86F</label>
+                        <div class="hudEditorSidebarActions">
+                            <button type="button" class="propertyInputButton hudEditorAddSliceSlot" data-slice-target="title">\uC2AC\uB86F \uCD94\uAC00</button>
+                            <button type="button" class="propertyInputButton hudEditorRemoveSliceSlot" data-slice-target="title" ${(element.sliceSlotCount ?? 1) <= 1 ? "disabled" : ""}>\uC2AC\uB86F \uC0AD\uC81C</button>
+                        </div>
+                        <div class="hudEditorHelp">\uD604\uC7AC \uC2AC\uB86F \uC218: ${element.sliceSlotCount ?? 1}</div>
+                    ` : ""}
                     <label>\uC2AC\uB86F \uD06C\uAE30</label><input data-field="sliceSlotSize" type="number" min="1" max="200" value="${element.sliceSlotSize ?? 20}" ${element.titleMode === "slice" ? "" : "disabled"}>
                     <label>\uC5F4 \uC218</label><input data-field="sliceColumns" type="number" min="1" max="4" value="${element.sliceColumns ?? 2}" ${element.titleMode === "slice" ? "" : "disabled"}>
                     <label>\uAC00\uB85C \uAC04\uACA9</label><input data-field="sliceGapX" type="number" value="${element.sliceGapX ?? 8}" ${element.titleMode === "slice" ? "" : "disabled"}>
@@ -1213,7 +1220,14 @@ function renderInspector() {
                         <option value="single" ${element.subtitleMode !== "slice" ? "selected" : ""}>\uB2E8\uC77C</option>
                         <option value="slice" ${element.subtitleMode === "slice" ? "selected" : ""}>\uC2AC\uB77C\uC774\uC2F1</option>
                     </select>
-                    <label>\uC2AC\uB86F \uC218</label><input data-field="sliceSlotCount" type="number" min="1" max="30" value="${element.sliceSlotCount ?? 5}" ${element.subtitleMode === "slice" ? "" : "disabled"}>
+                    ${element.subtitleMode === "slice" ? `
+                        <label>\uC2AC\uB86F</label>
+                        <div class="hudEditorSidebarActions">
+                            <button type="button" class="propertyInputButton hudEditorAddSliceSlot" data-slice-target="subtitle">\uC2AC\uB86F \uCD94\uAC00</button>
+                            <button type="button" class="propertyInputButton hudEditorRemoveSliceSlot" data-slice-target="subtitle" ${(element.sliceSlotCount ?? 1) <= 1 ? "disabled" : ""}>\uC2AC\uB86F \uC0AD\uC81C</button>
+                        </div>
+                        <div class="hudEditorHelp">\uD604\uC7AC \uC2AC\uB86F \uC218: ${element.sliceSlotCount ?? 1}</div>
+                    ` : ""}
                     <label>\uC2AC\uB86F \uD06C\uAE30</label><input data-field="sliceSlotSize" type="number" min="1" max="200" value="${element.sliceSlotSize ?? 20}" ${element.subtitleMode === "slice" ? "" : "disabled"}>
                     <label>\uC5F4 \uC218</label><input data-field="sliceColumns" type="number" min="1" max="4" value="${element.sliceColumns ?? 2}" ${element.subtitleMode === "slice" ? "" : "disabled"}>
                     <label>\uAC00\uB85C \uAC04\uACA9</label><input data-field="sliceGapX" type="number" value="${element.sliceGapX ?? 8}" ${element.subtitleMode === "slice" ? "" : "disabled"}>
@@ -1263,7 +1277,7 @@ function renderInspector() {
             if (input instanceof HTMLInputElement && input.type === "checkbox") {
                 target[field] = input.checked;
             }
-            else if (field === "x" || field === "y" || field === "width" || field === "height" || field === "layer" || field === "sliceSlotCount" || field === "sliceSlotSize" || field === "sliceColumns" || field === "sliceGapX" || field === "sliceGapY" || field === "maxValue") {
+            else if (field === "x" || field === "y" || field === "width" || field === "height" || field === "layer" || field === "sliceSlotSize" || field === "sliceColumns" || field === "sliceGapX" || field === "sliceGapY" || field === "maxValue") {
                 target[field] = Number.parseInt(input.value, 10) || 0;
             }
             else if (field === "animInDuration" || field === "animHoldDuration" || field === "animOutDuration") {
@@ -1279,6 +1293,24 @@ function renderInspector() {
         };
         input.addEventListener("input", onChange);
         input.addEventListener("change", onChange);
+    });
+    inspector.querySelectorAll(".hudEditorAddSliceSlot").forEach((button) => {
+        button.addEventListener("click", () => {
+            const targetId = button.dataset.sliceTarget;
+            const target = state.elements[targetId];
+            target.sliceSlotCount = clamp((target.sliceSlotCount ?? 1) + 1, 1, 30);
+            ensureSliceSlots(target);
+            renderAll();
+        });
+    });
+    inspector.querySelectorAll(".hudEditorRemoveSliceSlot").forEach((button) => {
+        button.addEventListener("click", () => {
+            const targetId = button.dataset.sliceTarget;
+            const target = state.elements[targetId];
+            target.sliceSlotCount = clamp((target.sliceSlotCount ?? 1) - 1, 1, 30);
+            ensureSliceSlots(target);
+            renderAll();
+        });
     });
     inspector.querySelectorAll("input[data-slot-field], select[data-slot-field]").forEach((input) => {
         const field = input.dataset.slotField;
@@ -1427,7 +1459,7 @@ function bindStaticActions() {
             animHoldDuration: 2,
             animOutDuration: 0.25,
             titleMode: "single",
-            sliceSlotCount: 5,
+            sliceSlotCount: 1,
             sliceSlotSize: 20,
             sliceColumns: 2,
             sliceGapX: 8,
@@ -1464,7 +1496,7 @@ function bindStaticActions() {
             animHoldDuration: 2,
             animOutDuration: 0.2,
             subtitleMode: "single",
-            sliceSlotCount: 5,
+            sliceSlotCount: 1,
             sliceSlotSize: 20,
             sliceColumns: 2,
             sliceGapX: 8,
