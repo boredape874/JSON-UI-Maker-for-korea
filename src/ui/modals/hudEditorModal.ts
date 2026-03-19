@@ -283,6 +283,20 @@ function backgroundDefinition(element: HudElement): Record<string, unknown> | nu
     return base;
 }
 
+function getAutoSizedTextContainer(element: HudElement, verticalPadding: number): [string, string] | [number, number] {
+    if (element.background === "none" || element.displayMode === "progress") {
+        return [element.width, element.height];
+    }
+    return ["100%c + 10px", `100%cm + ${verticalPadding}px`];
+}
+
+function getTextLabelSize(element: HudElement): [string, string] {
+    if (element.background === "none" || element.displayMode === "progress") {
+        return ["100%", "default"];
+    }
+    return ["default", "default"];
+}
+
 function progressValueExpression(source: string, element: HudElement): string {
     const numericSource = element.prefix
         ? `(${source} - ${quoteString(element.prefix)})`
@@ -354,7 +368,7 @@ function buildTitleControl(element: HudElement): Record<string, unknown> {
                 type: "label",
                 text: "#text",
                 localize: false,
-                size: ["100%", "default"],
+                size: getTextLabelSize(element),
                 max_size: ["100%", "default"],
                 anchor_from: "center",
                 anchor_to: "center",
@@ -381,7 +395,7 @@ function buildTitleControl(element: HudElement): Record<string, unknown> {
     return {
         type: "panel",
         ignored: element.ignored,
-        size: [element.width, element.height],
+        size: getAutoSizedTextContainer(element, 8),
         anchor_from: element.anchor,
         anchor_to: element.anchor,
         offset: [element.x, element.y],
@@ -443,7 +457,7 @@ function buildSubtitleControl(element: HudElement): Record<string, unknown> {
                 type: "label",
                 text: "#text",
                 localize: false,
-                size: ["100%", "default"],
+                size: getTextLabelSize(element),
                 max_size: ["100%", "default"],
                 anchor_from: "center",
                 anchor_to: "center",
@@ -467,7 +481,7 @@ function buildSubtitleControl(element: HudElement): Record<string, unknown> {
     return {
         type: "panel",
         ignored: element.ignored,
-        size: [element.width, element.height],
+        size: getAutoSizedTextContainer(element, 8),
         anchor_from: element.anchor,
         anchor_to: element.anchor,
         offset: [element.x, element.y],
@@ -575,9 +589,9 @@ function buildSliceSlotTemplate(element: HudElement, sourceControlName: string, 
     });
 
     const template: Record<string, unknown> = {
-        type: "panel",
+        type: element.background === "none" ? "panel" : "image",
         ignored: element.ignored,
-        size: [element.width, element.height],
+        size: getAutoSizedTextContainer(element, 8),
         layer: element.layer,
         $slot_binding: "#text1",
         controls,
@@ -590,6 +604,14 @@ function buildSliceSlotTemplate(element: HudElement, sourceControlName: string, 
             },
         ],
     };
+
+    if (element.background !== "none") {
+        template.texture = element.background === "vanilla" ? "textures/ui/hud_tip_text_background" : "textures/ui/white_background";
+        template.alpha = element.backgroundAlpha;
+        if (element.background === "solid") {
+            template.color = hexToRgb(element.backgroundColor);
+        }
+    }
 
     return template;
 }
@@ -606,7 +628,7 @@ function buildActionbarControl(element: HudElement): Record<string, unknown> {
     const control: Record<string, unknown> = {
         type: element.background === "none" ? "panel" : "image",
         ignored: element.ignored,
-        size: [element.width, element.height],
+        size: element.background === "none" ? [element.width, element.height] : ["100%c + 10px", "100%cm + 4px"],
         anchor_from: element.anchor,
         anchor_to: element.anchor,
         offset: [element.x, element.y],
@@ -619,7 +641,7 @@ function buildActionbarControl(element: HudElement): Record<string, unknown> {
                     type: "label",
                     text: "$display_text",
                     localize: false,
-                    size: ["100%", "default"],
+                    size: getTextLabelSize(element),
                     max_size: ["100%", "default"],
                     anchor_from: "center",
                     anchor_to: "center",
