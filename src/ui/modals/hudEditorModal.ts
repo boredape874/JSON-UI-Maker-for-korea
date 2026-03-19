@@ -1265,7 +1265,7 @@ function renderCanvas(): void {
                         y: slotLayout.y,
                     });
                     return `
-                        <div class="hudEditorPreviewItem${selectedClass}${withBg}" data-element-id="${element.id}" data-slot-index="${rawIndex}" style="left:${rect.left}px;top:${rect.top}px;width:${element.width}px;height:${element.height}px;z-index:${element.layer};${ignoredStyle}">
+                        <div class="hudEditorPreviewItem hudEditorPreviewSliceItem${selectedClass}${withBg}" data-element-id="${element.id}" data-slot-index="${rawIndex}" style="left:${rect.left}px;top:${rect.top}px;width:${element.width}px;height:${element.height}px;z-index:${element.layer};${ignoredStyle}">
                             <div class="hudEditorPreviewItemBg ${element.background === "vanilla" ? "hudEditorPreviewItemBgVanilla" : ""}" style="${bgStyle}"></div>
                             <div class="hudEditorPreviewText hudEditorFont-${element.fontSize}" style="color:${element.textColor};${element.shadow ? "text-shadow:0 2px 3px rgba(0,0,0,0.85);" : ""}">${escapeHtml(slotTexts[rawIndex] || `슬롯 ${rawIndex + 1}`)}</div>
                         </div>
@@ -1300,6 +1300,9 @@ function renderCanvas(): void {
             const element = state.elements[id];
             const rawSlotIndex = item.dataset.slotIndex;
             const slotIndex = rawSlotIndex != null ? Number.parseInt(rawSlotIndex, 10) : undefined;
+            if (isSliceMode(element) && !Number.isFinite(slotIndex as number)) {
+                return;
+            }
             state.selectedId = id;
             state.drag = {
                 id,
@@ -1782,23 +1785,16 @@ function attachDragHandlers(): void {
         const deltaX = Math.round(event.clientX - state.drag.startMouseX);
         const deltaY = Math.round(event.clientY - state.drag.startMouseY);
         if (isSliceMode(element) && state.drag.startSliceSlots) {
-            if (typeof state.drag.slotIndex === "number") {
-                element.sliceSlots = state.drag.startSliceSlots.map((slot, index) => index === state.drag?.slotIndex
-                    ? {
-                        ...slot,
-                        x: slot.x + deltaX,
-                        y: slot.y + deltaY,
-                    }
-                    : { ...slot });
-            } else {
-                element.x = Math.round(state.drag.startX + deltaX);
-                element.y = Math.round(state.drag.startY + deltaY);
-                element.sliceSlots = state.drag.startSliceSlots.map((slot) => ({
+            if (typeof state.drag.slotIndex !== "number") {
+                return;
+            }
+            element.sliceSlots = state.drag.startSliceSlots.map((slot, index) => index === state.drag?.slotIndex
+                ? {
                     ...slot,
                     x: slot.x + deltaX,
                     y: slot.y + deltaY,
-                }));
-            }
+                }
+                : { ...slot });
         } else {
             element.x = Math.round(state.drag.startX + deltaX);
             element.y = Math.round(state.drag.startY + deltaY);
