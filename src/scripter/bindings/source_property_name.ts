@@ -6,7 +6,6 @@ const hardcoded_source_property_names = [
     "#title_text",
     "#hud_title_text_string",
     "#hud_subtitle_text_string",
-    "#hud_actionbar_text_string",
     "#collection_index",
     "#form_button_length",
     "#collection_length",

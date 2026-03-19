@@ -1,6 +1,7 @@
 export interface Binding {
     binding_name?: string;
     binding_type?: string;
+    binding_condition?: string;
     binding_name_override?: string;
     binding_collection_name?: string;
     source_control_name?: string;

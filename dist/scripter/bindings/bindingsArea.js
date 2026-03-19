@@ -10,7 +10,7 @@ export class BindingsArea {
     static hudBindingDefaults = {
         title: "#hud_title_text_string",
         subtitle: "#hud_subtitle_text_string",
-        actionbar: "#hud_actionbar_text_string",
+        actionbar: "",
     };
     static placeHolderBindings = `[
   {
@@ -77,6 +77,9 @@ export class BindingsArea {
         const selectedSource = this.hudBindingSourceSelect.value;
         const defaultKey = this.hudBindingDefaults[selectedSource] ?? "#hud_title_text_string";
         this.hudBindingSourceKeyInput.value = defaultKey;
+        this.hudBindingSourceKeyInput.placeholder = selectedSource === "actionbar"
+            ? "$actionbar_text 는 변수라 bindings helper 로 직접 생성할 수 없습니다."
+            : "";
     }
     static insertHudBindingSnippet(kind) {
         if (!selectedElement) {
@@ -105,6 +108,10 @@ export class BindingsArea {
         new Notification("HUD 바인딩 스니펫을 추가했습니다.", 2200, "notif");
     }
     static createHudBindingSnippet(kind) {
+        if (this.hudBindingSourceSelect?.value === "actionbar") {
+            new Notification("액션바는 바인딩이 아니라 $actionbar_text 변수 기반이라 이 helper에서 직접 생성할 수 없습니다.", 3000, "warning");
+            return;
+        }
         const sourceKey = this.hudBindingSourceKeyInput?.value.trim();
         const matchText = this.hudBindingMatchInput?.value.trim() ?? "";
         if (!sourceKey) {

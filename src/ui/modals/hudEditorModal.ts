@@ -1,8 +1,11 @@
-import { Notification } from "../notifs/noficationMaker.js";
+﻿import { Notification } from "../notifs/noficationMaker.js";
 
 type HudChannel = "title" | "subtitle" | "actionbar";
 type HudBackground = "vanilla" | "solid" | "none";
-type HudFontSize = "normal" | "large" | "extra_large";
+type HudFontSize = "small" | "normal" | "large" | "extra_large";
+type HudSubtitleMode = "single" | "slice";
+type HudDisplayMode = "text" | "progress";
+type HudClipDirection = "left" | "right" | "up" | "down";
 type HudAnchor =
     | "top_left"
     | "top_middle"
@@ -18,6 +21,7 @@ type HudElement = {
     id: HudChannel;
     label: string;
     enabled: boolean;
+    ignored: boolean;
     sampleText: string;
     prefix: string;
     stripPrefix: boolean;
@@ -35,6 +39,16 @@ type HudElement = {
     background: HudBackground;
     backgroundAlpha: number;
     backgroundColor: string;
+    displayMode: HudDisplayMode;
+    maxValue: number;
+    fillColor: string;
+    clipDirection: HudClipDirection;
+    subtitleMode?: HudSubtitleMode;
+    sliceSlotCount?: number;
+    sliceSlotSize?: number;
+    sliceColumns?: number;
+    sliceGapX?: number;
+    sliceGapY?: number;
 };
 
 type HudEditorState = {
@@ -57,9 +71,10 @@ const state: HudEditorState = {
     elements: {
         title: {
             id: "title",
-            label: "Title",
+            label: "\uD0C0\uC774\uD2C0",
             enabled: true,
-            sampleText: "info:공지입니다",
+            ignored: false,
+            sampleText: "info:\uACF5\uC9C0\uC785\uB2C8\uB2E4",
             prefix: "info:",
             stripPrefix: true,
             hideVanilla: true,
@@ -76,12 +91,17 @@ const state: HudEditorState = {
             background: "vanilla",
             backgroundAlpha: 0.75,
             backgroundColor: "#1f2432",
+            displayMode: "text",
+            maxValue: 100,
+            fillColor: "#5be37a",
+            clipDirection: "left",
         },
         subtitle: {
             id: "subtitle",
-            label: "Subtitle",
+            label: "\uC11C\uBE0C\uD0C0\uC774\uD2C0",
             enabled: true,
-            sampleText: "부제목입니다",
+            ignored: false,
+            sampleText: "\uBD80\uC81C\uBAA9\uC785\uB2C8\uB2E4",
             prefix: "",
             stripPrefix: false,
             hideVanilla: true,
@@ -98,12 +118,23 @@ const state: HudEditorState = {
             background: "vanilla",
             backgroundAlpha: 0.75,
             backgroundColor: "#1f2432",
+            displayMode: "text",
+            maxValue: 100,
+            fillColor: "#6fc3ff",
+            clipDirection: "left",
+            subtitleMode: "single",
+            sliceSlotCount: 5,
+            sliceSlotSize: 20,
+            sliceColumns: 2,
+            sliceGapX: 8,
+            sliceGapY: 8,
         },
         actionbar: {
             id: "actionbar",
-            label: "Actionbar",
+            label: "\uC561\uC158\uBC14",
             enabled: true,
-            sampleText: "info:오른쪽 표시",
+            ignored: false,
+            sampleText: "info:\uC624\uB978\uCABD \uD45C\uC2DC",
             prefix: "info:",
             stripPrefix: true,
             hideVanilla: true,
@@ -120,6 +151,10 @@ const state: HudEditorState = {
             background: "vanilla",
             backgroundAlpha: 0.75,
             backgroundColor: "#1f2432",
+            displayMode: "text",
+            maxValue: 100,
+            fillColor: "#5be37a",
+            clipDirection: "left",
         },
     },
     drag: null,
@@ -177,7 +212,7 @@ function getCanvasBackgroundHtml(): string {
         return `<img class="hudEditorCanvasBackgroundImage" src="${bgImage.src}" alt="HUD Background">`;
     }
 
-    return `<div class="hudEditorCanvasBackgroundFallback"></div>`;
+    return `<img class="hudEditorCanvasBackgroundImage" src="background.png" alt="HUD Background">`;
 }
 
 function prefixMatchExpression(source: string, prefix: string): string {
@@ -207,6 +242,38 @@ function backgroundDefinition(element: HudElement): Record<string, unknown> | nu
     base.texture = "textures/ui/white_background";
     base.color = hexToRgb(element.backgroundColor);
     return base;
+}
+
+function progressValueExpression(source: string, element: HudElement): string {
+    const numericSource = element.prefix
+        ? `(${source} - ${quoteString(element.prefix)})`
+        : source;
+    return `(${numericSource} + 0)`;
+}
+
+function progressClipExpression(source: string, element: HudElement): string {
+    const maxValue = Math.max(1, element.maxValue || 1);
+    return `((${maxValue} - ${progressValueExpression(source, element)}) / ${maxValue})`;
+}
+
+function buildProgressFill(sourceControlName: string, sourcePropertyName: string, element: HudElement): Record<string, unknown> {
+    return {
+        type: "image",
+        texture: "textures/ui/white_background",
+        color: hexToRgb(element.fillColor),
+        size: ["100%", "100%"],
+        clip_direction: element.clipDirection,
+        clip_pixelperfect: false,
+        layer: 32,
+        bindings: [
+            {
+                binding_type: "view",
+                source_control_name: sourceControlName,
+                source_property_name: progressClipExpression(sourcePropertyName, element),
+                target_property_name: "#clip_ratio",
+            },
+        ],
+    };
 }
 
 function buildTitleControl(element: HudElement): Record<string, unknown> {
@@ -256,33 +323,40 @@ function buildTitleControl(element: HudElement): Record<string, unknown> {
         });
     }
 
-    controls.push({
-        title_label: {
-            type: "label",
-            text: "#text",
-            localize: false,
-            size: ["100%", "default"],
-            max_size: ["100%", "default"],
-            anchor_from: "center",
-            anchor_to: "center",
-            color: hexToRgb(element.textColor),
-            shadow: element.shadow,
-            layer: 31,
-            font_size: element.fontSize,
-            text_alignment: "center",
-            bindings: [
-                {
-                    binding_type: "view",
-                    source_control_name: "title_data",
-                    source_property_name: removePrefixExpression(element.preserve ? "#preserved_text" : "#source_text", element.prefix, element.stripPrefix),
-                    target_property_name: "#text",
-                },
-            ],
-        },
-    });
+    if (element.displayMode === "progress") {
+        controls.push({
+            title_fill: buildProgressFill("title_data", element.preserve ? "#preserved_text" : "#source_text", element),
+        });
+    } else {
+        controls.push({
+            title_label: {
+                type: "label",
+                text: "#text",
+                localize: false,
+                size: ["100%", "default"],
+                max_size: ["100%", "default"],
+                anchor_from: "center",
+                anchor_to: "center",
+                color: hexToRgb(element.textColor),
+                shadow: element.shadow,
+                layer: 31,
+                font_size: element.fontSize,
+                text_alignment: "center",
+                bindings: [
+                    {
+                        binding_type: "view",
+                        source_control_name: "title_data",
+                        source_property_name: removePrefixExpression(element.preserve ? "#preserved_text" : "#source_text", element.prefix, element.stripPrefix),
+                        target_property_name: "#text",
+                    },
+                ],
+            },
+        });
+    }
 
     return {
         type: "panel",
+        ignored: element.ignored,
         size: [element.width, element.height],
         anchor_from: element.anchor,
         anchor_to: element.anchor,
@@ -301,6 +375,135 @@ function buildTitleControl(element: HudElement): Record<string, unknown> {
 }
 
 function buildSubtitleControl(element: HudElement): Record<string, unknown> {
+    const controls: Record<string, unknown>[] = [];
+    controls.push({
+        subtitle_data: {
+            type: "panel",
+            size: [0, 0],
+            bindings: [
+                {
+                    binding_name: "#hud_subtitle_text_string",
+                    binding_name_override: "#source_text",
+                    binding_type: "global",
+                },
+                {
+                    binding_type: "view",
+                    source_property_name: element.prefix
+                        ? prefixMatchExpression("#source_text", element.prefix)
+                        : "(not (#source_text = ''))",
+                    target_property_name: "#visible",
+                },
+            ],
+        },
+    });
+
+    const background = backgroundDefinition(element);
+    if (background) {
+        controls.push({
+            subtitle_background: background,
+        });
+    }
+
+    if (element.displayMode === "progress") {
+        controls.push({
+            subtitle_fill: buildProgressFill("subtitle_data", "#source_text", element),
+        });
+    } else {
+        controls.push({
+            subtitle_label: {
+                type: "label",
+                text: "#text",
+                localize: false,
+                size: ["100%", "default"],
+                max_size: ["100%", "default"],
+                anchor_from: "center",
+                anchor_to: "center",
+                color: hexToRgb(element.textColor),
+                shadow: element.shadow,
+                layer: 31,
+                font_size: element.fontSize,
+                text_alignment: "center",
+                bindings: [
+                    {
+                        binding_type: "view",
+                        source_control_name: "subtitle_data",
+                        source_property_name: removePrefixExpression("#source_text", element.prefix, element.stripPrefix),
+                        target_property_name: "#text",
+                    },
+                ],
+            },
+        });
+    }
+
+    return {
+        type: "panel",
+        ignored: element.ignored,
+        size: [element.width, element.height],
+        anchor_from: element.anchor,
+        anchor_to: element.anchor,
+        offset: [element.x, element.y],
+        layer: element.layer,
+        controls,
+        bindings: [
+            {
+                binding_type: "view",
+                source_control_name: "subtitle_data",
+                source_property_name: "#visible",
+                target_property_name: "#visible",
+            },
+        ],
+    };
+}
+
+function sliceExpression(slotSize: number, index: number): string {
+    const end = slotSize * index;
+    if (index === 1) {
+        return `(('%.${end}s' * #text_data) - '\t')`;
+    }
+    const start = slotSize * (index - 1);
+    return `((('%.${end}s' * #text_data) - ('%.${start}s' * #text_data)) - '\t')`;
+}
+
+function buildSubtitleSliceData(element: HudElement): Record<string, unknown> {
+    const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 12);
+    const slotSize = clamp(element.sliceSlotSize ?? 20, 1, 200);
+    const bindings: Record<string, unknown>[] = [
+        {
+            binding_name: "#hud_subtitle_text_string",
+            binding_name_override: "#sub_raw",
+            binding_type: "global",
+        },
+        {
+            binding_type: "view",
+            source_property_name: element.prefix
+                ? prefixMatchExpression("#sub_raw", element.prefix)
+                : "(not (#sub_raw = ''))",
+            target_property_name: "#visible",
+        },
+        {
+            binding_type: "view",
+            source_property_name: removePrefixExpression("#sub_raw", element.prefix, element.stripPrefix),
+            target_property_name: "#text_data",
+        },
+    ];
+
+    for (let index = 1; index <= slotCount; index++) {
+        bindings.push({
+            binding_type: "view",
+            source_property_name: sliceExpression(slotSize, index),
+            target_property_name: `#text${index}`,
+        });
+    }
+
+    return {
+        type: "panel",
+        ignored: element.ignored,
+        size: [0, 0],
+        bindings,
+    };
+}
+
+function buildSubtitleSlotTemplate(element: HudElement): Record<string, unknown> {
     const controls: Record<string, unknown>[] = [];
     const background = backgroundDefinition(element);
     if (background) {
@@ -325,40 +528,39 @@ function buildSubtitleControl(element: HudElement): Record<string, unknown> {
             text_alignment: "center",
             bindings: [
                 {
-                    binding_name: "#hud_subtitle_text_string",
-                    binding_name_override: "#text",
-                    binding_type: "global",
-                },
-                {
                     binding_type: "view",
-                    source_property_name: removePrefixExpression("#text", element.prefix, element.stripPrefix),
+                    source_control_name: "subtitle_data",
+                    source_property_name: "$slot_binding",
                     target_property_name: "#text",
-                },
-                {
-                    binding_type: "view",
-                    source_property_name: element.prefix
-                        ? prefixMatchExpression("#text", element.prefix)
-                        : "(not (#text = ''))",
-                    target_property_name: "#visible",
                 },
             ],
         },
     });
 
-    return {
+    const template: Record<string, unknown> = {
         type: "panel",
+        ignored: element.ignored,
         size: [element.width, element.height],
-        anchor_from: element.anchor,
-        anchor_to: element.anchor,
-        offset: [element.x, element.y],
         layer: element.layer,
+        $slot_binding: "#text1",
         controls,
+        bindings: [
+            {
+                binding_type: "view",
+                source_control_name: "subtitle_data",
+                source_property_name: "(not ($slot_binding = ''))",
+                target_property_name: "#visible",
+            },
+        ],
     };
+
+    return template;
 }
 
 function buildActionbarControl(element: HudElement): Record<string, unknown> {
     const control: Record<string, unknown> = {
         type: element.background === "none" ? "panel" : "image",
+        ignored: element.ignored,
         size: [element.width, element.height],
         anchor_from: element.anchor,
         anchor_to: element.anchor,
@@ -435,8 +637,35 @@ function buildHudJson(): string {
 
     const subtitle = state.elements.subtitle;
     if (subtitle.enabled) {
-        json.subtitle_control = buildSubtitleControl(subtitle);
-        rootInsert.push({ "subtitle_control@hud.subtitle_control": {} });
+        if (subtitle.subtitleMode === "slice") {
+            const slotCount = clamp(subtitle.sliceSlotCount ?? 5, 1, 12);
+            const columns = clamp(subtitle.sliceColumns ?? 2, 1, 4);
+            const gapX = subtitle.sliceGapX ?? 8;
+            const gapY = subtitle.sliceGapY ?? 8;
+
+            json.subtitle_data = buildSubtitleSliceData(subtitle);
+            json.subtitle_slot_template = buildSubtitleSlotTemplate(subtitle);
+            rootInsert.push({ "subtitle_data@hud.subtitle_data": {} });
+
+            for (let index = 1; index <= slotCount; index++) {
+                const column = (index - 1) % columns;
+                const row = Math.floor((index - 1) / columns);
+                rootInsert.push({
+                    [`sub_slot${index}@hud.subtitle_slot_template`]: {
+                        $slot_binding: `#text${index}`,
+                        anchor_from: subtitle.anchor,
+                        anchor_to: subtitle.anchor,
+                        offset: [
+                            subtitle.x + column * (subtitle.width + gapX),
+                            subtitle.y + row * (subtitle.height + gapY),
+                        ],
+                    },
+                });
+            }
+        } else {
+            json.subtitle_control = buildSubtitleControl(subtitle);
+            rootInsert.push({ "subtitle_control@hud.subtitle_control": {} });
+        }
 
         if (subtitle.hideVanilla) {
             json["hud_title_text/subtitle_frame"] = subtitle.prefix
@@ -549,6 +778,53 @@ function previewElementText(element: HudElement): string {
     return element.sampleText;
 }
 
+function previewSliceSlotTexts(element: HudElement): string[] {
+    const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 12);
+    const slotSize = clamp(element.sliceSlotSize ?? 20, 1, 200);
+    const source = previewElementText(element).replace(/\t/g, "");
+    const slots: string[] = [];
+
+    for (let index = 0; index < slotCount; index++) {
+        const start = index * slotSize;
+        const end = start + slotSize;
+        slots.push(source.slice(start, end));
+    }
+
+    return slots;
+}
+
+function previewProgressSource(element: HudElement): string {
+    if (!element.prefix) return element.sampleText;
+    if (element.sampleText.startsWith(element.prefix)) {
+        return element.sampleText.slice(element.prefix.length);
+    }
+    return element.sampleText;
+}
+
+function previewNumericValue(element: HudElement): number {
+    const raw = previewProgressSource(element).trim();
+    const value = Number.parseFloat(raw);
+    return Number.isFinite(value) ? value : 0;
+}
+
+function buildSubtitleSliceScriptHelper(element: HudElement): string {
+    const slotSize = clamp(element.sliceSlotSize ?? 20, 1, 200);
+    const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 12);
+    const args = Array.from({ length: slotCount }, (_, index) => `slot${index + 1}`).join(", ");
+    const slotArray = Array.from({ length: slotCount }, (_, index) => `slot${index + 1}`).join(", ");
+
+    return `function pad(text, size = ${slotSize}) {
+  const safe = String(text ?? "");
+  return safe + "\\t".repeat(Math.max(0, size - safe.length));
+}
+
+function sendSubtitleSlots(player, ${args}) {
+  const data = [${slotArray}].map((slot) => pad(slot, ${slotSize})).join("");
+  player.runCommand('titleraw @s title {"rawtext":[{"text":""}]}');
+  player.runCommand(\`titleraw @s subtitle {"rawtext":[{"text":"\${data}"}]}\`);
+}`;
+}
+
 function renderSidebar(): void {
     const container = getForm().querySelector(".hudEditorSidebarList") as HTMLDivElement | null;
     if (!container) return;
@@ -579,18 +855,54 @@ function renderCanvas(): void {
     preview.innerHTML = `
         ${getCanvasBackgroundHtml()}
         <div class="hudEditorSafeZone"></div>
-        <div class="hudEditorGuideLabel" style="left:${titleGuide.left}px;top:${titleGuide.top}px;width:440px;height:56px;">Vanilla Title</div>
-        <div class="hudEditorGuideLabel" style="left:${subtitleGuide.left}px;top:${subtitleGuide.top}px;width:380px;height:42px;">Vanilla Subtitle</div>
-        <div class="hudEditorGuideLabel" style="left:${actionbarGuide.left}px;top:${actionbarGuide.top}px;width:340px;height:38px;">Vanilla Actionbar</div>
+        <div class="hudEditorGuideLabel" style="left:${titleGuide.left}px;top:${titleGuide.top}px;width:440px;height:56px;">\uBC14\uB2D0\uB77C \uD0C0\uC774\uD2C0</div>
+        <div class="hudEditorGuideLabel" style="left:${subtitleGuide.left}px;top:${subtitleGuide.top}px;width:380px;height:42px;">\uBC14\uB2D0\uB77C \uC11C\uBE0C\uD0C0\uC774\uD2C0</div>
+        <div class="hudEditorGuideLabel" style="left:${actionbarGuide.left}px;top:${actionbarGuide.top}px;width:340px;height:38px;">\uBC14\uB2D0\uB77C \uC561\uC158\uBC14</div>
         ${Object.values(state.elements).filter((element) => element.enabled).map((element) => {
-            const rect = computePreviewRect(element);
             const selectedClass = element.id === state.selectedId ? " hudEditorPreviewItemSelected" : "";
             const withBg = element.background === "none" ? "" : " hudEditorPreviewItemWithBg";
-            const bgStyle = element.background === "solid" ? `background:${element.backgroundColor};opacity:${element.backgroundAlpha};` : "";
+            const ignoredStyle = element.ignored ? "opacity:0.35;" : "";
+            const bgStyle = `${element.background === "solid" ? `background:${element.backgroundColor};opacity:${element.backgroundAlpha};` : ""}${ignoredStyle}`;
+
+            if (element.id === "subtitle" && element.subtitleMode === "slice") {
+                const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 12);
+                const columns = clamp(element.sliceColumns ?? 2, 1, 4);
+                const gapX = element.sliceGapX ?? 8;
+                const gapY = element.sliceGapY ?? 8;
+                const slotTexts = previewSliceSlotTexts(element);
+
+                return Array.from({ length: slotCount }, (_, rawIndex) => {
+                    const column = rawIndex % columns;
+                    const row = Math.floor(rawIndex / columns);
+                    const rect = computePreviewRect({
+                        ...element,
+                        x: element.x + column * (element.width + gapX),
+                        y: element.y + row * (element.height + gapY),
+                    });
+                    return `
+                        <div class="hudEditorPreviewItem${selectedClass}${withBg}" data-element-id="${element.id}" style="left:${rect.left}px;top:${rect.top}px;width:${element.width}px;height:${element.height}px;z-index:${element.layer};${ignoredStyle}">
+                            <div class="hudEditorPreviewItemBg ${element.background === "vanilla" ? "hudEditorPreviewItemBgVanilla" : ""}" style="${bgStyle}"></div>
+                            <div class="hudEditorPreviewText hudEditorFont-${element.fontSize}" style="color:${element.textColor};${element.shadow ? "text-shadow:0 2px 3px rgba(0,0,0,0.85);" : ""}">${escapeHtml(slotTexts[rawIndex] || `슬롯 ${rawIndex + 1}`)}</div>
+                        </div>
+                    `;
+                }).join("");
+            }
+
+            const rect = computePreviewRect(element);
+            const fillRatio = clamp(previewNumericValue(element) / Math.max(1, element.maxValue || 1), 0, 1);
+            const fillWidth = element.clipDirection === "up" || element.clipDirection === "down"
+                ? "100%"
+                : `${fillRatio * 100}%`;
+            const fillHeight = element.clipDirection === "up" || element.clipDirection === "down"
+                ? `${fillRatio * 100}%`
+                : "100%";
+            const fillLeft = element.clipDirection === "right" ? `${(1 - fillRatio) * 100}%` : "0";
+            const fillTop = element.clipDirection === "up" ? `${(1 - fillRatio) * 100}%` : "0";
             return `
-                <div class="hudEditorPreviewItem${selectedClass}${withBg}" data-element-id="${element.id}" style="left:${rect.left}px;top:${rect.top}px;width:${element.width}px;height:${element.height}px;z-index:${element.layer};">
+                <div class="hudEditorPreviewItem${selectedClass}${withBg}" data-element-id="${element.id}" style="left:${rect.left}px;top:${rect.top}px;width:${element.width}px;height:${element.height}px;z-index:${element.layer};${ignoredStyle}">
                     <div class="hudEditorPreviewItemBg ${element.background === "vanilla" ? "hudEditorPreviewItemBgVanilla" : ""}" style="${bgStyle}"></div>
-                    <div class="hudEditorPreviewText hudEditorFont-${element.fontSize}" style="color:${element.textColor};${element.shadow ? "text-shadow:0 2px 3px rgba(0,0,0,0.85);" : ""}">${escapeHtml(previewElementText(element))}</div>
+                    ${element.displayMode === "progress" && element.id !== "actionbar" ? `<div style="position:absolute;left:${fillLeft};top:${fillTop};width:${fillWidth};height:${fillHeight};background:${element.fillColor};opacity:0.9;"></div>` : ""}
+                    <div class="hudEditorPreviewText hudEditorFont-${element.fontSize}" style="color:${element.textColor};${element.shadow ? "text-shadow:0 2px 3px rgba(0,0,0,0.85);" : ""}">${escapeHtml(element.displayMode === "progress" && element.id !== "actionbar" ? `${previewNumericValue(element)} / ${element.maxValue}` : previewElementText(element))}</div>
                 </div>
             `;
         }).join("")}
@@ -627,45 +939,75 @@ function renderInspector(): void {
         <div class="hudEditorInspectorCard">
             <div class="hudEditorInspectorTitle">${element.label}</div>
             <div class="hudEditorInspectorBody">
-                <label>사용</label><input data-field="enabled" type="checkbox" ${element.enabled ? "checked" : ""}>
-                <label>예시 텍스트</label><input data-field="sampleText" type="text" value="${escapeHtml(element.sampleText)}">
-                <label>접두사</label><input data-field="prefix" type="text" value="${escapeHtml(element.prefix)}">
-                <label>접두사 제거</label><input data-field="stripPrefix" type="checkbox" ${element.stripPrefix ? "checked" : ""}>
-                <label>바닐라 숨김</label><input data-field="hideVanilla" type="checkbox" ${element.hideVanilla ? "checked" : ""}>
-                <label>값 보존</label><input data-field="preserve" type="checkbox" ${element.preserve ? "checked" : ""} ${element.id !== "title" ? "disabled" : ""}>
-                <label>앵커</label>
+                <label>\uC0AC\uC6A9</label><input data-field="enabled" type="checkbox" ${element.enabled ? "checked" : ""}>
+                <label>ignored</label><input data-field="ignored" type="checkbox" ${element.ignored ? "checked" : ""}>
+                <label>\uC608\uC2DC \uD14D\uC2A4\uD2B8</label><input data-field="sampleText" type="text" value="${escapeHtml(element.sampleText)}">
+                <label>\uC811\uB450\uC5B4</label><input data-field="prefix" type="text" value="${escapeHtml(element.prefix)}">
+                <label>\uC811\uB450\uC5B4 \uC81C\uAC70</label><input data-field="stripPrefix" type="checkbox" ${element.stripPrefix ? "checked" : ""}>
+                <label>\uBC14\uB2D0\uB77C \uC228\uAE40</label><input data-field="hideVanilla" type="checkbox" ${element.hideVanilla ? "checked" : ""}>
+                <label>\uAC12 \uBCF4\uC874</label><input data-field="preserve" type="checkbox" ${element.preserve ? "checked" : ""} ${element.id !== "title" ? "disabled" : ""}>
+                <label>\uC575\uCEE4</label>
                 <select data-field="anchor">
                     ${["top_left", "top_middle", "top_right", "left_middle", "center", "right_middle", "bottom_left", "bottom_middle", "bottom_right"].map((anchor) => `<option value="${anchor}" ${element.anchor === anchor ? "selected" : ""}>${anchor}</option>`).join("")}
                 </select>
                 <label>X</label><input data-field="x" type="number" value="${element.x}">
                 <label>Y</label><input data-field="y" type="number" value="${element.y}">
-                <label>너비</label><input data-field="width" type="number" min="40" value="${element.width}">
-                <label>높이</label><input data-field="height" type="number" min="20" value="${element.height}">
-                <label>레이어</label><input data-field="layer" type="number" value="${element.layer}">
-                <label>글자 크기</label>
+                <label>\uB108\uBE44</label><input data-field="width" type="number" min="40" value="${element.width}">
+                <label>\uB192\uC774</label><input data-field="height" type="number" min="20" value="${element.height}">
+                <label>\uB808\uC774\uC5B4</label><input data-field="layer" type="number" value="${element.layer}">
+                <label>\uAE00\uC790 \uD06C\uAE30</label>
                 <select data-field="fontSize">
-                    ${["normal", "large", "extra_large"].map((font) => `<option value="${font}" ${element.fontSize === font ? "selected" : ""}>${font}</option>`).join("")}
+                    ${["small", "normal", "large", "extra_large"].map((font) => `<option value="${font}" ${element.fontSize === font ? "selected" : ""}>${font}</option>`).join("")}
                 </select>
-                <label>텍스트 색상</label><input data-field="textColor" type="color" value="${element.textColor}">
-                <label>그림자</label><input data-field="shadow" type="checkbox" ${element.shadow ? "checked" : ""}>
-                <label>배경</label>
+                <label>\uD14D\uC2A4\uD2B8 \uC0C9\uC0C1</label><input data-field="textColor" type="color" value="${element.textColor}">
+                <label>\uADF8\uB9BC\uC790</label><input data-field="shadow" type="checkbox" ${element.shadow ? "checked" : ""}>
+                <label>\uBC30\uACBD</label>
                 <select data-field="background">
-                    <option value="vanilla" ${element.background === "vanilla" ? "selected" : ""}>vanilla</option>
-                    <option value="solid" ${element.background === "solid" ? "selected" : ""}>solid</option>
-                    <option value="none" ${element.background === "none" ? "selected" : ""}>none</option>
+                    <option value="vanilla" ${element.background === "vanilla" ? "selected" : ""}>\uBC14\uB2D0\uB77C</option>
+                    <option value="solid" ${element.background === "solid" ? "selected" : ""}>\uB2E8\uC0C9</option>
+                    <option value="none" ${element.background === "none" ? "selected" : ""}>\uC5C6\uC74C</option>
                 </select>
-                <label>배경 알파</label><input data-field="backgroundAlpha" type="number" min="0" max="1" step="0.05" value="${element.backgroundAlpha}">
-                <label>배경 색상</label><input data-field="backgroundColor" type="color" value="${element.backgroundColor}" ${element.background === "solid" ? "" : "disabled"}>
+                <label>\uBC30\uACBD \uD22C\uBA85\uB3C4</label><input data-field="backgroundAlpha" type="number" min="0" max="1" step="0.05" value="${element.backgroundAlpha}">
+                <label>\uBC30\uACBD \uC0C9\uC0C1</label><input data-field="backgroundColor" type="color" value="${element.backgroundColor}" ${element.background === "solid" ? "" : "disabled"}>
+                ${element.id !== "actionbar" ? `
+                    <label>\uD45C\uC2DC \uD615\uC2DD</label>
+                    <select data-field="displayMode" ${element.id === "subtitle" && element.subtitleMode === "slice" ? "disabled" : ""}>
+                        <option value="text" ${element.displayMode !== "progress" ? "selected" : ""}>\uD14D\uC2A4\uD2B8</option>
+                        <option value="progress" ${element.displayMode === "progress" ? "selected" : ""}>\uD504\uB85C\uADF8\uB808\uC2A4 \uBC14</option>
+                    </select>
+                    <label>\uCD5C\uB300\uAC12</label><input data-field="maxValue" type="number" min="1" value="${element.maxValue}" ${element.displayMode === "progress" && !(element.id === "subtitle" && element.subtitleMode === "slice") ? "" : "disabled"}>
+                    <label>\uCC44\uC6C0 \uC0C9\uC0C1</label><input data-field="fillColor" type="color" value="${element.fillColor}" ${element.displayMode === "progress" && !(element.id === "subtitle" && element.subtitleMode === "slice") ? "" : "disabled"}>
+                    <label>\uCC44\uC6C0 \uBC29\uD5A5</label>
+                    <select data-field="clipDirection" ${element.displayMode === "progress" && !(element.id === "subtitle" && element.subtitleMode === "slice") ? "" : "disabled"}>
+                        ${["left", "right", "up", "down"].map((direction) => `<option value="${direction}" ${element.clipDirection === direction ? "selected" : ""}>${direction}</option>`).join("")}
+                    </select>
+                ` : ""}
+                ${element.id === "subtitle" ? `
+                    <label>\uD45C\uC2DC \uBAA8\uB4DC</label>
+                    <select data-field="subtitleMode">
+                        <option value="single" ${element.subtitleMode !== "slice" ? "selected" : ""}>\uB2E8\uC77C</option>
+                        <option value="slice" ${element.subtitleMode === "slice" ? "selected" : ""}>\uC2AC\uB77C\uC774\uC2F1</option>
+                    </select>
+                    <label>\uC2AC\uB86F \uC218</label><input data-field="sliceSlotCount" type="number" min="1" max="12" value="${element.sliceSlotCount ?? 5}" ${element.subtitleMode === "slice" ? "" : "disabled"}>
+                    <label>\uC2AC\uB86F \uD06C\uAE30</label><input data-field="sliceSlotSize" type="number" min="1" max="200" value="${element.sliceSlotSize ?? 20}" ${element.subtitleMode === "slice" ? "" : "disabled"}>
+                    <label>\uC5F4 \uC218</label><input data-field="sliceColumns" type="number" min="1" max="4" value="${element.sliceColumns ?? 2}" ${element.subtitleMode === "slice" ? "" : "disabled"}>
+                    <label>\uAC00\uB85C \uAC04\uACA9</label><input data-field="sliceGapX" type="number" value="${element.sliceGapX ?? 8}" ${element.subtitleMode === "slice" ? "" : "disabled"}>
+                    <label>\uC138\uB85C \uAC04\uACA9</label><input data-field="sliceGapY" type="number" value="${element.sliceGapY ?? 8}" ${element.subtitleMode === "slice" ? "" : "disabled"}>
+                ` : ""}
             </div>
         </div>
         <div class="hudEditorInspectorCard">
-            <div class="hudEditorInspectorTitle">채널 안내</div>
+            <div class="hudEditorInspectorTitle">\uCC44\uB110 \uC548\uB0B4</div>
             <div class="hudEditorDescription">
                 <div>Title: <code>#hud_title_text_string</code></div>
                 <div>Subtitle: <code>#hud_subtitle_text_string</code></div>
                 <div>Actionbar: <code>$actionbar_text</code></div>
-                <div>Actionbar는 바닐라처럼 factory 방식으로 export됩니다.</div>
-                <div>Title만 preserve 패턴을 사용합니다.</div>
+                <div>\uC561\uC158\uBC14\uB294 \uBC14\uB2D0\uB77C \uADDC\uCE59\uC5D0 \uB9DE\uAC8C factory \uBC29\uC2DD\uC73C\uB85C \uB0B4\uBCF4\uB0C5\uB2C8\uB2E4.</div>
+                <div>preserve \uD328\uD134\uC740 \uD0C0\uC774\uD2C0\uC5D0\uB9CC \uC801\uC6A9\uB429\uB2C8\uB2E4.</div>
+                <div>\uC11C\uBE0C\uD0C0\uC774\uD2C0 \uC2AC\uB77C\uC774\uC2F1 \uBAA8\uB4DC\uB97C \uCF1C\uBA74 <code>subtitle_data</code>\uC640 <code>sub_slotN</code> \uAD6C\uC870\uB85C \uB0B4\uBCF4\uB0C5\uB2C8\uB2E4.</div>
+                ${element.id === "subtitle" && element.subtitleMode === "slice" ? `<div><code>pad(text, size)</code> \uD615\uC2DD\uC73C\uB85C \uAC01 \uC2AC\uB86F\uC744 \\t \uD328\uB529\uD55C \uB4A4 subtitle\uB85C \uC774\uC5B4\uBD99\uC5EC \uBCF4\uB0B4\uC57C \uD569\uB2C8\uB2E4.</div>` : ""}
+                <div><code>ignored: true</code>\uB97C \uCF1C\uBA74 \uB80C\uB354\uB9C1\uACFC \uBC14\uC778\uB529 \uD3C9\uAC00\uAC00 \uD568\uAED8 \uBE44\uD65C\uC131\uD654\uB429\uB2C8\uB2E4.</div>
+                <div>\uD504\uB85C\uADF8\uB808\uC2A4 \uBC14\uB294 title/subtitle\uC5D0\uC11C clip_ratio \uAE30\uBC18\uC73C\uB85C \uB0B4\uBCF4\uB0C5\uB2C8\uB2E4.</div>
             </div>
         </div>
     `;
@@ -676,7 +1018,7 @@ function renderInspector(): void {
             const target = state.elements[state.selectedId] as Record<string, unknown>;
             if (input instanceof HTMLInputElement && input.type === "checkbox") {
                 target[field] = input.checked;
-            } else if (field === "x" || field === "y" || field === "width" || field === "height" || field === "layer") {
+            } else if (field === "x" || field === "y" || field === "width" || field === "height" || field === "layer" || field === "sliceSlotCount" || field === "sliceSlotSize" || field === "sliceColumns" || field === "sliceGapX" || field === "sliceGapY" || field === "maxValue") {
                 target[field] = Number.parseInt(input.value, 10) || 0;
             } else if (field === "backgroundAlpha") {
                 target[field] = clamp(Number.parseFloat(input.value) || 0, 0, 1);
@@ -691,10 +1033,36 @@ function renderInspector(): void {
     });
 }
 
+function renderScriptHelper(): void {
+    const container = getForm().querySelector(".hudEditorScriptCard") as HTMLDivElement | null;
+    if (!container) return;
+
+    const subtitle = state.elements.subtitle;
+    if (!subtitle.enabled || subtitle.subtitleMode !== "slice") {
+        container.innerHTML = "";
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="hudEditorSidebarTitle">Subtitle Script Helper</div>
+        <textarea class="hudEditorOutput hudEditorScriptOutput" spellcheck="false">${escapeHtml(buildSubtitleSliceScriptHelper(subtitle))}</textarea>
+        <div class="hudEditorSidebarActions">
+            <button type="button" class="propertyInputButton hudEditorCopyScript">Script \uBCF5\uC0AC</button>
+        </div>
+    `;
+
+    const copyButton = container.querySelector(".hudEditorCopyScript") as HTMLButtonElement | null;
+    copyButton?.addEventListener("click", async () => {
+        await navigator.clipboard.writeText(buildSubtitleSliceScriptHelper(subtitle));
+        new Notification("Subtitle Script helper\uB97C \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.", 2200, "notif");
+    });
+}
+
 function renderAll(): void {
     renderSidebar();
     renderCanvas();
     renderInspector();
+    renderScriptHelper();
     updateOutput();
 }
 
@@ -703,10 +1071,10 @@ function renderModalShell(): void {
         <div class="hudEditorLayout">
             <div class="hudEditorSidebar">
                 <div class="hudEditorSidebarCard">
-                    <div class="hudEditorSidebarTitle">HUD 요소</div>
+                    <div class="hudEditorSidebarTitle">HUD \uC694\uC18C</div>
                     <div class="hudEditorSidebarList"></div>
                     <div class="hudEditorSidebarActions">
-                        <button type="button" class="propertyInputButton hudEditorReset">바닐라 위치로 초기화</button>
+                        <button type="button" class="propertyInputButton hudEditorReset">\uBC14\uB2D0\uB77C \uC704\uCE58\uB85C \uCD08\uAE30\uD654</button>
                     </div>
                 </div>
             </div>
@@ -717,17 +1085,18 @@ function renderModalShell(): void {
                     </div>
                 </div>
                 <div class="hudEditorHelp">
-                    <div>가이드 상자는 바닐라 위치 기준입니다.</div>
-                    <div>실제 HUD 박스를 직접 드래그해서 위치를 옮기고, 오른쪽에서 크기와 접두사 처리까지 조정할 수 있습니다.</div>
+                    <div>\uAC00\uC774\uB4DC \uC0C1\uC790\uB294 \uBC14\uB2D0\uB77C \uAE30\uC900 \uC704\uCE58\uC785\uB2C8\uB2E4.</div>
+                    <div>HUD \uBC15\uC2A4\uB97C \uC9C1\uC811 \uB4DC\uB798\uADF8\uD574\uC11C \uC704\uCE58\uB97C \uC62E\uAE30\uACE0, \uC624\uB978\uCABD\uC5D0\uC11C \uD06C\uAE30\uC640 \uC811\uB450\uC5B4 \uCC98\uB9AC\uAE4C\uC9C0 \uC870\uC815\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.</div>
                 </div>
                 <div class="hudEditorJsonCard">
-                    <div class="hudEditorSidebarTitle">생성되는 JSON</div>
+                    <div class="hudEditorSidebarTitle">\uC0DD\uC131\uB418\uB294 JSON</div>
                     <textarea class="hudEditorOutput" spellcheck="false"></textarea>
                     <div class="hudEditorSidebarActions">
-                        <button type="button" class="propertyInputButton hudEditorCopyJson">JSON 복사</button>
-                        <button type="button" class="propertyInputButton hudEditorDownloadJson">hud_screen.json 다운로드</button>
+                        <button type="button" class="propertyInputButton hudEditorCopyJson">JSON \uBCF5\uC0AC</button>
+                        <button type="button" class="propertyInputButton hudEditorDownloadJson">hud_screen.json \uB2E4\uC6B4\uB85C\uB4DC</button>
                     </div>
                 </div>
+                <div class="hudEditorJsonCard hudEditorScriptCard"></div>
             </div>
             <div class="hudEditorInspector"></div>
         </div>
@@ -745,7 +1114,8 @@ function bindStaticActions(): void {
         state.elements.title = {
             ...state.elements.title,
             enabled: true,
-            sampleText: "info:공지입니다",
+            ignored: false,
+            sampleText: "info:\uACF5\uC9C0\uC785\uB2C8\uB2E4",
             prefix: "info:",
             stripPrefix: true,
             hideVanilla: true,
@@ -762,11 +1132,16 @@ function bindStaticActions(): void {
             background: "vanilla",
             backgroundAlpha: 0.75,
             backgroundColor: "#1f2432",
+            displayMode: "text",
+            maxValue: 100,
+            fillColor: "#5be37a",
+            clipDirection: "left",
         };
         state.elements.subtitle = {
             ...state.elements.subtitle,
             enabled: true,
-            sampleText: "부제목입니다",
+            ignored: false,
+            sampleText: "\uBD80\uC81C\uBAA9\uC785\uB2C8\uB2E4",
             prefix: "",
             stripPrefix: false,
             hideVanilla: true,
@@ -783,11 +1158,22 @@ function bindStaticActions(): void {
             background: "vanilla",
             backgroundAlpha: 0.75,
             backgroundColor: "#1f2432",
+            displayMode: "text",
+            maxValue: 100,
+            fillColor: "#6fc3ff",
+            clipDirection: "left",
+            subtitleMode: "single",
+            sliceSlotCount: 5,
+            sliceSlotSize: 20,
+            sliceColumns: 2,
+            sliceGapX: 8,
+            sliceGapY: 8,
         };
         state.elements.actionbar = {
             ...state.elements.actionbar,
             enabled: true,
-            sampleText: "info:오른쪽 표시",
+            ignored: false,
+            sampleText: "info:\uC624\uB978\uCABD \uD45C\uC2DC",
             prefix: "info:",
             stripPrefix: true,
             hideVanilla: true,
@@ -804,14 +1190,18 @@ function bindStaticActions(): void {
             background: "vanilla",
             backgroundAlpha: 0.75,
             backgroundColor: "#1f2432",
+            displayMode: "text",
+            maxValue: 100,
+            fillColor: "#5be37a",
+            clipDirection: "left",
         };
         renderAll();
-        new Notification("HUD 기본 위치로 초기화했습니다.", 2200, "notif");
+        new Notification("HUD\uB97C \uBC14\uB2D0\uB77C \uAE30\uBCF8 \uC704\uCE58\uB85C \uCD08\uAE30\uD654\uD588\uC2B5\uB2C8\uB2E4.", 2200, "notif");
     });
 
     copyButton?.addEventListener("click", async () => {
         await navigator.clipboard.writeText(buildHudJson());
-        new Notification("HUD JSON을 클립보드에 복사했습니다.", 2200, "notif");
+        new Notification("HUD JSON\uC744 \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.", 2200, "notif");
     });
 
     downloadButton?.addEventListener("click", () => {
@@ -822,7 +1212,7 @@ function bindStaticActions(): void {
         link.download = "hud_screen.json";
         link.click();
         URL.revokeObjectURL(url);
-        new Notification("hud_screen.json을 다운로드했습니다.", 2200, "notif");
+        new Notification("hud_screen.json\uC744 \uB2E4\uC6B4\uB85C\uB4DC\uD588\uC2B5\uB2C8\uB2E4.", 2200, "notif");
     });
 }
 
@@ -845,12 +1235,15 @@ function attachDragHandlers(): void {
     };
 }
 
-export async function hudEditorModal(): Promise<void> {
+function mountHudEditor(): void {
     renderModalShell();
     bindStaticActions();
     attachDragHandlers();
     renderAll();
+}
 
+export async function hudEditorModal(): Promise<void> {
+    mountHudEditor();
     const modal = getModal();
     modal.style.display = "block";
 

@@ -1,6 +1,7 @@
 export const binding_keys = [
     "binding_name",
     "binding_type",
+    "binding_condition",
     "binding_name_override",
     "binding_collection_name",
     "source_control_name",
