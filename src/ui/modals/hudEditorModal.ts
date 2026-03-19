@@ -3,7 +3,7 @@
 type HudChannel = "title" | "subtitle" | "actionbar";
 type HudBackground = "vanilla" | "solid" | "none";
 type HudFontSize = "small" | "normal" | "large" | "extra_large";
-type HudSubtitleMode = "single" | "slice";
+type HudTextSliceMode = "single" | "slice";
 type HudDisplayMode = "text" | "progress";
 type HudClipDirection = "left" | "right" | "up" | "down";
 type HudAnimationPreset = "none" | "fade_out" | "fade_hold_fade";
@@ -48,7 +48,8 @@ type HudElement = {
     animInDuration: number;
     animHoldDuration: number;
     animOutDuration: number;
-    subtitleMode?: HudSubtitleMode;
+    titleMode?: HudTextSliceMode;
+    subtitleMode?: HudTextSliceMode;
     sliceSlotCount?: number;
     sliceSlotSize?: number;
     sliceColumns?: number;
@@ -108,6 +109,12 @@ const state: HudEditorState = {
             animInDuration: 0.25,
             animHoldDuration: 2,
             animOutDuration: 0.25,
+            titleMode: "single",
+            sliceSlotCount: 5,
+            sliceSlotSize: 20,
+            sliceColumns: 2,
+            sliceGapX: 8,
+            sliceGapY: 8,
         },
         subtitle: {
             id: "subtitle",
@@ -496,25 +503,25 @@ function sliceExpression(slotSize: number, index: number): string {
     return `((('%.${end}s' * #text_data) - ('%.${start}s' * #text_data)) - '\t')`;
 }
 
-function buildSubtitleSliceData(element: HudElement): Record<string, unknown> {
+function buildSliceData(element: HudElement, bindingName: string, rawTarget: string): Record<string, unknown> {
     const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 12);
     const slotSize = clamp(element.sliceSlotSize ?? 20, 1, 200);
     const bindings: Record<string, unknown>[] = [
         {
-            binding_name: "#hud_subtitle_text_string",
-            binding_name_override: "#sub_raw",
+            binding_name: bindingName,
+            binding_name_override: rawTarget,
             binding_type: "global",
         },
         {
             binding_type: "view",
             source_property_name: element.prefix
-                ? prefixMatchExpression("#sub_raw", element.prefix)
-                : "(not (#sub_raw = ''))",
+                ? prefixMatchExpression(rawTarget, element.prefix)
+                : `(not (${rawTarget} = ''))`,
             target_property_name: "#visible",
         },
         {
             binding_type: "view",
-            source_property_name: removePrefixExpression("#sub_raw", element.prefix, element.stripPrefix),
+            source_property_name: removePrefixExpression(rawTarget, element.prefix, element.stripPrefix),
             target_property_name: "#text_data",
         },
     ];
@@ -535,17 +542,25 @@ function buildSubtitleSliceData(element: HudElement): Record<string, unknown> {
     };
 }
 
-function buildSubtitleSlotTemplate(element: HudElement): Record<string, unknown> {
+function buildSubtitleSliceData(element: HudElement): Record<string, unknown> {
+    return buildSliceData(element, "#hud_subtitle_text_string", "#sub_raw");
+}
+
+function buildTitleSliceData(element: HudElement): Record<string, unknown> {
+    return buildSliceData(element, "#hud_title_text_string", "#title_raw");
+}
+
+function buildSliceSlotTemplate(element: HudElement, sourceControlName: string, labelPrefix: string): Record<string, unknown> {
     const controls: Record<string, unknown>[] = [];
     const background = backgroundDefinition(element);
     if (background) {
         controls.push({
-            subtitle_background: background,
+            [`${labelPrefix}_background`]: background,
         });
     }
 
     controls.push({
-        subtitle_label: {
+        [`${labelPrefix}_label`]: {
             type: "label",
             text: "#text",
             localize: false,
@@ -561,7 +576,7 @@ function buildSubtitleSlotTemplate(element: HudElement): Record<string, unknown>
             bindings: [
                 {
                     binding_type: "view",
-                    source_control_name: "subtitle_data",
+                    source_control_name: sourceControlName,
                     source_property_name: "$slot_binding",
                     target_property_name: "#text",
                 },
@@ -579,7 +594,7 @@ function buildSubtitleSlotTemplate(element: HudElement): Record<string, unknown>
         bindings: [
             {
                 binding_type: "view",
-                source_control_name: "subtitle_data",
+                source_control_name: sourceControlName,
                 source_property_name: "(not ($slot_binding = ''))",
                 target_property_name: "#visible",
             },
@@ -587,6 +602,14 @@ function buildSubtitleSlotTemplate(element: HudElement): Record<string, unknown>
     };
 
     return template;
+}
+
+function buildSubtitleSlotTemplate(element: HudElement): Record<string, unknown> {
+    return buildSliceSlotTemplate(element, "subtitle_data", "subtitle");
+}
+
+function buildTitleSlotTemplate(element: HudElement): Record<string, unknown> {
+    return buildSliceSlotTemplate(element, "title_data", "title");
 }
 
 function buildActionbarControl(element: HudElement): Record<string, unknown> {
@@ -712,13 +735,45 @@ function buildHudJson(): string {
 
     const title = state.elements.title;
     if (title.enabled) {
-        json.title_control = buildTitleControl(title);
-        const titleAnimation = buildAnimationDefinitions("title_control", title);
-        if (titleAnimation.entryAnimation) {
-            (json.title_control as Record<string, unknown>).alpha = `@hud.${titleAnimation.entryAnimation}`;
+        if (title.titleMode === "slice") {
+            const slotCount = clamp(title.sliceSlotCount ?? 5, 1, 12);
+            const columns = clamp(title.sliceColumns ?? 2, 1, 4);
+            const gapX = title.sliceGapX ?? 8;
+            const gapY = title.sliceGapY ?? 8;
+
+            json.title_data = buildTitleSliceData(title);
+            json.title_slot_template = buildTitleSlotTemplate(title);
+            const titleAnimation = buildAnimationDefinitions("title_slot_template", title);
+            if (titleAnimation.entryAnimation) {
+                (json.title_slot_template as Record<string, unknown>).alpha = `@hud.${titleAnimation.entryAnimation}`;
+            }
+            Object.assign(json, titleAnimation.definitions);
+            rootInsert.push({ "title_data@hud.title_data": {} });
+
+            for (let index = 1; index <= slotCount; index++) {
+                const column = (index - 1) % columns;
+                const row = Math.floor((index - 1) / columns);
+                rootInsert.push({
+                    [`title_slot${index}@hud.title_slot_template`]: {
+                        $slot_binding: `#text${index}`,
+                        anchor_from: title.anchor,
+                        anchor_to: title.anchor,
+                        offset: [
+                            title.x + column * (title.width + gapX),
+                            title.y + row * (title.height + gapY),
+                        ],
+                    },
+                });
+            }
+        } else {
+            json.title_control = buildTitleControl(title);
+            const titleAnimation = buildAnimationDefinitions("title_control", title);
+            if (titleAnimation.entryAnimation) {
+                (json.title_control as Record<string, unknown>).alpha = `@hud.${titleAnimation.entryAnimation}`;
+            }
+            Object.assign(json, titleAnimation.definitions);
+            rootInsert.push({ "title_control@hud.title_control": {} });
         }
-        Object.assign(json, titleAnimation.definitions);
-        rootInsert.push({ "title_control@hud.title_control": {} });
 
         if (title.hideVanilla) {
             json["hud_title_text/title_frame"] = {
@@ -939,6 +994,23 @@ function sendSubtitleSlots(player, ${args}) {
 }`;
 }
 
+function buildTitleSliceScriptHelper(element: HudElement): string {
+    const slotSize = clamp(element.sliceSlotSize ?? 20, 1, 200);
+    const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 12);
+    const args = Array.from({ length: slotCount }, (_, index) => `slot${index + 1}`).join(", ");
+    const slotArray = Array.from({ length: slotCount }, (_, index) => `slot${index + 1}`).join(", ");
+
+    return `function pad(text, size = ${slotSize}) {
+  const safe = String(text ?? "");
+  return safe + "\\t".repeat(Math.max(0, size - safe.length));
+}
+
+function sendTitleSlots(player, ${args}) {
+  const data = [${slotArray}].map((slot) => pad(slot, ${slotSize})).join("");
+  player.runCommand(\`titleraw @s title {"rawtext":[{"text":"\${data}"}]}\`);
+}`;
+}
+
 function renderSidebar(): void {
     const container = getForm().querySelector(".hudEditorSidebarList") as HTMLDivElement | null;
     if (!container) return;
@@ -1016,7 +1088,7 @@ function renderCanvas(): void {
             const ignoredStyle = element.ignored ? "opacity:0.35;" : "";
             const bgStyle = `${element.background === "solid" ? `background:${element.backgroundColor};opacity:${element.backgroundAlpha};` : ""}${ignoredStyle}`;
 
-            if (element.id === "subtitle" && element.subtitleMode === "slice") {
+            if ((element.id === "title" && element.titleMode === "slice") || (element.id === "subtitle" && element.subtitleMode === "slice")) {
                 const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 12);
                 const columns = clamp(element.sliceColumns ?? 2, 1, 4);
                 const gapX = element.sliceGapX ?? 8;
@@ -1098,7 +1170,7 @@ function renderInspector(): void {
                 <label>\uC811\uB450\uC5B4</label><input data-field="prefix" type="text" value="${escapeHtml(element.prefix)}">
                 <label>\uC811\uB450\uC5B4 \uC81C\uAC70</label><input data-field="stripPrefix" type="checkbox" ${element.stripPrefix ? "checked" : ""}>
                 <label>\uBC14\uB2D0\uB77C \uC228\uAE40</label><input data-field="hideVanilla" type="checkbox" ${element.hideVanilla ? "checked" : ""}>
-                <label>\uAC12 \uBCF4\uC874</label><input data-field="preserve" type="checkbox" ${element.preserve ? "checked" : ""} ${element.id !== "title" ? "disabled" : ""}>
+                <label>\uAC12 \uBCF4\uC874</label><input data-field="preserve" type="checkbox" ${element.preserve ? "checked" : ""} ${element.id !== "title" || element.titleMode === "slice" ? "disabled" : ""}>
                 <label>\uC575\uCEE4</label>
                 <select data-field="anchor">
                     ${["top_left", "top_middle", "top_right", "left_middle", "center", "right_middle", "bottom_left", "bottom_middle", "bottom_right"].map((anchor) => `<option value="${anchor}" ${element.anchor === anchor ? "selected" : ""}>${anchor}</option>`).join("")}
@@ -1124,14 +1196,14 @@ function renderInspector(): void {
                 <label>\uBC30\uACBD \uC0C9\uC0C1</label><input data-field="backgroundColor" type="color" value="${element.backgroundColor}" ${element.background === "solid" ? "" : "disabled"}>
                 ${element.id !== "actionbar" ? `
                     <label>\uD45C\uC2DC \uD615\uC2DD</label>
-                    <select data-field="displayMode" ${element.id === "subtitle" && element.subtitleMode === "slice" ? "disabled" : ""}>
+                    <select data-field="displayMode" ${(element.id === "subtitle" && element.subtitleMode === "slice") || (element.id === "title" && element.titleMode === "slice") ? "disabled" : ""}>
                         <option value="text" ${element.displayMode !== "progress" ? "selected" : ""}>\uD14D\uC2A4\uD2B8</option>
                         <option value="progress" ${element.displayMode === "progress" ? "selected" : ""}>\uD504\uB85C\uADF8\uB808\uC2A4 \uBC14</option>
                     </select>
-                    <label>\uCD5C\uB300\uAC12</label><input data-field="maxValue" type="number" min="1" value="${element.maxValue}" ${element.displayMode === "progress" && !(element.id === "subtitle" && element.subtitleMode === "slice") ? "" : "disabled"}>
-                    <label>\uCC44\uC6C0 \uC0C9\uC0C1</label><input data-field="fillColor" type="color" value="${element.fillColor}" ${element.displayMode === "progress" && !(element.id === "subtitle" && element.subtitleMode === "slice") ? "" : "disabled"}>
+                    <label>\uCD5C\uB300\uAC12</label><input data-field="maxValue" type="number" min="1" value="${element.maxValue}" ${element.displayMode === "progress" && !(element.id === "subtitle" && element.subtitleMode === "slice") && !(element.id === "title" && element.titleMode === "slice") ? "" : "disabled"}>
+                    <label>\uCC44\uC6C0 \uC0C9\uC0C1</label><input data-field="fillColor" type="color" value="${element.fillColor}" ${element.displayMode === "progress" && !(element.id === "subtitle" && element.subtitleMode === "slice") && !(element.id === "title" && element.titleMode === "slice") ? "" : "disabled"}>
                     <label>\uCC44\uC6C0 \uBC29\uD5A5</label>
-                    <select data-field="clipDirection" ${element.displayMode === "progress" && !(element.id === "subtitle" && element.subtitleMode === "slice") ? "" : "disabled"}>
+                    <select data-field="clipDirection" ${element.displayMode === "progress" && !(element.id === "subtitle" && element.subtitleMode === "slice") && !(element.id === "title" && element.titleMode === "slice") ? "" : "disabled"}>
                         ${["left", "right", "up", "down"].map((direction) => `<option value="${direction}" ${element.clipDirection === direction ? "selected" : ""}>${direction}</option>`).join("")}
                     </select>
                 ` : ""}
@@ -1144,6 +1216,18 @@ function renderInspector(): void {
                 <label>\uB4E4\uC5B4\uC624\uB294 \uC2DC\uAC04</label><input data-field="animInDuration" type="number" min="0" step="0.05" value="${element.animInDuration}" ${element.animationPreset === "fade_hold_fade" ? "" : "disabled"}>
                 <label>\uC720\uC9C0 \uC2DC\uAC04</label><input data-field="animHoldDuration" type="number" min="0" step="0.05" value="${element.animHoldDuration}" ${element.animationPreset === "fade_hold_fade" ? "" : "disabled"}>
                 <label>\uC0AC\uB77C\uC9C0\uB294 \uC2DC\uAC04</label><input data-field="animOutDuration" type="number" min="0.05" step="0.05" value="${element.animOutDuration}" ${element.animationPreset !== "none" ? "" : "disabled"}>
+                ${element.id === "title" ? `
+                    <label>\uD45C\uC2DC \uBAA8\uB4DC</label>
+                    <select data-field="titleMode">
+                        <option value="single" ${element.titleMode !== "slice" ? "selected" : ""}>\uB2E8\uC77C</option>
+                        <option value="slice" ${element.titleMode === "slice" ? "selected" : ""}>\uC2AC\uB77C\uC774\uC2F1</option>
+                    </select>
+                    <label>\uC2AC\uB86F \uC218</label><input data-field="sliceSlotCount" type="number" min="1" max="12" value="${element.sliceSlotCount ?? 5}" ${element.titleMode === "slice" ? "" : "disabled"}>
+                    <label>\uC2AC\uB86F \uD06C\uAE30</label><input data-field="sliceSlotSize" type="number" min="1" max="200" value="${element.sliceSlotSize ?? 20}" ${element.titleMode === "slice" ? "" : "disabled"}>
+                    <label>\uC5F4 \uC218</label><input data-field="sliceColumns" type="number" min="1" max="4" value="${element.sliceColumns ?? 2}" ${element.titleMode === "slice" ? "" : "disabled"}>
+                    <label>\uAC00\uB85C \uAC04\uACA9</label><input data-field="sliceGapX" type="number" value="${element.sliceGapX ?? 8}" ${element.titleMode === "slice" ? "" : "disabled"}>
+                    <label>\uC138\uB85C \uAC04\uACA9</label><input data-field="sliceGapY" type="number" value="${element.sliceGapY ?? 8}" ${element.titleMode === "slice" ? "" : "disabled"}>
+                ` : ""}
                 ${element.id === "subtitle" ? `
                     <label>\uD45C\uC2DC \uBAA8\uB4DC</label>
                     <select data-field="subtitleMode">
@@ -1166,7 +1250,9 @@ function renderInspector(): void {
                 <div>Actionbar: <code>$actionbar_text</code></div>
                 <div>\uC561\uC158\uBC14\uB294 \uBC14\uB2D0\uB77C \uADDC\uCE59\uC5D0 \uB9DE\uAC8C factory \uBC29\uC2DD\uC73C\uB85C \uB0B4\uBCF4\uB0C5\uB2C8\uB2E4.</div>
                 <div>preserve \uD328\uD134\uC740 \uD0C0\uC774\uD2C0\uC5D0\uB9CC \uC801\uC6A9\uB429\uB2C8\uB2E4.</div>
+                <div>\uD0C0\uC774\uD2C0\uB3C4 \uC2AC\uB77C\uC774\uC2F1\uC744 \uC9C0\uC6D0\uD558\uC9C0\uB9CC, \uD604\uC7AC\uB294 preserve\uC640 \uB3D9\uC2DC \uC0AC\uC6A9\uC744 \uB9C9\uC544\uB450\uC5C8\uC2B5\uB2C8\uB2E4.</div>
                 <div>\uC11C\uBE0C\uD0C0\uC774\uD2C0 \uC2AC\uB77C\uC774\uC2F1 \uBAA8\uB4DC\uB97C \uCF1C\uBA74 <code>subtitle_data</code>\uC640 <code>sub_slotN</code> \uAD6C\uC870\uB85C \uB0B4\uBCF4\uB0C5\uB2C8\uB2E4.</div>
+                ${element.id === "title" && element.titleMode === "slice" ? `<div><code>pad(text, size)</code> \uD615\uC2DD\uC73C\uB85C \uAC01 \uC2AC\uB86F\uC744 \\t \uD328\uB529\uD55C \uB4A4 title\uB85C \uC774\uC5B4\uBD99\uC5EC \uBCF4\uB0B4\uC57C \uD569\uB2C8\uB2E4.</div>` : ""}
                 <div>\uC560\uB2C8\uBA54\uC774\uC158\uC740 <code>alpha</code> \uCCB4\uC774\uB2DD\uC73C\uB85C \uB0B4\uBCF4\uB0B4\uBA70, actionbar\uC5D0\uC11C\uB294 \uD31D\ud1a0\ub9ac \uD750\uB984\uC5D0 \uB9DE\uCD94\uAE30 \uC704\uD574 fade out \uD504\uB9AC\uC14B\uC774 \uC798 \uB9DE\uC2B5\uB2C8\uB2E4.</div>
                 ${element.id === "subtitle" && element.subtitleMode === "slice" ? `<div><code>pad(text, size)</code> \uD615\uC2DD\uC73C\uB85C \uAC01 \uC2AC\uB86F\uC744 \\t \uD328\uB529\uD55C \uB4A4 subtitle\uB85C \uC774\uC5B4\uBD99\uC5EC \uBCF4\uB0B4\uC57C \uD569\uB2C8\uB2E4.</div>` : ""}
                 <div><code>ignored: true</code>\uB97C \uCF1C\uBA74 \uB80C\uB354\uB9C1\uACFC \uBC14\uC778\uB529 \uD3C9\uAC00\uAC00 \uD568\uAED8 \uBE44\uD65C\uC131\uD654\uB429\uB2C8\uB2E4.</div>
@@ -1202,22 +1288,45 @@ function renderScriptHelper(): void {
     const container = getForm().querySelector(".hudEditorScriptCard") as HTMLDivElement | null;
     if (!container) return;
 
+    const title = state.elements.title;
     const subtitle = state.elements.subtitle;
-    if (!subtitle.enabled || subtitle.subtitleMode !== "slice") {
+    const sections: string[] = [];
+
+    if (title.enabled && title.titleMode === "slice") {
+        sections.push(`
+            <div class="hudEditorSidebarTitle">Title Script Helper</div>
+            <textarea class="hudEditorOutput hudEditorScriptOutput hudEditorTitleScriptOutput" spellcheck="false">${escapeHtml(buildTitleSliceScriptHelper(title))}</textarea>
+            <div class="hudEditorSidebarActions">
+                <button type="button" class="propertyInputButton hudEditorCopyTitleScript">Script \uBCF5\uC0AC</button>
+            </div>
+        `);
+    }
+
+    if (subtitle.enabled && subtitle.subtitleMode === "slice") {
+        sections.push(`
+            <div class="hudEditorSidebarTitle">Subtitle Script Helper</div>
+            <textarea class="hudEditorOutput hudEditorScriptOutput hudEditorSubtitleScriptOutput" spellcheck="false">${escapeHtml(buildSubtitleSliceScriptHelper(subtitle))}</textarea>
+            <div class="hudEditorSidebarActions">
+                <button type="button" class="propertyInputButton hudEditorCopySubtitleScript">Script \uBCF5\uC0AC</button>
+            </div>
+        `);
+    }
+
+    if (sections.length === 0) {
         container.innerHTML = "";
         return;
     }
 
-    container.innerHTML = `
-        <div class="hudEditorSidebarTitle">Subtitle Script Helper</div>
-        <textarea class="hudEditorOutput hudEditorScriptOutput" spellcheck="false">${escapeHtml(buildSubtitleSliceScriptHelper(subtitle))}</textarea>
-        <div class="hudEditorSidebarActions">
-            <button type="button" class="propertyInputButton hudEditorCopyScript">Script \uBCF5\uC0AC</button>
-        </div>
-    `;
+    container.innerHTML = sections.join("");
 
-    const copyButton = container.querySelector(".hudEditorCopyScript") as HTMLButtonElement | null;
-    copyButton?.addEventListener("click", async () => {
+    const copyTitleButton = container.querySelector(".hudEditorCopyTitleScript") as HTMLButtonElement | null;
+    copyTitleButton?.addEventListener("click", async () => {
+        await navigator.clipboard.writeText(buildTitleSliceScriptHelper(title));
+        new Notification("Title Script helper\uB97C \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.", 2200, "notif");
+    });
+
+    const copySubtitleButton = container.querySelector(".hudEditorCopySubtitleScript") as HTMLButtonElement | null;
+    copySubtitleButton?.addEventListener("click", async () => {
         await navigator.clipboard.writeText(buildSubtitleSliceScriptHelper(subtitle));
         new Notification("Subtitle Script helper\uB97C \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.", 2200, "notif");
     });
@@ -1309,6 +1418,12 @@ function bindStaticActions(): void {
             animInDuration: 0.25,
             animHoldDuration: 2,
             animOutDuration: 0.25,
+            titleMode: "single",
+            sliceSlotCount: 5,
+            sliceSlotSize: 20,
+            sliceColumns: 2,
+            sliceGapX: 8,
+            sliceGapY: 8,
         };
         state.elements.subtitle = {
             ...state.elements.subtitle,
