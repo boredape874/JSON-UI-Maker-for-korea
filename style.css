@@ -390,25 +390,54 @@ input[type="file"] {
     gap: 12px;
 }
 
+.hudEditorPreviewToolbar {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.hudEditorPreviewToolbarLeft,
+.hudEditorPreviewToolbarRight {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.hudEditorPreviewToolbarRight {
+    color: #d8deeb;
+    font-size: 12px;
+}
+
+.hudEditorZoomActive {
+    outline: rgba(102, 217, 255, 0.9) 2px solid;
+    background: rgba(102, 217, 255, 0.12);
+}
+
 .hudEditorCanvasWrap {
     width: 100%;
     overflow: auto;
     border-radius: 14px;
+    background: rgba(5, 8, 14, 0.45);
+    outline: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 10px;
 }
 
 .hudEditorCanvasScale {
-    width: 100%;
-    min-width: 720px;
+    position: relative;
+    min-width: 0;
 }
 
 .hudEditorPreview {
     position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
+    width: 1500px;
+    height: 843.75px;
     overflow: hidden;
     border-radius: 14px;
     outline: 1px solid rgba(255, 255, 255, 0.14);
     background: #0f131b;
+    transform-origin: top left;
 }
 
 .hudEditorCanvasBackgroundImage,
@@ -589,6 +618,11 @@ input[type="file"] {
 
     .hudEditorCanvasScale {
         min-width: 0;
+    }
+
+    .hudEditorPreviewToolbar {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
 

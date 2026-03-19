@@ -58,6 +58,8 @@ type HudElement = {
 
 type HudEditorState = {
     selectedId: HudChannel;
+    autoFitPreview: boolean;
+    previewZoom: number;
     elements: Record<HudChannel, HudElement>;
     drag: null | {
         id: HudChannel;
@@ -73,6 +75,8 @@ const PREVIEW_HEIGHT = 1500 / 1.7777777;
 
 const state: HudEditorState = {
     selectedId: "title",
+    autoFitPreview: true,
+    previewZoom: 1,
     elements: {
         title: {
             id: "title",
@@ -230,6 +234,17 @@ function getCanvasBackgroundHtml(): string {
     }
 
     return `<img class="hudEditorCanvasBackgroundImage" src="background.png" alt="HUD Background">`;
+}
+
+function getPreviewScale(): number {
+    if (!state.autoFitPreview) {
+        return clamp(state.previewZoom, 0.5, 1.5);
+    }
+
+    const wrap = getForm().querySelector(".hudEditorCanvasWrap") as HTMLDivElement | null;
+    const wrapWidth = wrap?.clientWidth ?? PREVIEW_WIDTH;
+    const fitScale = wrapWidth / PREVIEW_WIDTH;
+    return clamp(fitScale, 0.65, 1);
 }
 
 function prefixMatchExpression(source: string, prefix: string): string {
@@ -943,9 +958,47 @@ function renderSidebar(): void {
     });
 }
 
+function renderPreviewToolbar(): void {
+    const container = getForm().querySelector(".hudEditorPreviewToolbar") as HTMLDivElement | null;
+    if (!container) return;
+
+    const scale = Math.round(getPreviewScale() * 100);
+    container.innerHTML = `
+        <div class="hudEditorPreviewToolbarLeft">
+            <button type="button" class="propertyInputButton hudEditorZoomFit ${state.autoFitPreview ? "hudEditorZoomActive" : ""}">\uB9DE\uCDA4</button>
+            <button type="button" class="propertyInputButton hudEditorZoomPreset ${!state.autoFitPreview && state.previewZoom === 0.75 ? "hudEditorZoomActive" : ""}" data-zoom="0.75">75%</button>
+            <button type="button" class="propertyInputButton hudEditorZoomPreset ${!state.autoFitPreview && state.previewZoom === 1 ? "hudEditorZoomActive" : ""}" data-zoom="1">100%</button>
+            <button type="button" class="propertyInputButton hudEditorZoomPreset ${!state.autoFitPreview && state.previewZoom === 1.25 ? "hudEditorZoomActive" : ""}" data-zoom="1.25">125%</button>
+        </div>
+        <div class="hudEditorPreviewToolbarRight">\uD604\uC7AC \uBC30\uC728 ${scale}%</div>
+    `;
+
+    container.querySelector<HTMLButtonElement>(".hudEditorZoomFit")?.addEventListener("click", () => {
+        state.autoFitPreview = true;
+        renderAll();
+    });
+
+    container.querySelectorAll<HTMLButtonElement>(".hudEditorZoomPreset").forEach((button) => {
+        button.addEventListener("click", () => {
+            state.autoFitPreview = false;
+            state.previewZoom = Number.parseFloat(button.dataset.zoom || "1") || 1;
+            renderAll();
+        });
+    });
+}
+
 function renderCanvas(): void {
     const preview = getForm().querySelector(".hudEditorPreview") as HTMLDivElement | null;
     if (!preview) return;
+    const scale = getPreviewScale();
+    const canvasScale = getForm().querySelector(".hudEditorCanvasScale") as HTMLDivElement | null;
+    if (canvasScale) {
+        canvasScale.style.width = `${PREVIEW_WIDTH * scale}px`;
+        canvasScale.style.height = `${PREVIEW_HEIGHT * scale}px`;
+    }
+    preview.style.width = `${PREVIEW_WIDTH}px`;
+    preview.style.height = `${PREVIEW_HEIGHT}px`;
+    preview.style.transform = `scale(${scale})`;
 
     const titleGuide = computePreviewRect({ ...state.elements.title, x: 0, y: 130, width: 440, height: 56, anchor: "top_middle" });
     const subtitleGuide = computePreviewRect({ ...state.elements.subtitle, x: 0, y: 190, width: 380, height: 42, anchor: "top_middle" });
@@ -1172,6 +1225,7 @@ function renderScriptHelper(): void {
 
 function renderAll(): void {
     renderSidebar();
+    renderPreviewToolbar();
     renderCanvas();
     renderInspector();
     renderScriptHelper();
@@ -1191,6 +1245,7 @@ function renderModalShell(): void {
                 </div>
             </div>
             <div class="hudEditorCenter">
+                <div class="hudEditorSidebarCard hudEditorPreviewToolbar"></div>
                 <div class="hudEditorCanvasWrap">
                     <div class="hudEditorCanvasScale">
                         <div class="hudEditorPreview"></div>
@@ -1223,6 +1278,8 @@ function bindStaticActions(): void {
 
     resetButton?.addEventListener("click", () => {
         state.selectedId = "title";
+        state.autoFitPreview = true;
+        state.previewZoom = 1;
         state.elements.title = {
             ...state.elements.title,
             enabled: true,
@@ -1372,13 +1429,16 @@ export async function hudEditorModal(): Promise<void> {
     modal.style.display = "block";
 
     return new Promise((resolve) => {
+        const handleResize = () => renderAll();
         const close = () => {
             modal.style.display = "none";
             getCloseButton().onclick = null;
             window.onclick = null;
+            window.removeEventListener("resize", handleResize);
             resolve();
         };
 
+        window.addEventListener("resize", handleResize);
         getCloseButton().onclick = close;
         window.onclick = (event: MouseEvent) => {
             if (event.target === modal) close();
