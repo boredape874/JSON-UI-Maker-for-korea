@@ -316,44 +316,7 @@ function buildProgressFill(sourceControlName: string, sourcePropertyName: string
 }
 
 function buildTitleControl(element: HudElement): Record<string, unknown> {
-    const dataBindings: Record<string, unknown>[] = [
-        {
-            binding_name: "#hud_title_text_string",
-            binding_name_override: "#source_text",
-            binding_type: "global",
-        },
-    ];
-
-    if (element.preserve) {
-        dataBindings.push({
-            binding_name: "#hud_title_text_string",
-            binding_name_override: "#preserved_text",
-            binding_condition: "visibility_changed",
-            binding_type: "global",
-        });
-    }
-
-    dataBindings.push({
-        binding_type: "view",
-        source_property_name: element.preserve
-            ? `(not (#source_text = #preserved_text) and ${prefixMatchExpression("#source_text", element.prefix)})`
-            : prefixMatchExpression("#source_text", element.prefix),
-        target_property_name: "#visible",
-    });
-
-    const controls: Record<string, unknown>[] = [
-        {
-            title_data: {
-                type: "panel",
-                size: [0, 0],
-                property_bag: {
-                    "#source_text": "",
-                    "#preserved_text": "",
-                },
-                bindings: dataBindings,
-            },
-        },
-    ];
+    const controls: Record<string, unknown>[] = [];
 
     const background = backgroundDefinition(element);
     if (background) {
@@ -364,7 +327,26 @@ function buildTitleControl(element: HudElement): Record<string, unknown> {
 
     if (element.displayMode === "progress") {
         controls.push({
-            title_fill: buildProgressFill("title_data", element.preserve ? "#preserved_text" : "#source_text", element),
+            title_fill: {
+                type: "image",
+                texture: "textures/ui/white_background",
+                color: hexToRgb(element.fillColor),
+                size: ["100%", "100%"],
+                clip_direction: element.clipDirection,
+                clip_pixelperfect: false,
+                layer: 32,
+                bindings: [
+                    {
+                        binding_name: "#hud_title_text_string",
+                        binding_type: "global",
+                    },
+                    {
+                        binding_type: "view",
+                        source_property_name: progressClipExpression("#hud_title_text_string", element),
+                        target_property_name: "#clip_ratio",
+                    },
+                ],
+            },
         });
     } else {
         controls.push({
@@ -383,9 +365,12 @@ function buildTitleControl(element: HudElement): Record<string, unknown> {
                 text_alignment: "center",
                 bindings: [
                     {
+                        binding_name: "#hud_title_text_string",
+                        binding_type: "global",
+                    },
+                    {
                         binding_type: "view",
-                        source_control_name: "title_data",
-                        source_property_name: removePrefixExpression(element.preserve ? "#preserved_text" : "#source_text", element.prefix, element.stripPrefix),
+                        source_property_name: removePrefixExpression("#hud_title_text_string", element.prefix, element.stripPrefix),
                         target_property_name: "#text",
                     },
                 ],
@@ -404,9 +389,14 @@ function buildTitleControl(element: HudElement): Record<string, unknown> {
         controls,
         bindings: [
             {
+                binding_name: "#hud_title_text_string",
+                binding_type: "global",
+            },
+            {
                 binding_type: "view",
-                source_control_name: "title_data",
-                source_property_name: element.preserve ? "(not (#preserved_text = ''))" : "#visible",
+                source_property_name: element.prefix
+                    ? prefixMatchExpression("#hud_title_text_string", element.prefix)
+                    : "(not (#hud_title_text_string = ''))",
                 target_property_name: "#visible",
             },
         ],
@@ -1170,7 +1160,6 @@ function renderInspector(): void {
                 <label>\uC811\uB450\uC5B4</label><input data-field="prefix" type="text" value="${escapeHtml(element.prefix)}">
                 <label>\uC811\uB450\uC5B4 \uC81C\uAC70</label><input data-field="stripPrefix" type="checkbox" ${element.stripPrefix ? "checked" : ""}>
                 <label>\uBC14\uB2D0\uB77C \uC228\uAE40</label><input data-field="hideVanilla" type="checkbox" ${element.hideVanilla ? "checked" : ""}>
-                <label>\uAC12 \uBCF4\uC874</label><input data-field="preserve" type="checkbox" ${element.preserve ? "checked" : ""} ${element.id !== "title" || element.titleMode === "slice" ? "disabled" : ""}>
                 <label>\uC575\uCEE4</label>
                 <select data-field="anchor">
                     ${["top_left", "top_middle", "top_right", "left_middle", "center", "right_middle", "bottom_left", "bottom_middle", "bottom_right"].map((anchor) => `<option value="${anchor}" ${element.anchor === anchor ? "selected" : ""}>${anchor}</option>`).join("")}
@@ -1249,8 +1238,8 @@ function renderInspector(): void {
                 <div>Subtitle: <code>#hud_subtitle_text_string</code></div>
                 <div>Actionbar: <code>$actionbar_text</code></div>
                 <div>\uC561\uC158\uBC14\uB294 \uBC14\uB2D0\uB77C \uADDC\uCE59\uC5D0 \uB9DE\uAC8C factory \uBC29\uC2DD\uC73C\uB85C \uB0B4\uBCF4\uB0C5\uB2C8\uB2E4.</div>
-                <div>preserve \uD328\uD134\uC740 \uD0C0\uC774\uD2C0\uC5D0\uB9CC \uC801\uC6A9\uB429\uB2C8\uB2E4.</div>
-                <div>\uD0C0\uC774\uD2C0\uB3C4 \uC2AC\uB77C\uC774\uC2F1\uC744 \uC9C0\uC6D0\uD558\uC9C0\uB9CC, \uD604\uC7AC\uB294 preserve\uC640 \uB3D9\uC2DC \uC0AC\uC6A9\uC744 \uB9C9\uC544\uB450\uC5C8\uC2B5\uB2C8\uB2E4.</div>
+                <div>title \uB2E8\uC77C \uBAA8\uB4DC\uB294 \uD604\uC7AC <code>#hud_title_text_string</code>\uC744 \uC9C1\uC811 \uAC00\uB85C\uCC44 \uB80C\uB354\uD569\uB2C8\uB2E4.</div>
+                <div>\uD0C0\uC774\uD2C0\uB3C4 \uC2AC\uB77C\uC774\uC2F1\uC744 \uC9C0\uC6D0\uD558\uC9C0\uB9CC, \uC774 \uBAA8\uB4DC\uC5D0\uC11C\uB3C4 \uD604\uC7AC title \uBB38\uC790\uC5F4 \uAE30\uC900\uC73C\uB85C \uBC14\uB85C \uACC4\uC0B0\uD569\uB2C8\uB2E4.</div>
                 <div>\uC11C\uBE0C\uD0C0\uC774\uD2C0 \uC2AC\uB77C\uC774\uC2F1 \uBAA8\uB4DC\uB97C \uCF1C\uBA74 <code>subtitle_data</code>\uC640 <code>sub_slotN</code> \uAD6C\uC870\uB85C \uB0B4\uBCF4\uB0C5\uB2C8\uB2E4.</div>
                 ${element.id === "title" && element.titleMode === "slice" ? `<div><code>pad(text, size)</code> \uD615\uC2DD\uC73C\uB85C \uAC01 \uC2AC\uB86F\uC744 \\t \uD328\uB529\uD55C \uB4A4 title\uB85C \uC774\uC5B4\uBD99\uC5EC \uBCF4\uB0B4\uC57C \uD569\uB2C8\uB2E4.</div>` : ""}
                 <div>\uC560\uB2C8\uBA54\uC774\uC158\uC740 <code>alpha</code> \uCCB4\uC774\uB2DD\uC73C\uB85C \uB0B4\uBCF4\uB0B4\uBA70, actionbar\uC5D0\uC11C\uB294 \uD31D\ud1a0\ub9ac \uD750\uB984\uC5D0 \uB9DE\uCD94\uAE30 \uC704\uD574 fade out \uD504\uB9AC\uC14B\uC774 \uC798 \uB9DE\uC2B5\uB2C8\uB2E4.</div>
