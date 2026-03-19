@@ -198,6 +198,10 @@ function ensureSliceSlots(element) {
 function getSliceSlotLayout(element, rawIndex) {
     return ensureSliceSlots(element)[rawIndex] ?? getDefaultSliceSlotLayout(element, rawIndex);
 }
+function isSliceMode(element) {
+    return (element.id === "title" && element.titleMode === "slice")
+        || (element.id === "subtitle" && element.subtitleMode === "slice");
+}
 function removePrefixExpression(source, prefix, stripPrefix) {
     if (!prefix || !stripPrefix)
         return source;
@@ -1122,6 +1126,7 @@ function renderCanvas() {
                 startMouseY: event.clientY,
                 startX: element.x,
                 startY: element.y,
+                startSliceSlots: isSliceMode(element) ? ensureSliceSlots(element).map((slot) => ({ ...slot })) : undefined,
             };
             renderAll();
         });
@@ -1273,7 +1278,11 @@ function renderInspector() {
     inspector.querySelectorAll("input[data-field], select[data-field]").forEach((input) => {
         const field = input.dataset.field;
         const onChange = () => {
-            const target = state.elements[state.selectedId];
+            const element = state.elements[state.selectedId];
+            const target = element;
+            const previousX = element.x;
+            const previousY = element.y;
+            const previousAnchor = element.anchor;
             if (input instanceof HTMLInputElement && input.type === "checkbox") {
                 target[field] = input.checked;
             }
@@ -1288,6 +1297,20 @@ function renderInspector() {
             }
             else {
                 target[field] = input.value;
+            }
+            if (isSliceMode(element)) {
+                const slots = ensureSliceSlots(element);
+                if (field === "x") {
+                    const delta = element.x - previousX;
+                    element.sliceSlots = slots.map((slot) => ({ ...slot, x: slot.x + delta }));
+                }
+                else if (field === "y") {
+                    const delta = element.y - previousY;
+                    element.sliceSlots = slots.map((slot) => ({ ...slot, y: slot.y + delta }));
+                }
+                else if (field === "anchor") {
+                    element.sliceSlots = slots.map((slot) => ({ ...slot, anchor: element.anchor }));
+                }
             }
             renderAll();
         };
@@ -1557,8 +1580,17 @@ function attachDragHandlers() {
         if (!state.drag)
             return;
         const element = state.elements[state.drag.id];
-        element.x = Math.round(state.drag.startX + (event.clientX - state.drag.startMouseX));
-        element.y = Math.round(state.drag.startY + (event.clientY - state.drag.startMouseY));
+        const deltaX = Math.round(event.clientX - state.drag.startMouseX);
+        const deltaY = Math.round(event.clientY - state.drag.startMouseY);
+        element.x = Math.round(state.drag.startX + deltaX);
+        element.y = Math.round(state.drag.startY + deltaY);
+        if (isSliceMode(element) && state.drag.startSliceSlots) {
+            element.sliceSlots = state.drag.startSliceSlots.map((slot) => ({
+                ...slot,
+                x: slot.x + deltaX,
+                y: slot.y + deltaY,
+            }));
+        }
         renderAll();
     };
     modal.onmouseup = () => {
