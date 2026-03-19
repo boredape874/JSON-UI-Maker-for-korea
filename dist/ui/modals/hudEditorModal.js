@@ -11,11 +11,11 @@ const state = {
             label: "\uD0C0\uC774\uD2C0",
             enabled: true,
             ignored: false,
-            sampleText: "info:\uACF5\uC9C0\uC785\uB2C8\uB2E4",
-            prefix: "info:",
-            stripPrefix: true,
-            hideVanilla: true,
-            preserve: true,
+            sampleText: "Title",
+            prefix: "",
+            stripPrefix: false,
+            hideVanilla: false,
+            preserve: false,
             anchor: "top_middle",
             x: 0,
             y: 130,
@@ -36,16 +36,22 @@ const state = {
             animInDuration: 0.25,
             animHoldDuration: 2,
             animOutDuration: 0.25,
+            titleMode: "single",
+            sliceSlotCount: 5,
+            sliceSlotSize: 20,
+            sliceColumns: 2,
+            sliceGapX: 8,
+            sliceGapY: 8,
         },
         subtitle: {
             id: "subtitle",
             label: "\uC11C\uBE0C\uD0C0\uC774\uD2C0",
             enabled: true,
             ignored: false,
-            sampleText: "\uBD80\uC81C\uBAA9\uC785\uB2C8\uB2E4",
+            sampleText: "Subtitle",
             prefix: "",
             stripPrefix: false,
-            hideVanilla: true,
+            hideVanilla: false,
             preserve: false,
             anchor: "top_middle",
             x: 0,
@@ -79,10 +85,10 @@ const state = {
             label: "\uC561\uC158\uBC14",
             enabled: true,
             ignored: false,
-            sampleText: "info:\uC624\uB978\uCABD \uD45C\uC2DC",
-            prefix: "info:",
-            stripPrefix: true,
-            hideVanilla: true,
+            sampleText: "Actionbar",
+            prefix: "",
+            stripPrefix: false,
+            hideVanilla: false,
             preserve: false,
             anchor: "bottom_middle",
             x: 0,
@@ -109,10 +115,10 @@ const state = {
     drag: null,
 };
 function getModal() {
-    return document.getElementById("modalHudEditor");
+    return document.getElementById("hudEditorScreen");
 }
 function getCloseButton() {
-    return document.getElementById("modalHudEditorClose");
+    return document.getElementById("hudEditorScreenClose");
 }
 function getForm() {
     return document.getElementsByClassName("modalHudEditorForm")[0];
@@ -167,6 +173,31 @@ function prefixMatchExpression(source, prefix) {
         return "true";
     return `(not ((${source} - ${quoteString(prefix)}) = ${source}))`;
 }
+function getDefaultSliceSlotLayout(element, rawIndex) {
+    const columns = clamp(element.sliceColumns ?? 2, 1, 4);
+    const gapX = element.sliceGapX ?? 8;
+    const gapY = element.sliceGapY ?? 8;
+    const column = rawIndex % columns;
+    const row = Math.floor(rawIndex / columns);
+    return {
+        anchor: element.anchor,
+        x: element.x + column * (element.width + gapX),
+        y: element.y + row * (element.height + gapY),
+    };
+}
+function ensureSliceSlots(element) {
+    const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 30);
+    const slots = [...(element.sliceSlots ?? [])];
+    for (let rawIndex = slots.length; rawIndex < slotCount; rawIndex++) {
+        slots.push(getDefaultSliceSlotLayout(element, rawIndex));
+    }
+    slots.length = slotCount;
+    element.sliceSlots = slots;
+    return slots;
+}
+function getSliceSlotLayout(element, rawIndex) {
+    return ensureSliceSlots(element)[rawIndex] ?? getDefaultSliceSlotLayout(element, rawIndex);
+}
 function removePrefixExpression(source, prefix, stripPrefix) {
     if (!prefix || !stripPrefix)
         return source;
@@ -187,6 +218,24 @@ function backgroundDefinition(element) {
     base.texture = "textures/ui/white_background";
     base.color = hexToRgb(element.backgroundColor);
     return base;
+}
+function getAutoSizedTextContainer(element, verticalPadding) {
+    if (element.background === "none" || element.displayMode === "progress") {
+        return [element.width, element.height];
+    }
+    return ["100%c + 10px", `100%cm + ${verticalPadding}px`];
+}
+function getTextLabelSize(element) {
+    if (element.background === "none" || element.displayMode === "progress") {
+        return ["100%", "default"];
+    }
+    return ["default", "default"];
+}
+function withIgnored(target, ignored) {
+    if (ignored) {
+        target.ignored = true;
+    }
+    return target;
 }
 function progressValueExpression(source, element) {
     const numericSource = element.prefix
@@ -218,41 +267,7 @@ function buildProgressFill(sourceControlName, sourcePropertyName, element) {
     };
 }
 function buildTitleControl(element) {
-    const dataBindings = [
-        {
-            binding_name: "#hud_title_text_string",
-            binding_name_override: "#source_text",
-            binding_type: "global",
-        },
-    ];
-    if (element.preserve) {
-        dataBindings.push({
-            binding_name: "#hud_title_text_string",
-            binding_name_override: "#preserved_text",
-            binding_condition: "visibility_changed",
-            binding_type: "global",
-        });
-    }
-    dataBindings.push({
-        binding_type: "view",
-        source_property_name: element.preserve
-            ? `(not (#source_text = #preserved_text) and ${prefixMatchExpression("#source_text", element.prefix)})`
-            : prefixMatchExpression("#source_text", element.prefix),
-        target_property_name: "#visible",
-    });
-    const controls = [
-        {
-            title_data: {
-                type: "panel",
-                size: [0, 0],
-                property_bag: {
-                    "#source_text": "",
-                    "#preserved_text": "",
-                },
-                bindings: dataBindings,
-            },
-        },
-    ];
+    const controls = [];
     const background = backgroundDefinition(element);
     if (background) {
         controls.push({
@@ -261,39 +276,69 @@ function buildTitleControl(element) {
     }
     if (element.displayMode === "progress") {
         controls.push({
-            title_fill: buildProgressFill("title_data", element.preserve ? "#preserved_text" : "#source_text", element),
-        });
-    }
-    else {
-        controls.push({
-            title_label: {
-                type: "label",
-                text: "#text",
-                localize: false,
-                size: ["100%", "default"],
-                max_size: ["100%", "default"],
-                anchor_from: "center",
-                anchor_to: "center",
-                color: hexToRgb(element.textColor),
-                shadow: element.shadow,
-                layer: 31,
-                font_size: element.fontSize,
-                text_alignment: "center",
+            title_fill: {
+                type: "image",
+                texture: "textures/ui/white_background",
+                color: hexToRgb(element.fillColor),
+                size: ["100%", "100%"],
+                clip_direction: element.clipDirection,
+                clip_pixelperfect: false,
+                layer: 32,
                 bindings: [
                     {
+                        binding_name: "#hud_title_text_string",
+                        binding_type: "global",
+                    },
+                    {
                         binding_type: "view",
-                        source_control_name: "title_data",
-                        source_property_name: removePrefixExpression(element.preserve ? "#preserved_text" : "#source_text", element.prefix, element.stripPrefix),
-                        target_property_name: "#text",
+                        source_property_name: progressClipExpression("#hud_title_text_string", element),
+                        target_property_name: "#clip_ratio",
                     },
                 ],
             },
         });
     }
-    return {
+    else {
+        const label = {
+            type: "label",
+            text: "#text",
+            size: getTextLabelSize(element),
+            anchor_from: "center",
+            anchor_to: "center",
+            color: hexToRgb(element.textColor),
+            shadow: element.shadow,
+            layer: 2,
+            bindings: [
+                {
+                    binding_name: "#hud_title_text_string",
+                },
+                {
+                    binding_type: "view",
+                    source_property_name: removePrefixExpression("#hud_title_text_string", element.prefix, element.stripPrefix),
+                    target_property_name: "#text",
+                },
+                {
+                    binding_type: "view",
+                    source_property_name: element.prefix
+                        ? prefixMatchExpression("#hud_title_text_string", element.prefix)
+                        : "(not (#hud_title_text_string = ''))",
+                    target_property_name: "#visible",
+                },
+            ],
+        };
+        if (element.fontSize !== "extra_large") {
+            label.font_size = element.fontSize;
+        }
+        if (element.textColor !== "#ffffff") {
+            label.color = hexToRgb(element.textColor);
+        }
+        controls.push({
+            title_label: label,
+        });
+    }
+    return withIgnored({
         type: "panel",
-        ignored: element.ignored,
-        size: [element.width, element.height],
+        size: getAutoSizedTextContainer(element, 8),
         anchor_from: element.anchor,
         anchor_to: element.anchor,
         offset: [element.x, element.y],
@@ -301,13 +346,17 @@ function buildTitleControl(element) {
         controls,
         bindings: [
             {
+                binding_name: "#hud_title_text_string",
+            },
+            {
                 binding_type: "view",
-                source_control_name: "title_data",
-                source_property_name: element.preserve ? "(not (#preserved_text = ''))" : "#visible",
+                source_property_name: element.prefix
+                    ? prefixMatchExpression("#hud_title_text_string", element.prefix)
+                    : "(not (#hud_title_text_string = ''))",
                 target_property_name: "#visible",
             },
         ],
-    };
+    }, element.ignored);
 }
 function buildSubtitleControl(element) {
     const controls = [];
@@ -348,7 +397,7 @@ function buildSubtitleControl(element) {
                 type: "label",
                 text: "#text",
                 localize: false,
-                size: ["100%", "default"],
+                size: getTextLabelSize(element),
                 max_size: ["100%", "default"],
                 anchor_from: "center",
                 anchor_to: "center",
@@ -368,10 +417,9 @@ function buildSubtitleControl(element) {
             },
         });
     }
-    return {
+    return withIgnored({
         type: "panel",
-        ignored: element.ignored,
-        size: [element.width, element.height],
+        size: getAutoSizedTextContainer(element, 8),
         anchor_from: element.anchor,
         anchor_to: element.anchor,
         offset: [element.x, element.y],
@@ -385,7 +433,7 @@ function buildSubtitleControl(element) {
                 target_property_name: "#visible",
             },
         ],
-    };
+    }, element.ignored);
 }
 function sliceExpression(slotSize, index) {
     const end = slotSize * index;
@@ -395,25 +443,25 @@ function sliceExpression(slotSize, index) {
     const start = slotSize * (index - 1);
     return `((('%.${end}s' * #text_data) - ('%.${start}s' * #text_data)) - '\t')`;
 }
-function buildSubtitleSliceData(element) {
-    const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 12);
+function buildSliceData(element, bindingName, rawTarget) {
+    const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 30);
     const slotSize = clamp(element.sliceSlotSize ?? 20, 1, 200);
     const bindings = [
         {
-            binding_name: "#hud_subtitle_text_string",
-            binding_name_override: "#sub_raw",
+            binding_name: bindingName,
+            binding_name_override: rawTarget,
             binding_type: "global",
         },
         {
             binding_type: "view",
             source_property_name: element.prefix
-                ? prefixMatchExpression("#sub_raw", element.prefix)
-                : "(not (#sub_raw = ''))",
+                ? prefixMatchExpression(rawTarget, element.prefix)
+                : `(not (${rawTarget} = ''))`,
             target_property_name: "#visible",
         },
         {
             binding_type: "view",
-            source_property_name: removePrefixExpression("#sub_raw", element.prefix, element.stripPrefix),
+            source_property_name: removePrefixExpression(rawTarget, element.prefix, element.stripPrefix),
             target_property_name: "#text_data",
         },
     ];
@@ -424,103 +472,130 @@ function buildSubtitleSliceData(element) {
             target_property_name: `#text${index}`,
         });
     }
-    return {
+    return withIgnored({
         type: "panel",
-        ignored: element.ignored,
         size: [0, 0],
         bindings,
-    };
+    }, element.ignored);
 }
-function buildSubtitleSlotTemplate(element) {
+function buildSubtitleSliceData(element) {
+    return buildSliceData(element, "#hud_subtitle_text_string", "#sub_raw");
+}
+function buildTitleSliceData(element) {
+    return buildSliceData(element, "#hud_title_text_string", "#title_raw");
+}
+function buildSliceSlotTemplate(element, sourceControlName, labelPrefix) {
     const controls = [];
     const background = backgroundDefinition(element);
     if (background) {
         controls.push({
-            subtitle_background: background,
+            [`${labelPrefix}_background`]: background,
         });
     }
+    const label = {
+        type: "label",
+        text: "#text",
+        size: getTextLabelSize(element),
+        anchor_from: "center",
+        anchor_to: "center",
+        color: hexToRgb(element.textColor),
+        shadow: element.shadow,
+        layer: 2,
+        bindings: [
+            {
+                binding_type: "view",
+                source_control_name: sourceControlName,
+                source_property_name: "$slot_binding",
+                target_property_name: "#text",
+            },
+        ],
+    };
+    if (element.fontSize !== "large") {
+        label.font_size = element.fontSize;
+    }
+    if (element.textColor !== "#dfe9ff") {
+        label.color = hexToRgb(element.textColor);
+    }
     controls.push({
-        subtitle_label: {
-            type: "label",
-            text: "#text",
-            localize: false,
-            size: ["100%", "default"],
-            max_size: ["100%", "default"],
-            anchor_from: "center",
-            anchor_to: "center",
-            color: hexToRgb(element.textColor),
-            shadow: element.shadow,
-            layer: 31,
-            font_size: element.fontSize,
-            text_alignment: "center",
-            bindings: [
-                {
-                    binding_type: "view",
-                    source_control_name: "subtitle_data",
-                    source_property_name: "$slot_binding",
-                    target_property_name: "#text",
-                },
-            ],
-        },
+        label,
     });
-    const template = {
-        type: "panel",
-        ignored: element.ignored,
-        size: [element.width, element.height],
+    const template = withIgnored({
+        type: element.background === "none" ? "panel" : "image",
+        size: getAutoSizedTextContainer(element, 8),
         layer: element.layer,
         $slot_binding: "#text1",
         controls,
         bindings: [
             {
                 binding_type: "view",
-                source_control_name: "subtitle_data",
+                source_control_name: sourceControlName,
                 source_property_name: "(not ($slot_binding = ''))",
                 target_property_name: "#visible",
             },
         ],
-    };
+    }, element.ignored);
+    if (element.background !== "none") {
+        template.texture = element.background === "vanilla" ? "textures/ui/hud_tip_text_background" : "textures/ui/white_background";
+        template.alpha = element.backgroundAlpha;
+        if (element.background === "solid") {
+            template.color = hexToRgb(element.backgroundColor);
+        }
+    }
     return template;
 }
+function buildSubtitleSlotTemplate(element) {
+    return buildSliceSlotTemplate(element, "subtitle_data", "subtitle");
+}
+function buildTitleSlotTemplate(element) {
+    return buildSliceSlotTemplate(element, "title_data", "title");
+}
 function buildActionbarControl(element) {
-    const control = {
+    const label = {
+        type: "label",
+        text: "$display_text",
+        size: getTextLabelSize(element),
+        anchor_from: "right_middle",
+        anchor_to: "right_middle",
+        offset: [-5, 0],
+        shadow: element.shadow,
+        layer: 2,
+        $atext: "$actionbar_text",
+        "$display_text|default": "$atext",
+        variables: [
+            {
+                requires: element.prefix ? prefixMatchExpression("$atext", element.prefix) : "(not ($atext = ''))",
+                $display_text: element.prefix && element.stripPrefix
+                    ? removePrefixExpression("$atext", element.prefix, true)
+                    : "$atext",
+            },
+        ],
+    };
+    if (element.textColor !== "#ffffff") {
+        label.color = hexToRgb(element.textColor);
+    }
+    if (element.fontSize !== "normal") {
+        label.font_size = element.fontSize;
+    }
+    if (element.background === "none") {
+        label.size = ["100%", "default"];
+    }
+    const control = withIgnored({
         type: element.background === "none" ? "panel" : "image",
-        ignored: element.ignored,
-        size: [element.width, element.height],
+        size: element.background === "none" ? [element.width, element.height] : ["100%c + 10px", "100%cm + 4px"],
         anchor_from: element.anchor,
         anchor_to: element.anchor,
         offset: [element.x, element.y],
-        layer: element.layer,
         $atext: "$actionbar_text",
         visible: element.prefix ? prefixMatchExpression("$atext", element.prefix) : "(not ($atext = ''))",
         controls: [
             {
-                actionbar_label: {
-                    type: "label",
-                    text: "$display_text",
-                    localize: false,
-                    size: ["100%", "default"],
-                    max_size: ["100%", "default"],
-                    anchor_from: "center",
-                    anchor_to: "center",
-                    color: hexToRgb(element.textColor),
-                    shadow: element.shadow,
-                    layer: 31,
-                    font_size: element.fontSize,
-                    text_alignment: "center",
-                    $atext: "$actionbar_text",
-                    "$display_text|default": "$atext",
-                    variables: [
-                        {
-                            requires: element.prefix ? prefixMatchExpression("$atext", element.prefix) : "(not ($atext = ''))",
-                            $display_text: element.prefix && element.stripPrefix
-                                ? removePrefixExpression("$atext", element.prefix, true)
-                                : "$atext",
-                        },
-                    ],
-                },
+                actionbar_label: label,
             },
         ],
-    };
+    }, element.ignored);
+    if (element.layer !== 32) {
+        control.layer = element.layer;
+    }
     if (element.background !== "none") {
         control.texture = element.background === "vanilla" ? "textures/ui/hud_tip_text_background" : "textures/ui/white_background";
         control.alpha = element.backgroundAlpha;
@@ -529,6 +604,93 @@ function buildActionbarControl(element) {
         }
     }
     return control;
+}
+function buildPreservedActionbarDisplay(element) {
+    const controls = [
+        {
+            data_control: {
+                type: "panel",
+                size: [0, 0],
+                property_bag: {
+                    "#preserved_text": "",
+                },
+                bindings: [
+                    {
+                        binding_name: "#hud_actionbar_text_string",
+                        binding_type: "global",
+                    },
+                    {
+                        binding_name: "#hud_actionbar_text_string",
+                        binding_name_override: "#preserved_text",
+                        binding_condition: "visibility_changed",
+                        binding_type: "global",
+                    },
+                    {
+                        binding_type: "view",
+                        source_property_name: element.prefix
+                            ? `(not (#hud_actionbar_text_string = #preserved_text) and ${prefixMatchExpression("#hud_actionbar_text_string", element.prefix)})`
+                            : "(not (#hud_actionbar_text_string = #preserved_text) and (not (#hud_actionbar_text_string = '')))",
+                        target_property_name: "#visible",
+                    },
+                ],
+            },
+        },
+    ];
+    const label = {
+        type: "label",
+        text: "#text",
+        size: getTextLabelSize(element),
+        anchor_from: "right_middle",
+        anchor_to: "right_middle",
+        offset: [-5, 0],
+        shadow: element.shadow,
+        layer: 2,
+        bindings: [
+            {
+                binding_type: "view",
+                source_control_name: "data_control",
+                source_property_name: removePrefixExpression("#preserved_text", element.prefix, element.stripPrefix),
+                target_property_name: "#text",
+            },
+        ],
+    };
+    if (element.textColor !== "#ffffff") {
+        label.color = hexToRgb(element.textColor);
+    }
+    if (element.fontSize !== "normal") {
+        label.font_size = element.fontSize;
+    }
+    if (element.background === "none") {
+        label.size = ["100%", "default"];
+    }
+    controls.push({
+        actionbar_label: label,
+    });
+    const display = withIgnored({
+        type: element.background === "none" ? "panel" : "image",
+        size: element.background === "none" ? [element.width, element.height] : ["100%c + 10px", "100%cm + 4px"],
+        anchor_from: element.anchor,
+        anchor_to: element.anchor,
+        offset: [element.x, element.y],
+        layer: element.layer,
+        controls,
+        bindings: [
+            {
+                binding_type: "view",
+                source_control_name: "data_control",
+                source_property_name: "(not (#preserved_text = ''))",
+                target_property_name: "#visible",
+            },
+        ],
+    }, element.ignored);
+    if (element.background !== "none") {
+        display.texture = element.background === "vanilla" ? "textures/ui/hud_tip_text_background" : "textures/ui/white_background";
+        display.alpha = element.backgroundAlpha;
+        if (element.background === "solid") {
+            display.color = hexToRgb(element.backgroundColor);
+        }
+    }
+    return display;
 }
 function buildAnimationDefinitions(elementKey, element, destroyTarget) {
     if (element.animationPreset === "none") {
@@ -589,13 +751,40 @@ function buildHudJson() {
     const rootInsert = [];
     const title = state.elements.title;
     if (title.enabled) {
-        json.title_control = buildTitleControl(title);
-        const titleAnimation = buildAnimationDefinitions("title_control", title);
-        if (titleAnimation.entryAnimation) {
-            json.title_control.alpha = `@hud.${titleAnimation.entryAnimation}`;
+        if (title.titleMode === "slice") {
+            const slotCount = clamp(title.sliceSlotCount ?? 5, 1, 30);
+            json.title_data = buildTitleSliceData(title);
+            json.title_slot_template = buildTitleSlotTemplate(title);
+            const titleAnimation = buildAnimationDefinitions("title_slot_template", title);
+            if (titleAnimation.entryAnimation) {
+                json.title_slot_template.alpha = `@hud.${titleAnimation.entryAnimation}`;
+            }
+            Object.assign(json, titleAnimation.definitions);
+            rootInsert.push({ "title_data@hud.title_data": {} });
+            for (let index = 1; index <= slotCount; index++) {
+                const slotLayout = getSliceSlotLayout(title, index - 1);
+                rootInsert.push({
+                    [`title_slot${index}@hud.title_slot_template`]: {
+                        $slot_binding: `#text${index}`,
+                        anchor_from: slotLayout.anchor,
+                        anchor_to: slotLayout.anchor,
+                        offset: [
+                            slotLayout.x,
+                            slotLayout.y,
+                        ],
+                    },
+                });
+            }
         }
-        Object.assign(json, titleAnimation.definitions);
-        rootInsert.push({ "title_control@hud.title_control": {} });
+        else {
+            json.title_control = buildTitleControl(title);
+            const titleAnimation = buildAnimationDefinitions("title_control", title);
+            if (titleAnimation.entryAnimation) {
+                json.title_control.alpha = `@hud.${titleAnimation.entryAnimation}`;
+            }
+            Object.assign(json, titleAnimation.definitions);
+            rootInsert.push({ "title_ctrl@hud.title_control": {} });
+        }
         if (title.hideVanilla) {
             json["hud_title_text/title_frame"] = {
                 bindings: [
@@ -612,10 +801,7 @@ function buildHudJson() {
     const subtitle = state.elements.subtitle;
     if (subtitle.enabled) {
         if (subtitle.subtitleMode === "slice") {
-            const slotCount = clamp(subtitle.sliceSlotCount ?? 5, 1, 12);
-            const columns = clamp(subtitle.sliceColumns ?? 2, 1, 4);
-            const gapX = subtitle.sliceGapX ?? 8;
-            const gapY = subtitle.sliceGapY ?? 8;
+            const slotCount = clamp(subtitle.sliceSlotCount ?? 5, 1, 30);
             json.subtitle_data = buildSubtitleSliceData(subtitle);
             json.subtitle_slot_template = buildSubtitleSlotTemplate(subtitle);
             const subtitleAnimation = buildAnimationDefinitions("subtitle_slot_template", subtitle);
@@ -625,16 +811,15 @@ function buildHudJson() {
             Object.assign(json, subtitleAnimation.definitions);
             rootInsert.push({ "subtitle_data@hud.subtitle_data": {} });
             for (let index = 1; index <= slotCount; index++) {
-                const column = (index - 1) % columns;
-                const row = Math.floor((index - 1) / columns);
+                const slotLayout = getSliceSlotLayout(subtitle, index - 1);
                 rootInsert.push({
                     [`sub_slot${index}@hud.subtitle_slot_template`]: {
                         $slot_binding: `#text${index}`,
-                        anchor_from: subtitle.anchor,
-                        anchor_to: subtitle.anchor,
+                        anchor_from: slotLayout.anchor,
+                        anchor_to: slotLayout.anchor,
                         offset: [
-                            subtitle.x + column * (subtitle.width + gapX),
-                            subtitle.y + row * (subtitle.height + gapY),
+                            slotLayout.x,
+                            slotLayout.y,
                         ],
                     },
                 });
@@ -693,6 +878,10 @@ function buildHudJson() {
                 },
             ],
         };
+        if (actionbar.preserve) {
+            json.preserved_actionbar_display = buildPreservedActionbarDisplay(actionbar);
+            rootInsert.unshift({ "preserved_actionbar@hud.preserved_actionbar_display": {} });
+        }
         if (actionbar.hideVanilla) {
             json["hud_actionbar_text"] = {
                 $atext: "$actionbar_text",
@@ -758,7 +947,7 @@ function previewElementText(element) {
     return element.sampleText;
 }
 function previewSliceSlotTexts(element) {
-    const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 12);
+    const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 30);
     const slotSize = clamp(element.sliceSlotSize ?? 20, 1, 200);
     const source = previewElementText(element).replace(/\t/g, "");
     const slots = [];
@@ -796,6 +985,21 @@ function sendSubtitleSlots(player, ${args}) {
   const data = [${slotArray}].map((slot) => pad(slot, ${slotSize})).join("");
   player.runCommand('titleraw @s title {"rawtext":[{"text":""}]}');
   player.runCommand(\`titleraw @s subtitle {"rawtext":[{"text":"\${data}"}]}\`);
+}`;
+}
+function buildTitleSliceScriptHelper(element) {
+    const slotSize = clamp(element.sliceSlotSize ?? 20, 1, 200);
+    const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 12);
+    const args = Array.from({ length: slotCount }, (_, index) => `slot${index + 1}`).join(", ");
+    const slotArray = Array.from({ length: slotCount }, (_, index) => `slot${index + 1}`).join(", ");
+    return `function pad(text, size = ${slotSize}) {
+  const safe = String(text ?? "");
+  return safe + "\\t".repeat(Math.max(0, size - safe.length));
+}
+
+function sendTitleSlots(player, ${args}) {
+  const data = [${slotArray}].map((slot) => pad(slot, ${slotSize})).join("");
+  player.runCommand(\`titleraw @s title {"rawtext":[{"text":"\${data}"}]}\`);
 }`;
 }
 function renderSidebar() {
@@ -868,19 +1072,16 @@ function renderCanvas() {
         const withBg = element.background === "none" ? "" : " hudEditorPreviewItemWithBg";
         const ignoredStyle = element.ignored ? "opacity:0.35;" : "";
         const bgStyle = `${element.background === "solid" ? `background:${element.backgroundColor};opacity:${element.backgroundAlpha};` : ""}${ignoredStyle}`;
-        if (element.id === "subtitle" && element.subtitleMode === "slice") {
+        if ((element.id === "title" && element.titleMode === "slice") || (element.id === "subtitle" && element.subtitleMode === "slice")) {
             const slotCount = clamp(element.sliceSlotCount ?? 5, 1, 12);
-            const columns = clamp(element.sliceColumns ?? 2, 1, 4);
-            const gapX = element.sliceGapX ?? 8;
-            const gapY = element.sliceGapY ?? 8;
             const slotTexts = previewSliceSlotTexts(element);
             return Array.from({ length: slotCount }, (_, rawIndex) => {
-                const column = rawIndex % columns;
-                const row = Math.floor(rawIndex / columns);
+                const slotLayout = getSliceSlotLayout(element, rawIndex);
                 const rect = computePreviewRect({
                     ...element,
-                    x: element.x + column * (element.width + gapX),
-                    y: element.y + row * (element.height + gapY),
+                    anchor: slotLayout.anchor,
+                    x: slotLayout.x,
+                    y: slotLayout.y,
                 });
                 return `
                         <div class="hudEditorPreviewItem${selectedClass}${withBg}" data-element-id="${element.id}" style="left:${rect.left}px;top:${rect.top}px;width:${element.width}px;height:${element.height}px;z-index:${element.layer};${ignoredStyle}">
@@ -932,6 +1133,9 @@ function renderCanvas() {
 }
 function renderInspector() {
     const element = getSelectedElement();
+    const isTitleSlice = element.id === "title" && element.titleMode === "slice";
+    const isSubtitleSlice = element.id === "subtitle" && element.subtitleMode === "slice";
+    const sliceSlots = isTitleSlice || isSubtitleSlice ? ensureSliceSlots(element) : [];
     const inspector = getForm().querySelector(".hudEditorInspector");
     if (!inspector)
         return;
@@ -945,7 +1149,7 @@ function renderInspector() {
                 <label>\uC811\uB450\uC5B4</label><input data-field="prefix" type="text" value="${escapeHtml(element.prefix)}">
                 <label>\uC811\uB450\uC5B4 \uC81C\uAC70</label><input data-field="stripPrefix" type="checkbox" ${element.stripPrefix ? "checked" : ""}>
                 <label>\uBC14\uB2D0\uB77C \uC228\uAE40</label><input data-field="hideVanilla" type="checkbox" ${element.hideVanilla ? "checked" : ""}>
-                <label>\uAC12 \uBCF4\uC874</label><input data-field="preserve" type="checkbox" ${element.preserve ? "checked" : ""} ${element.id !== "title" ? "disabled" : ""}>
+                ${element.id === "actionbar" ? `<label>preserve</label><input data-field="preserve" type="checkbox" ${element.preserve ? "checked" : ""}>` : ""}
                 <label>\uC575\uCEE4</label>
                 <select data-field="anchor">
                     ${["top_left", "top_middle", "top_right", "left_middle", "center", "right_middle", "bottom_left", "bottom_middle", "bottom_right"].map((anchor) => `<option value="${anchor}" ${element.anchor === anchor ? "selected" : ""}>${anchor}</option>`).join("")}
@@ -971,14 +1175,14 @@ function renderInspector() {
                 <label>\uBC30\uACBD \uC0C9\uC0C1</label><input data-field="backgroundColor" type="color" value="${element.backgroundColor}" ${element.background === "solid" ? "" : "disabled"}>
                 ${element.id !== "actionbar" ? `
                     <label>\uD45C\uC2DC \uD615\uC2DD</label>
-                    <select data-field="displayMode" ${element.id === "subtitle" && element.subtitleMode === "slice" ? "disabled" : ""}>
+                    <select data-field="displayMode" ${(element.id === "subtitle" && element.subtitleMode === "slice") || (element.id === "title" && element.titleMode === "slice") ? "disabled" : ""}>
                         <option value="text" ${element.displayMode !== "progress" ? "selected" : ""}>\uD14D\uC2A4\uD2B8</option>
                         <option value="progress" ${element.displayMode === "progress" ? "selected" : ""}>\uD504\uB85C\uADF8\uB808\uC2A4 \uBC14</option>
                     </select>
-                    <label>\uCD5C\uB300\uAC12</label><input data-field="maxValue" type="number" min="1" value="${element.maxValue}" ${element.displayMode === "progress" && !(element.id === "subtitle" && element.subtitleMode === "slice") ? "" : "disabled"}>
-                    <label>\uCC44\uC6C0 \uC0C9\uC0C1</label><input data-field="fillColor" type="color" value="${element.fillColor}" ${element.displayMode === "progress" && !(element.id === "subtitle" && element.subtitleMode === "slice") ? "" : "disabled"}>
+                    <label>\uCD5C\uB300\uAC12</label><input data-field="maxValue" type="number" min="1" value="${element.maxValue}" ${element.displayMode === "progress" && !(element.id === "subtitle" && element.subtitleMode === "slice") && !(element.id === "title" && element.titleMode === "slice") ? "" : "disabled"}>
+                    <label>\uCC44\uC6C0 \uC0C9\uC0C1</label><input data-field="fillColor" type="color" value="${element.fillColor}" ${element.displayMode === "progress" && !(element.id === "subtitle" && element.subtitleMode === "slice") && !(element.id === "title" && element.titleMode === "slice") ? "" : "disabled"}>
                     <label>\uCC44\uC6C0 \uBC29\uD5A5</label>
-                    <select data-field="clipDirection" ${element.displayMode === "progress" && !(element.id === "subtitle" && element.subtitleMode === "slice") ? "" : "disabled"}>
+                    <select data-field="clipDirection" ${element.displayMode === "progress" && !(element.id === "subtitle" && element.subtitleMode === "slice") && !(element.id === "title" && element.titleMode === "slice") ? "" : "disabled"}>
                         ${["left", "right", "up", "down"].map((direction) => `<option value="${direction}" ${element.clipDirection === direction ? "selected" : ""}>${direction}</option>`).join("")}
                     </select>
                 ` : ""}
@@ -991,13 +1195,25 @@ function renderInspector() {
                 <label>\uB4E4\uC5B4\uC624\uB294 \uC2DC\uAC04</label><input data-field="animInDuration" type="number" min="0" step="0.05" value="${element.animInDuration}" ${element.animationPreset === "fade_hold_fade" ? "" : "disabled"}>
                 <label>\uC720\uC9C0 \uC2DC\uAC04</label><input data-field="animHoldDuration" type="number" min="0" step="0.05" value="${element.animHoldDuration}" ${element.animationPreset === "fade_hold_fade" ? "" : "disabled"}>
                 <label>\uC0AC\uB77C\uC9C0\uB294 \uC2DC\uAC04</label><input data-field="animOutDuration" type="number" min="0.05" step="0.05" value="${element.animOutDuration}" ${element.animationPreset !== "none" ? "" : "disabled"}>
+                ${element.id === "title" ? `
+                    <label>\uD45C\uC2DC \uBAA8\uB4DC</label>
+                    <select data-field="titleMode">
+                        <option value="single" ${element.titleMode !== "slice" ? "selected" : ""}>\uB2E8\uC77C</option>
+                        <option value="slice" ${element.titleMode === "slice" ? "selected" : ""}>\uC2AC\uB77C\uC774\uC2F1</option>
+                    </select>
+                    <label>\uC2AC\uB86F \uC218</label><input data-field="sliceSlotCount" type="number" min="1" max="30" value="${element.sliceSlotCount ?? 5}" ${element.titleMode === "slice" ? "" : "disabled"}>
+                    <label>\uC2AC\uB86F \uD06C\uAE30</label><input data-field="sliceSlotSize" type="number" min="1" max="200" value="${element.sliceSlotSize ?? 20}" ${element.titleMode === "slice" ? "" : "disabled"}>
+                    <label>\uC5F4 \uC218</label><input data-field="sliceColumns" type="number" min="1" max="4" value="${element.sliceColumns ?? 2}" ${element.titleMode === "slice" ? "" : "disabled"}>
+                    <label>\uAC00\uB85C \uAC04\uACA9</label><input data-field="sliceGapX" type="number" value="${element.sliceGapX ?? 8}" ${element.titleMode === "slice" ? "" : "disabled"}>
+                    <label>\uC138\uB85C \uAC04\uACA9</label><input data-field="sliceGapY" type="number" value="${element.sliceGapY ?? 8}" ${element.titleMode === "slice" ? "" : "disabled"}>
+                ` : ""}
                 ${element.id === "subtitle" ? `
                     <label>\uD45C\uC2DC \uBAA8\uB4DC</label>
                     <select data-field="subtitleMode">
                         <option value="single" ${element.subtitleMode !== "slice" ? "selected" : ""}>\uB2E8\uC77C</option>
                         <option value="slice" ${element.subtitleMode === "slice" ? "selected" : ""}>\uC2AC\uB77C\uC774\uC2F1</option>
                     </select>
-                    <label>\uC2AC\uB86F \uC218</label><input data-field="sliceSlotCount" type="number" min="1" max="12" value="${element.sliceSlotCount ?? 5}" ${element.subtitleMode === "slice" ? "" : "disabled"}>
+                    <label>\uC2AC\uB86F \uC218</label><input data-field="sliceSlotCount" type="number" min="1" max="30" value="${element.sliceSlotCount ?? 5}" ${element.subtitleMode === "slice" ? "" : "disabled"}>
                     <label>\uC2AC\uB86F \uD06C\uAE30</label><input data-field="sliceSlotSize" type="number" min="1" max="200" value="${element.sliceSlotSize ?? 20}" ${element.subtitleMode === "slice" ? "" : "disabled"}>
                     <label>\uC5F4 \uC218</label><input data-field="sliceColumns" type="number" min="1" max="4" value="${element.sliceColumns ?? 2}" ${element.subtitleMode === "slice" ? "" : "disabled"}>
                     <label>\uAC00\uB85C \uAC04\uACA9</label><input data-field="sliceGapX" type="number" value="${element.sliceGapX ?? 8}" ${element.subtitleMode === "slice" ? "" : "disabled"}>
@@ -1005,15 +1221,34 @@ function renderInspector() {
                 ` : ""}
             </div>
         </div>
+        ${(isTitleSlice || isSubtitleSlice) ? `
+            <div class="hudEditorInspectorCard">
+                <div class="hudEditorInspectorTitle">\uC2AC\uB86F \uBC30\uCE58</div>
+                <div class="hudEditorInspectorBody">
+                    ${sliceSlots.map((slot, rawIndex) => `
+                        <label>\uC2AC\uB86F ${rawIndex + 1} \uC575\uCEE4</label>
+                        <select data-slot-index="${rawIndex}" data-slot-field="anchor">
+                            ${["top_left", "top_middle", "top_right", "left_middle", "center", "right_middle", "bottom_left", "bottom_middle", "bottom_right"].map((anchor) => `<option value="${anchor}" ${slot.anchor === anchor ? "selected" : ""}>${anchor}</option>`).join("")}
+                        </select>
+                        <label>\uC2AC\uB86F ${rawIndex + 1} X</label><input data-slot-index="${rawIndex}" data-slot-field="x" type="number" value="${slot.x}">
+                        <label>\uC2AC\uB86F ${rawIndex + 1} Y</label><input data-slot-index="${rawIndex}" data-slot-field="y" type="number" value="${slot.y}">
+                    `).join("")}
+                </div>
+            </div>
+        ` : ""}
         <div class="hudEditorInspectorCard">
             <div class="hudEditorInspectorTitle">\uCC44\uB110 \uC548\uB0B4</div>
             <div class="hudEditorDescription">
                 <div>Title: <code>#hud_title_text_string</code></div>
                 <div>Subtitle: <code>#hud_subtitle_text_string</code></div>
                 <div>Actionbar: <code>$actionbar_text</code></div>
+                <div>Actionbar preserve\uB97C \uCF1C\uBA74 <code>#hud_actionbar_text_string</code> \uAE30\uBC18 \uBCF4\uC874 \uD328\uB110\uB3C4 \uD568\uAED8 \uB0B4\uBCF4\uB0C5\uB2C8\uB2E4.</div>
                 <div>\uC561\uC158\uBC14\uB294 \uBC14\uB2D0\uB77C \uADDC\uCE59\uC5D0 \uB9DE\uAC8C factory \uBC29\uC2DD\uC73C\uB85C \uB0B4\uBCF4\uB0C5\uB2C8\uB2E4.</div>
-                <div>preserve \uD328\uD134\uC740 \uD0C0\uC774\uD2C0\uC5D0\uB9CC \uC801\uC6A9\uB429\uB2C8\uB2E4.</div>
+                <div>title \uB2E8\uC77C \uBAA8\uB4DC\uB294 \uD604\uC7AC <code>#hud_title_text_string</code>\uC744 \uC9C1\uC811 \uAC00\uB85C\uCC44 \uB80C\uB354\uD569\uB2C8\uB2E4.</div>
+                <div>\uD0C0\uC774\uD2C0\uB3C4 \uC2AC\uB77C\uC774\uC2F1\uC744 \uC9C0\uC6D0\uD558\uC9C0\uB9CC, \uC774 \uBAA8\uB4DC\uC5D0\uC11C\uB3C4 \uD604\uC7AC title \uBB38\uC790\uC5F4 \uAE30\uC900\uC73C\uB85C \uBC14\uB85C \uACC4\uC0B0\uD569\uB2C8\uB2E4.</div>
                 <div>\uC11C\uBE0C\uD0C0\uC774\uD2C0 \uC2AC\uB77C\uC774\uC2F1 \uBAA8\uB4DC\uB97C \uCF1C\uBA74 <code>subtitle_data</code>\uC640 <code>sub_slotN</code> \uAD6C\uC870\uB85C \uB0B4\uBCF4\uB0C5\uB2C8\uB2E4.</div>
+                <div>\uC2AC\uB77C\uC774\uC2F1 \uBAA8\uB4DC\uC5D0\uC11C\uB294 \uC2AC\uB86F\uBCC4 \uC575\uCEE4/X/Y\uB97C \uAC1C\uBCC4 \uD3B8\uC9D1\uD574 \uC6D0\uD558\uB294 \uBC30\uCE58\uB97C \uC9C1\uC811 \uB9CC\uB4E4 \uC218 \uC788\uC2B5\uB2C8\uB2E4.</div>
+                ${element.id === "title" && element.titleMode === "slice" ? `<div><code>pad(text, size)</code> \uD615\uC2DD\uC73C\uB85C \uAC01 \uC2AC\uB86F\uC744 \\t \uD328\uB529\uD55C \uB4A4 title\uB85C \uC774\uC5B4\uBD99\uC5EC \uBCF4\uB0B4\uC57C \uD569\uB2C8\uB2E4.</div>` : ""}
                 <div>\uC560\uB2C8\uBA54\uC774\uC158\uC740 <code>alpha</code> \uCCB4\uC774\uB2DD\uC73C\uB85C \uB0B4\uBCF4\uB0B4\uBA70, actionbar\uC5D0\uC11C\uB294 \uD31D\ud1a0\ub9ac \uD750\uB984\uC5D0 \uB9DE\uCD94\uAE30 \uC704\uD574 fade out \uD504\uB9AC\uC14B\uC774 \uC798 \uB9DE\uC2B5\uB2C8\uB2E4.</div>
                 ${element.id === "subtitle" && element.subtitleMode === "slice" ? `<div><code>pad(text, size)</code> \uD615\uC2DD\uC73C\uB85C \uAC01 \uC2AC\uB86F\uC744 \\t \uD328\uB529\uD55C \uB4A4 subtitle\uB85C \uC774\uC5B4\uBD99\uC5EC \uBCF4\uB0B4\uC57C \uD569\uB2C8\uB2E4.</div>` : ""}
                 <div><code>ignored: true</code>\uB97C \uCF1C\uBA74 \uB80C\uB354\uB9C1\uACFC \uBC14\uC778\uB529 \uD3C9\uAC00\uAC00 \uD568\uAED8 \uBE44\uD65C\uC131\uD654\uB429\uB2C8\uB2E4.</div>
@@ -1045,25 +1280,65 @@ function renderInspector() {
         input.addEventListener("input", onChange);
         input.addEventListener("change", onChange);
     });
+    inspector.querySelectorAll("input[data-slot-field], select[data-slot-field]").forEach((input) => {
+        const field = input.dataset.slotField;
+        const rawIndex = Number.parseInt(input.dataset.slotIndex || "0", 10) || 0;
+        const onChange = () => {
+            const target = state.elements[state.selectedId];
+            const slots = ensureSliceSlots(target);
+            const slot = slots[rawIndex];
+            if (!slot) {
+                return;
+            }
+            if (field === "x" || field === "y") {
+                slot[field] = Number.parseInt(input.value, 10) || 0;
+            }
+            else {
+                slot[field] = input.value;
+            }
+            renderAll();
+        };
+        input.addEventListener("input", onChange);
+        input.addEventListener("change", onChange);
+    });
 }
 function renderScriptHelper() {
     const container = getForm().querySelector(".hudEditorScriptCard");
     if (!container)
         return;
+    const title = state.elements.title;
     const subtitle = state.elements.subtitle;
-    if (!subtitle.enabled || subtitle.subtitleMode !== "slice") {
+    const sections = [];
+    if (title.enabled && title.titleMode === "slice") {
+        sections.push(`
+            <div class="hudEditorSidebarTitle">Title Script Helper</div>
+            <textarea class="hudEditorOutput hudEditorScriptOutput hudEditorTitleScriptOutput" spellcheck="false">${escapeHtml(buildTitleSliceScriptHelper(title))}</textarea>
+            <div class="hudEditorSidebarActions">
+                <button type="button" class="propertyInputButton hudEditorCopyTitleScript">Script \uBCF5\uC0AC</button>
+            </div>
+        `);
+    }
+    if (subtitle.enabled && subtitle.subtitleMode === "slice") {
+        sections.push(`
+            <div class="hudEditorSidebarTitle">Subtitle Script Helper</div>
+            <textarea class="hudEditorOutput hudEditorScriptOutput hudEditorSubtitleScriptOutput" spellcheck="false">${escapeHtml(buildSubtitleSliceScriptHelper(subtitle))}</textarea>
+            <div class="hudEditorSidebarActions">
+                <button type="button" class="propertyInputButton hudEditorCopySubtitleScript">Script \uBCF5\uC0AC</button>
+            </div>
+        `);
+    }
+    if (sections.length === 0) {
         container.innerHTML = "";
         return;
     }
-    container.innerHTML = `
-        <div class="hudEditorSidebarTitle">Subtitle Script Helper</div>
-        <textarea class="hudEditorOutput hudEditorScriptOutput" spellcheck="false">${escapeHtml(buildSubtitleSliceScriptHelper(subtitle))}</textarea>
-        <div class="hudEditorSidebarActions">
-            <button type="button" class="propertyInputButton hudEditorCopyScript">Script \uBCF5\uC0AC</button>
-        </div>
-    `;
-    const copyButton = container.querySelector(".hudEditorCopyScript");
-    copyButton?.addEventListener("click", async () => {
+    container.innerHTML = sections.join("");
+    const copyTitleButton = container.querySelector(".hudEditorCopyTitleScript");
+    copyTitleButton?.addEventListener("click", async () => {
+        await navigator.clipboard.writeText(buildTitleSliceScriptHelper(title));
+        new Notification("Title Script helper\uB97C \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.", 2200, "notif");
+    });
+    const copySubtitleButton = container.querySelector(".hudEditorCopySubtitleScript");
+    copySubtitleButton?.addEventListener("click", async () => {
         await navigator.clipboard.writeText(buildSubtitleSliceScriptHelper(subtitle));
         new Notification("Subtitle Script helper\uB97C \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.", 2200, "notif");
     });
@@ -1083,9 +1358,9 @@ function renderModalShell() {
                 <div class="hudEditorSidebarCard">
                     <div class="hudEditorSidebarTitle">HUD \uC694\uC18C</div>
                     <div class="hudEditorSidebarList"></div>
-                    <div class="hudEditorSidebarActions">
-                        <button type="button" class="propertyInputButton hudEditorReset">\uBC14\uB2D0\uB77C \uC704\uCE58\uB85C \uCD08\uAE30\uD654</button>
-                    </div>
+                <div class="hudEditorSidebarActions">
+                    <button type="button" class="propertyInputButton hudEditorReset">\uBC14\uB2D0\uB77C \uC704\uCE58\uB85C \uCD08\uAE30\uD654</button>
+                </div>
                 </div>
             </div>
             <div class="hudEditorCenter">
@@ -1126,11 +1401,11 @@ function bindStaticActions() {
             ...state.elements.title,
             enabled: true,
             ignored: false,
-            sampleText: "info:\uACF5\uC9C0\uC785\uB2C8\uB2E4",
-            prefix: "info:",
-            stripPrefix: true,
-            hideVanilla: true,
-            preserve: true,
+            sampleText: "Title",
+            prefix: "",
+            stripPrefix: false,
+            hideVanilla: false,
+            preserve: false,
             anchor: "top_middle",
             x: 0,
             y: 130,
@@ -1151,15 +1426,22 @@ function bindStaticActions() {
             animInDuration: 0.25,
             animHoldDuration: 2,
             animOutDuration: 0.25,
+            titleMode: "single",
+            sliceSlotCount: 5,
+            sliceSlotSize: 20,
+            sliceColumns: 2,
+            sliceGapX: 8,
+            sliceGapY: 8,
+            sliceSlots: undefined,
         };
         state.elements.subtitle = {
             ...state.elements.subtitle,
             enabled: true,
             ignored: false,
-            sampleText: "\uBD80\uC81C\uBAA9\uC785\uB2C8\uB2E4",
+            sampleText: "Subtitle",
             prefix: "",
             stripPrefix: false,
-            hideVanilla: true,
+            hideVanilla: false,
             preserve: false,
             anchor: "top_middle",
             x: 0,
@@ -1187,15 +1469,16 @@ function bindStaticActions() {
             sliceColumns: 2,
             sliceGapX: 8,
             sliceGapY: 8,
+            sliceSlots: undefined,
         };
         state.elements.actionbar = {
             ...state.elements.actionbar,
             enabled: true,
             ignored: false,
-            sampleText: "info:\uC624\uB978\uCABD \uD45C\uC2DC",
-            prefix: "info:",
-            stripPrefix: true,
-            hideVanilla: true,
+            sampleText: "Actionbar",
+            prefix: "",
+            stripPrefix: false,
+            hideVanilla: false,
             preserve: false,
             anchor: "bottom_middle",
             x: 0,
@@ -1262,22 +1545,19 @@ function mountHudEditor() {
 export async function hudEditorModal() {
     mountHudEditor();
     const modal = getModal();
-    modal.style.display = "block";
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
     return new Promise((resolve) => {
         const handleResize = () => renderAll();
         const close = () => {
             modal.style.display = "none";
+            document.body.style.overflow = "";
             getCloseButton().onclick = null;
-            window.onclick = null;
             window.removeEventListener("resize", handleResize);
             resolve();
         };
         window.addEventListener("resize", handleResize);
         getCloseButton().onclick = close;
-        window.onclick = (event) => {
-            if (event.target === modal)
-                close();
-        };
     });
 }
 //# sourceMappingURL=hudEditorModal.js.map
