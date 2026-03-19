@@ -182,11 +182,11 @@ const state: HudEditorState = {
 };
 
 function getModal(): HTMLElement {
-    return document.getElementById("modalHudEditor") as HTMLElement;
+    return document.getElementById("hudEditorScreen") as HTMLElement;
 }
 
 function getCloseButton(): HTMLElement {
-    return document.getElementById("modalHudEditorClose") as HTMLElement;
+    return document.getElementById("hudEditorScreenClose") as HTMLElement;
 }
 
 function getForm(): HTMLDivElement {
@@ -1426,22 +1426,20 @@ function mountHudEditor(): void {
 export async function hudEditorModal(): Promise<void> {
     mountHudEditor();
     const modal = getModal();
-    modal.style.display = "block";
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
 
     return new Promise((resolve) => {
         const handleResize = () => renderAll();
         const close = () => {
             modal.style.display = "none";
+            document.body.style.overflow = "";
             getCloseButton().onclick = null;
-            window.onclick = null;
             window.removeEventListener("resize", handleResize);
             resolve();
         };
 
         window.addEventListener("resize", handleResize);
         getCloseButton().onclick = close;
-        window.onclick = (event: MouseEvent) => {
-            if (event.target === modal) close();
-        };
     });
 }
