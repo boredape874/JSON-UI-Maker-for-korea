@@ -74,6 +74,7 @@ type HudEditorState = {
         startMouseY: number;
         startX: number;
         startY: number;
+        slotIndex?: number;
         startSliceSlots?: HudSliceSlot[];
     };
 };
@@ -1264,7 +1265,7 @@ function renderCanvas(): void {
                         y: slotLayout.y,
                     });
                     return `
-                        <div class="hudEditorPreviewItem${selectedClass}${withBg}" data-element-id="${element.id}" style="left:${rect.left}px;top:${rect.top}px;width:${element.width}px;height:${element.height}px;z-index:${element.layer};${ignoredStyle}">
+                        <div class="hudEditorPreviewItem${selectedClass}${withBg}" data-element-id="${element.id}" data-slot-index="${rawIndex}" style="left:${rect.left}px;top:${rect.top}px;width:${element.width}px;height:${element.height}px;z-index:${element.layer};${ignoredStyle}">
                             <div class="hudEditorPreviewItemBg ${element.background === "vanilla" ? "hudEditorPreviewItemBgVanilla" : ""}" style="${bgStyle}"></div>
                             <div class="hudEditorPreviewText hudEditorFont-${element.fontSize}" style="color:${element.textColor};${element.shadow ? "text-shadow:0 2px 3px rgba(0,0,0,0.85);" : ""}">${escapeHtml(slotTexts[rawIndex] || `슬롯 ${rawIndex + 1}`)}</div>
                         </div>
@@ -1297,6 +1298,8 @@ function renderCanvas(): void {
         item.addEventListener("mousedown", (event) => {
             const id = item.dataset.elementId as HudChannel;
             const element = state.elements[id];
+            const rawSlotIndex = item.dataset.slotIndex;
+            const slotIndex = rawSlotIndex != null ? Number.parseInt(rawSlotIndex, 10) : undefined;
             state.selectedId = id;
             state.drag = {
                 id,
@@ -1304,6 +1307,7 @@ function renderCanvas(): void {
                 startMouseY: event.clientY,
                 startX: element.x,
                 startY: element.y,
+                slotIndex: Number.isFinite(slotIndex as number) ? slotIndex : undefined,
                 startSliceSlots: isSliceMode(element) ? ensureSliceSlots(element).map((slot) => ({ ...slot })) : undefined,
             };
             renderAll();
@@ -1777,14 +1781,27 @@ function attachDragHandlers(): void {
         const element = state.elements[state.drag.id];
         const deltaX = Math.round(event.clientX - state.drag.startMouseX);
         const deltaY = Math.round(event.clientY - state.drag.startMouseY);
-        element.x = Math.round(state.drag.startX + deltaX);
-        element.y = Math.round(state.drag.startY + deltaY);
         if (isSliceMode(element) && state.drag.startSliceSlots) {
-            element.sliceSlots = state.drag.startSliceSlots.map((slot) => ({
-                ...slot,
-                x: slot.x + deltaX,
-                y: slot.y + deltaY,
-            }));
+            if (typeof state.drag.slotIndex === "number") {
+                element.sliceSlots = state.drag.startSliceSlots.map((slot, index) => index === state.drag?.slotIndex
+                    ? {
+                        ...slot,
+                        x: slot.x + deltaX,
+                        y: slot.y + deltaY,
+                    }
+                    : { ...slot });
+            } else {
+                element.x = Math.round(state.drag.startX + deltaX);
+                element.y = Math.round(state.drag.startY + deltaY);
+                element.sliceSlots = state.drag.startSliceSlots.map((slot) => ({
+                    ...slot,
+                    x: slot.x + deltaX,
+                    y: slot.y + deltaY,
+                }));
+            }
+        } else {
+            element.x = Math.round(state.drag.startX + deltaX);
+            element.y = Math.round(state.drag.startY + deltaY);
         }
         renderAll();
     };
