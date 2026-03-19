@@ -6,6 +6,7 @@ type HudFontSize = "small" | "normal" | "large" | "extra_large";
 type HudSubtitleMode = "single" | "slice";
 type HudDisplayMode = "text" | "progress";
 type HudClipDirection = "left" | "right" | "up" | "down";
+type HudAnimationPreset = "none" | "fade_out" | "fade_hold_fade";
 type HudAnchor =
     | "top_left"
     | "top_middle"
@@ -43,6 +44,10 @@ type HudElement = {
     maxValue: number;
     fillColor: string;
     clipDirection: HudClipDirection;
+    animationPreset: HudAnimationPreset;
+    animInDuration: number;
+    animHoldDuration: number;
+    animOutDuration: number;
     subtitleMode?: HudSubtitleMode;
     sliceSlotCount?: number;
     sliceSlotSize?: number;
@@ -95,6 +100,10 @@ const state: HudEditorState = {
             maxValue: 100,
             fillColor: "#5be37a",
             clipDirection: "left",
+            animationPreset: "fade_hold_fade",
+            animInDuration: 0.25,
+            animHoldDuration: 2,
+            animOutDuration: 0.25,
         },
         subtitle: {
             id: "subtitle",
@@ -122,6 +131,10 @@ const state: HudEditorState = {
             maxValue: 100,
             fillColor: "#6fc3ff",
             clipDirection: "left",
+            animationPreset: "fade_hold_fade",
+            animInDuration: 0.2,
+            animHoldDuration: 2,
+            animOutDuration: 0.2,
             subtitleMode: "single",
             sliceSlotCount: 5,
             sliceSlotSize: 20,
@@ -155,6 +168,10 @@ const state: HudEditorState = {
             maxValue: 100,
             fillColor: "#5be37a",
             clipDirection: "left",
+            animationPreset: "fade_out",
+            animInDuration: 0.15,
+            animHoldDuration: 2.7,
+            animOutDuration: 3,
         },
     },
     drag: null,
@@ -609,6 +626,68 @@ function buildActionbarControl(element: HudElement): Record<string, unknown> {
     return control;
 }
 
+function buildAnimationDefinitions(
+    elementKey: string,
+    element: HudElement,
+    destroyTarget?: string,
+): { entryAnimation?: string; definitions: Record<string, unknown> } {
+    if (element.animationPreset === "none") {
+        return { definitions: {} };
+    }
+
+    const safeIn = Math.max(0.05, element.animInDuration || 0.2);
+    const safeHold = Math.max(0, element.animHoldDuration || 0);
+    const safeOut = Math.max(0.05, element.animOutDuration || 0.2);
+    const definitions: Record<string, unknown> = {};
+
+    if (element.animationPreset === "fade_out") {
+        const outName = `${elementKey}_anim_fade_out`;
+        definitions[outName] = {
+            anim_type: "alpha",
+            easing: "in_expo",
+            duration: safeOut,
+            from: 1,
+            to: 0,
+            ...(destroyTarget ? { destroy_at_end: destroyTarget } : {}),
+        };
+        return {
+            entryAnimation: outName,
+            definitions,
+        };
+    }
+
+    const inName = `${elementKey}_anim_fade_in`;
+    const waitName = `${elementKey}_anim_wait`;
+    const outName = `${elementKey}_anim_fade_out`;
+
+    definitions[inName] = {
+        anim_type: "alpha",
+        easing: "out_expo",
+        duration: safeIn,
+        from: 0,
+        to: 1,
+        next: `@hud.${waitName}`,
+    };
+    definitions[waitName] = {
+        anim_type: "wait",
+        duration: safeHold,
+        next: `@hud.${outName}`,
+    };
+    definitions[outName] = {
+        anim_type: "alpha",
+        easing: "in_expo",
+        duration: safeOut,
+        from: 1,
+        to: 0,
+        ...(destroyTarget ? { destroy_at_end: destroyTarget } : {}),
+    };
+
+    return {
+        entryAnimation: inName,
+        definitions,
+    };
+}
+
 function buildHudJson(): string {
     const json: Record<string, unknown> = {
         namespace: "hud",
@@ -619,6 +698,11 @@ function buildHudJson(): string {
     const title = state.elements.title;
     if (title.enabled) {
         json.title_control = buildTitleControl(title);
+        const titleAnimation = buildAnimationDefinitions("title_control", title);
+        if (titleAnimation.entryAnimation) {
+            (json.title_control as Record<string, unknown>).alpha = `@hud.${titleAnimation.entryAnimation}`;
+        }
+        Object.assign(json, titleAnimation.definitions);
         rootInsert.push({ "title_control@hud.title_control": {} });
 
         if (title.hideVanilla) {
@@ -645,6 +729,11 @@ function buildHudJson(): string {
 
             json.subtitle_data = buildSubtitleSliceData(subtitle);
             json.subtitle_slot_template = buildSubtitleSlotTemplate(subtitle);
+            const subtitleAnimation = buildAnimationDefinitions("subtitle_slot_template", subtitle);
+            if (subtitleAnimation.entryAnimation) {
+                (json.subtitle_slot_template as Record<string, unknown>).alpha = `@hud.${subtitleAnimation.entryAnimation}`;
+            }
+            Object.assign(json, subtitleAnimation.definitions);
             rootInsert.push({ "subtitle_data@hud.subtitle_data": {} });
 
             for (let index = 1; index <= slotCount; index++) {
@@ -664,6 +753,11 @@ function buildHudJson(): string {
             }
         } else {
             json.subtitle_control = buildSubtitleControl(subtitle);
+            const subtitleAnimation = buildAnimationDefinitions("subtitle_control", subtitle);
+            if (subtitleAnimation.entryAnimation) {
+                (json.subtitle_control as Record<string, unknown>).alpha = `@hud.${subtitleAnimation.entryAnimation}`;
+            }
+            Object.assign(json, subtitleAnimation.definitions);
             rootInsert.push({ "subtitle_control@hud.subtitle_control": {} });
         }
 
@@ -686,6 +780,11 @@ function buildHudJson(): string {
     const actionbar = state.elements.actionbar;
     if (actionbar.enabled) {
         json.my_custom_actionbar = buildActionbarControl(actionbar);
+        const actionbarAnimation = buildAnimationDefinitions("my_custom_actionbar", actionbar, "hud_actionbar_text");
+        if (actionbarAnimation.entryAnimation) {
+            (json.my_custom_actionbar as Record<string, unknown>).alpha = `@hud.${actionbarAnimation.entryAnimation}`;
+        }
+        Object.assign(json, actionbarAnimation.definitions);
         json["root_panel/hud_actionbar_text_area"] = {
             modifications: [
                 {
@@ -901,6 +1000,7 @@ function renderCanvas(): void {
             return `
                 <div class="hudEditorPreviewItem${selectedClass}${withBg}" data-element-id="${element.id}" style="left:${rect.left}px;top:${rect.top}px;width:${element.width}px;height:${element.height}px;z-index:${element.layer};${ignoredStyle}">
                     <div class="hudEditorPreviewItemBg ${element.background === "vanilla" ? "hudEditorPreviewItemBgVanilla" : ""}" style="${bgStyle}"></div>
+                    ${element.animationPreset !== "none" ? `<div style="position:absolute;left:8px;top:6px;padding:2px 6px;border-radius:999px;background:rgba(8,12,20,0.72);border:1px solid rgba(255,255,255,0.12);color:#d7e4f6;font-size:10px;line-height:1;z-index:2;">${element.animationPreset}</div>` : ""}
                     ${element.displayMode === "progress" && element.id !== "actionbar" ? `<div style="position:absolute;left:${fillLeft};top:${fillTop};width:${fillWidth};height:${fillHeight};background:${element.fillColor};opacity:0.9;"></div>` : ""}
                     <div class="hudEditorPreviewText hudEditorFont-${element.fontSize}" style="color:${element.textColor};${element.shadow ? "text-shadow:0 2px 3px rgba(0,0,0,0.85);" : ""}">${escapeHtml(element.displayMode === "progress" && element.id !== "actionbar" ? `${previewNumericValue(element)} / ${element.maxValue}` : previewElementText(element))}</div>
                 </div>
@@ -982,6 +1082,15 @@ function renderInspector(): void {
                         ${["left", "right", "up", "down"].map((direction) => `<option value="${direction}" ${element.clipDirection === direction ? "selected" : ""}>${direction}</option>`).join("")}
                     </select>
                 ` : ""}
+                <label>\uC560\uB2C8\uBA54\uC774\uC158</label>
+                <select data-field="animationPreset">
+                    <option value="none" ${element.animationPreset === "none" ? "selected" : ""}>\uC5C6\uC74C</option>
+                    <option value="fade_out" ${element.animationPreset === "fade_out" ? "selected" : ""}>fade out</option>
+                    <option value="fade_hold_fade" ${element.animationPreset === "fade_hold_fade" ? "selected" : ""}>fade in + wait + fade out</option>
+                </select>
+                <label>\uB4E4\uC5B4\uC624\uB294 \uC2DC\uAC04</label><input data-field="animInDuration" type="number" min="0" step="0.05" value="${element.animInDuration}" ${element.animationPreset === "fade_hold_fade" ? "" : "disabled"}>
+                <label>\uC720\uC9C0 \uC2DC\uAC04</label><input data-field="animHoldDuration" type="number" min="0" step="0.05" value="${element.animHoldDuration}" ${element.animationPreset === "fade_hold_fade" ? "" : "disabled"}>
+                <label>\uC0AC\uB77C\uC9C0\uB294 \uC2DC\uAC04</label><input data-field="animOutDuration" type="number" min="0.05" step="0.05" value="${element.animOutDuration}" ${element.animationPreset !== "none" ? "" : "disabled"}>
                 ${element.id === "subtitle" ? `
                     <label>\uD45C\uC2DC \uBAA8\uB4DC</label>
                     <select data-field="subtitleMode">
@@ -1005,6 +1114,7 @@ function renderInspector(): void {
                 <div>\uC561\uC158\uBC14\uB294 \uBC14\uB2D0\uB77C \uADDC\uCE59\uC5D0 \uB9DE\uAC8C factory \uBC29\uC2DD\uC73C\uB85C \uB0B4\uBCF4\uB0C5\uB2C8\uB2E4.</div>
                 <div>preserve \uD328\uD134\uC740 \uD0C0\uC774\uD2C0\uC5D0\uB9CC \uC801\uC6A9\uB429\uB2C8\uB2E4.</div>
                 <div>\uC11C\uBE0C\uD0C0\uC774\uD2C0 \uC2AC\uB77C\uC774\uC2F1 \uBAA8\uB4DC\uB97C \uCF1C\uBA74 <code>subtitle_data</code>\uC640 <code>sub_slotN</code> \uAD6C\uC870\uB85C \uB0B4\uBCF4\uB0C5\uB2C8\uB2E4.</div>
+                <div>\uC560\uB2C8\uBA54\uC774\uC158\uC740 <code>alpha</code> \uCCB4\uC774\uB2DD\uC73C\uB85C \uB0B4\uBCF4\uB0B4\uBA70, actionbar\uC5D0\uC11C\uB294 \uD31D\ud1a0\ub9ac \uD750\uB984\uC5D0 \uB9DE\uCD94\uAE30 \uC704\uD574 fade out \uD504\uB9AC\uC14B\uC774 \uC798 \uB9DE\uC2B5\uB2C8\uB2E4.</div>
                 ${element.id === "subtitle" && element.subtitleMode === "slice" ? `<div><code>pad(text, size)</code> \uD615\uC2DD\uC73C\uB85C \uAC01 \uC2AC\uB86F\uC744 \\t \uD328\uB529\uD55C \uB4A4 subtitle\uB85C \uC774\uC5B4\uBD99\uC5EC \uBCF4\uB0B4\uC57C \uD569\uB2C8\uB2E4.</div>` : ""}
                 <div><code>ignored: true</code>\uB97C \uCF1C\uBA74 \uB80C\uB354\uB9C1\uACFC \uBC14\uC778\uB529 \uD3C9\uAC00\uAC00 \uD568\uAED8 \uBE44\uD65C\uC131\uD654\uB429\uB2C8\uB2E4.</div>
                 <div>\uD504\uB85C\uADF8\uB808\uC2A4 \uBC14\uB294 title/subtitle\uC5D0\uC11C clip_ratio \uAE30\uBC18\uC73C\uB85C \uB0B4\uBCF4\uB0C5\uB2C8\uB2E4.</div>
@@ -1020,6 +1130,8 @@ function renderInspector(): void {
                 target[field] = input.checked;
             } else if (field === "x" || field === "y" || field === "width" || field === "height" || field === "layer" || field === "sliceSlotCount" || field === "sliceSlotSize" || field === "sliceColumns" || field === "sliceGapX" || field === "sliceGapY" || field === "maxValue") {
                 target[field] = Number.parseInt(input.value, 10) || 0;
+            } else if (field === "animInDuration" || field === "animHoldDuration" || field === "animOutDuration") {
+                target[field] = Math.max(0, Number.parseFloat(input.value) || 0);
             } else if (field === "backgroundAlpha") {
                 target[field] = clamp(Number.parseFloat(input.value) || 0, 0, 1);
             } else {
@@ -1136,6 +1248,10 @@ function bindStaticActions(): void {
             maxValue: 100,
             fillColor: "#5be37a",
             clipDirection: "left",
+            animationPreset: "fade_hold_fade",
+            animInDuration: 0.25,
+            animHoldDuration: 2,
+            animOutDuration: 0.25,
         };
         state.elements.subtitle = {
             ...state.elements.subtitle,
@@ -1162,6 +1278,10 @@ function bindStaticActions(): void {
             maxValue: 100,
             fillColor: "#6fc3ff",
             clipDirection: "left",
+            animationPreset: "fade_hold_fade",
+            animInDuration: 0.2,
+            animHoldDuration: 2,
+            animOutDuration: 0.2,
             subtitleMode: "single",
             sliceSlotCount: 5,
             sliceSlotSize: 20,
@@ -1194,6 +1314,10 @@ function bindStaticActions(): void {
             maxValue: 100,
             fillColor: "#5be37a",
             clipDirection: "left",
+            animationPreset: "fade_out",
+            animInDuration: 0.15,
+            animHoldDuration: 2.7,
+            animOutDuration: 3,
         };
         renderAll();
         new Notification("HUD\uB97C \uBC14\uB2D0\uB77C \uAE30\uBCF8 \uC704\uCE58\uB85C \uCD08\uAE30\uD654\uD588\uC2B5\uB2C8\uB2E4.", 2200, "notif");
