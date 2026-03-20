@@ -1201,7 +1201,7 @@ function buildAnimatedProgressBarTemplate(): Record<string, unknown> {
                                     anchor_from: "$_anchor",
                                     anchor_to: "$_anchor",
                                     size: ["100%", "100%"],
-                                    "$control_name": "('hud.animated_bar_image' + $_fixed)",
+                                    "$control_name": "('animated_bar.animated_bar_image' + $_fixed)",
                                     property_bag: {
                                         "#prev_value": 0,
                                         "#multiplier": "$multiplier",
@@ -1252,7 +1252,7 @@ function buildAnimatedProgressBarTemplate(): Record<string, unknown> {
                                         {
                                             anim_increase_cx2: {
                                                 type: "collection_panel",
-                                                "$size_anim": "('@hud.increase_anim' + $_direction + $_fixed)",
+                                                "$size_anim": "('@animated_bar.increase_anim' + $_direction + $_fixed)",
                                                 "$ignore_trail": true,
                                                 factory: {
                                                     name: "anim_increase",
@@ -1277,7 +1277,7 @@ function buildAnimatedProgressBarTemplate(): Record<string, unknown> {
                                         {
                                             anim_decrease_cx2: {
                                                 type: "collection_panel",
-                                                "$size_anim": "('@hud.decrease_anim' + $_direction + $_fixed)",
+                                                "$size_anim": "('@animated_bar.decrease_anim' + $_direction + $_fixed)",
                                                 factory: {
                                                     name: "anim_decrease",
                                                     control_name: "$control_name",
@@ -1339,7 +1339,7 @@ function buildAnimatedProgressBarTemplate(): Record<string, unknown> {
         decrease_anim__fixed: { anim_type: "size", from: ["100%", "200%"], to: [0, "200%"], duration: "$duration", easing: "$decrease_easing" },
         decrease_anim__vertical: { anim_type: "size", from: ["100%", "100%"], to: ["100%", 0], duration: "$duration", easing: "$decrease_easing" },
         decrease_anim__vertical__fixed: { anim_type: "size", from: ["200%", "100%"], to: ["200%", 0], duration: "$duration", easing: "$decrease_easing" },
-        trail_anim: { anim_type: "wait", duration: "$trail_delay", next: "('@hud.decrease_anim' + $_direction)" },
+        trail_anim: { anim_type: "wait", duration: "$trail_delay", next: "('@animated_bar.decrease_anim' + $_direction)" },
         animated_bar_image: {
             type: "panel",
             size: ["100%", "100%"],
@@ -1360,7 +1360,7 @@ function buildAnimatedProgressBarTemplate(): Record<string, unknown> {
                         ignored: "$ignore_trail",
                         type: "image",
                         layer: 0,
-                        size: "@hud.trail_anim",
+                        size: "@animated_bar.trail_anim",
                         alpha: "$trail_alpha",
                         anchor_from: "$_anchor",
                         anchor_to: "$_anchor",
@@ -1400,7 +1400,7 @@ function buildAnimatedProgressBarTemplate(): Record<string, unknown> {
                         ignored: "$ignore_trail",
                         type: "image",
                         layer: 0,
-                        size: "@hud.trail_anim",
+                        size: "@animated_bar.trail_anim",
                         alpha: "$trail_alpha",
                         anchor_from: "$_anchor",
                         anchor_to: "$_anchor",
@@ -1645,14 +1645,12 @@ function buildHudJson(): string {
 
     const progressBars = state.progressBars.filter((bar) => bar.enabled);
     if (progressBars.length > 0) {
-        Object.assign(json, buildAnimatedProgressBarTemplate());
         for (const bar of progressBars) {
             const dataKey = getProgressBarDataControlName(bar);
             const insertKey = getProgressBarInsertName(bar);
-            json[dataKey] = buildProgressBarData(bar);
-            rootInsert.push({ [`${dataKey}@hud.${dataKey}`]: {} });
+            rootInsert.push({ [`${dataKey}@animated_bar.${dataKey}`]: {} });
             rootInsert.push({
-                [`${insertKey}@hud.animated_progress_bar`]: buildProgressBarInstance(bar),
+                [`${insertKey}@animated_bar.animated_progress_bar`]: buildProgressBarInstance(bar),
             });
             if (bar.hideVanilla) {
                 if (bar.sourceChannel === "actionbar") {
@@ -1712,9 +1710,45 @@ function buildHudJson(): string {
     return JSON.stringify(json, null, 2);
 }
 
+function buildAnimatedBarJson(): string {
+    const json: Record<string, unknown> = {
+        namespace: "animated_bar",
+        ...buildAnimatedProgressBarTemplate(),
+    };
+
+    for (const bar of state.progressBars.filter((entry) => entry.enabled)) {
+        json[getProgressBarDataControlName(bar)] = buildProgressBarData(bar);
+    }
+
+    return JSON.stringify(json, null, 2);
+}
+
+function buildUiDefsJson(): string {
+    return JSON.stringify({
+        ui_defs: [
+            "ui/animated_bar.json",
+        ],
+    }, null, 2);
+}
+
+function hasEnabledProgressBars(): boolean {
+    return state.progressBars.some((bar) => bar.enabled);
+}
+
 function updateOutput(): void {
-    const output = getForm().querySelector(".hudEditorOutput") as HTMLTextAreaElement | null;
-    if (output) output.value = buildHudJson();
+    const hudOutput = getForm().querySelector(".hudEditorHudOutput") as HTMLTextAreaElement | null;
+    if (hudOutput) hudOutput.value = buildHudJson();
+
+    const animatedOutput = getForm().querySelector(".hudEditorAnimatedBarOutput") as HTMLTextAreaElement | null;
+    if (animatedOutput) animatedOutput.value = buildAnimatedBarJson();
+
+    const defsOutput = getForm().querySelector(".hudEditorUiDefsOutput") as HTMLTextAreaElement | null;
+    if (defsOutput) defsOutput.value = buildUiDefsJson();
+
+    const progressCards = getForm().querySelectorAll<HTMLElement>(".hudEditorProgressSplitCard");
+    progressCards.forEach((card) => {
+        card.style.display = hasEnabledProgressBars() ? "block" : "none";
+    });
 }
 
 function getAnchorReference(anchor: HudAnchor): { x: number; y: number } {
@@ -2548,11 +2582,27 @@ function renderModalShell(): void {
                 <div>\uC790\uB3D9 \uC575\uCEE4\uB97C \uCF1C\uBA74 \uB4DC\uB798\uADF8 \uC885\uB8CC \uC2DC \uAC00\uC7A5 \uAC00\uAE4C\uC6B4 9\uBD84\uD560 \uAD6C\uC5ED \uAE30\uC900\uC73C\uB85C anchor\uAC00 \uBC14\uB00C\uACE0, offset\uB3C4 \uADF8 anchor \uAE30\uC900\uC73C\uB85C \uB2E4\uC2DC \uACC4\uC0B0\uB429\uB2C8\uB2E4.</div>
             </div>
                 <div class="hudEditorJsonCard">
-                    <div class="hudEditorSidebarTitle">\uC0DD\uC131\uB418\uB294 JSON</div>
-                    <textarea class="hudEditorOutput" spellcheck="false"></textarea>
+                    <div class="hudEditorSidebarTitle">hud_screen.json</div>
+                    <textarea class="hudEditorOutput hudEditorHudOutput" spellcheck="false"></textarea>
                     <div class="hudEditorSidebarActions">
-                        <button type="button" class="propertyInputButton hudEditorCopyJson">JSON \uBCF5\uC0AC</button>
+                        <button type="button" class="propertyInputButton hudEditorCopyJson">hud_screen.json \uBCF5\uC0AC</button>
                         <button type="button" class="propertyInputButton hudEditorDownloadJson">hud_screen.json \uB2E4\uC6B4\uB85C\uB4DC</button>
+                    </div>
+                </div>
+                <div class="hudEditorJsonCard hudEditorProgressSplitCard" style="display:none;">
+                    <div class="hudEditorSidebarTitle">animated_bar.json</div>
+                    <textarea class="hudEditorOutput hudEditorAnimatedBarOutput" spellcheck="false"></textarea>
+                    <div class="hudEditorSidebarActions">
+                        <button type="button" class="propertyInputButton hudEditorCopyAnimatedBarJson">animated_bar.json \uBCF5\uC0AC</button>
+                        <button type="button" class="propertyInputButton hudEditorDownloadAnimatedBarJson">animated_bar.json \uB2E4\uC6B4\uB85C\uB4DC</button>
+                    </div>
+                </div>
+                <div class="hudEditorJsonCard hudEditorProgressSplitCard" style="display:none;">
+                    <div class="hudEditorSidebarTitle">_ui_defs.json</div>
+                    <textarea class="hudEditorOutput hudEditorUiDefsOutput" spellcheck="false"></textarea>
+                    <div class="hudEditorSidebarActions">
+                        <button type="button" class="propertyInputButton hudEditorCopyUiDefsJson">_ui_defs.json \uBCF5\uC0AC</button>
+                        <button type="button" class="propertyInputButton hudEditorDownloadUiDefsJson">_ui_defs.json \uB2E4\uC6B4\uB85C\uB4DC</button>
                     </div>
                 </div>
                 <div class="hudEditorJsonCard hudEditorScriptCard"></div>
@@ -2567,6 +2617,20 @@ function bindStaticActions(): void {
     const resetButton = form.querySelector(".hudEditorReset") as HTMLButtonElement | null;
     const copyButton = form.querySelector(".hudEditorCopyJson") as HTMLButtonElement | null;
     const downloadButton = form.querySelector(".hudEditorDownloadJson") as HTMLButtonElement | null;
+    const copyAnimatedButton = form.querySelector(".hudEditorCopyAnimatedBarJson") as HTMLButtonElement | null;
+    const downloadAnimatedButton = form.querySelector(".hudEditorDownloadAnimatedBarJson") as HTMLButtonElement | null;
+    const copyUiDefsButton = form.querySelector(".hudEditorCopyUiDefsJson") as HTMLButtonElement | null;
+    const downloadUiDefsButton = form.querySelector(".hudEditorDownloadUiDefsJson") as HTMLButtonElement | null;
+
+    const downloadJsonFile = (filename: string, content: string) => {
+        const blob = new Blob([content], { type: "application/json" });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(url);
+    };
 
     resetButton?.addEventListener("click", () => {
         state.selectedId = "title";
@@ -2684,18 +2748,32 @@ function bindStaticActions(): void {
 
     copyButton?.addEventListener("click", async () => {
         await navigator.clipboard.writeText(buildHudJson());
-        new Notification("HUD JSON\uC744 \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.", 2200, "notif");
+        new Notification("hud_screen.json\uC744 \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.", 2200, "notif");
     });
 
     downloadButton?.addEventListener("click", () => {
-        const blob = new Blob([buildHudJson()], { type: "application/json" });
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.href = url;
-        link.download = "hud_screen.json";
-        link.click();
-        URL.revokeObjectURL(url);
+        downloadJsonFile("hud_screen.json", buildHudJson());
         new Notification("hud_screen.json\uC744 \uB2E4\uC6B4\uB85C\uB4DC\uD588\uC2B5\uB2C8\uB2E4.", 2200, "notif");
+    });
+
+    copyAnimatedButton?.addEventListener("click", async () => {
+        await navigator.clipboard.writeText(buildAnimatedBarJson());
+        new Notification("animated_bar.json\uC744 \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.", 2200, "notif");
+    });
+
+    downloadAnimatedButton?.addEventListener("click", () => {
+        downloadJsonFile("animated_bar.json", buildAnimatedBarJson());
+        new Notification("animated_bar.json\uC744 \uB2E4\uC6B4\uB85C\uB4DC\uD588\uC2B5\uB2C8\uB2E4.", 2200, "notif");
+    });
+
+    copyUiDefsButton?.addEventListener("click", async () => {
+        await navigator.clipboard.writeText(buildUiDefsJson());
+        new Notification("_ui_defs.json\uC744 \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.", 2200, "notif");
+    });
+
+    downloadUiDefsButton?.addEventListener("click", () => {
+        downloadJsonFile("_ui_defs.json", buildUiDefsJson());
+        new Notification("_ui_defs.json\uC744 \uB2E4\uC6B4\uB85C\uB4DC\uD588\uC2B5\uB2C8\uB2E4.", 2200, "notif");
     });
 }
 
