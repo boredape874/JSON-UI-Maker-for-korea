@@ -60,7 +60,14 @@ console.log("Bindings-Area Loaded");
 ScriptGenerator.init();
 console.log("Script Generator Loaded");
 
-document.addEventListener("DOMContentLoaded", async (e) => {
+let bootstrapPromise: Promise<void> | null = null;
+
+export function bootstrapLegacyApp(): Promise<void> {
+    if (bootstrapPromise) {
+        return bootstrapPromise;
+    }
+
+    bootstrapPromise = (async () => {
     // Initialize database and auth
     try {
         await loadSqlJs();
@@ -103,7 +110,10 @@ document.addEventListener("DOMContentLoaded", async (e) => {
     
     // Load any saved assets from localStorage
     await loadSavedAssets();
-});
+    })();
+
+    return bootstrapPromise;
+}
 
 /**
  * Loads assets that were saved to localStorage (from preset uploads, etc.)
