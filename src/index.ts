@@ -19,7 +19,6 @@ import { BindingsArea } from "./scripter/bindings/bindingsArea.js";
 import { ScriptGenerator } from "./scripter/generator.js";
 import { createFormModal } from "./ui/modals/createForm.js";
 import { Notification } from "./ui/notifs/noficationMaker.js";
-import { CopiedElementData } from "./copy_paste/copy.js";
 import { FormUploader } from "./upload.js";
 import { initDefaultImages } from "./files/initDefaultImages.js";
 import { ExplorerController } from "./ui/explorer/explorerController.js";
@@ -36,7 +35,6 @@ import "./ui/modals/settings.js";
 import { authModal } from "./ui/modals/authModal.js";
 import { uploadPresetModal } from "./ui/modals/uploadPresetModal.js";
 import { presetManagementModal } from "./ui/modals/presetManagementModal.js";
-import { emitUiBridge } from "./ui/reactUiBridge.js";
 import { setAuthUiState } from "./ui/react/authUiBridge.js";
 import { authManager } from "./auth.js";
 import { presetManager } from "./presetManager.js";
@@ -49,6 +47,9 @@ import { undoRedoManager } from "./keyboard/undoRedo.js";
 import { createSyntheticFormFromWorkspace, loadUiWorkspace } from "./ui/uiWorkspace.js";
 import { createZipBlob, ZipEntry } from "./util/zip.js";
 import { selectedElement, setSelectedElement } from "./runtime/editorSelection.js";
+import { getPanelContainer, initEditorCanvasRuntime } from "./runtime/editorCanvasRuntime.js";
+import { GLOBAL_ELEMENT_MAP, GLOBAL_FILE_SYSTEM, GlobalElementMapValue, draggedElement, resizedElement, setDraggedElement, setFileSystem, setResizedElement } from "./runtime/editorStore.js";
+import { images } from "./runtime/imageStore.js";
 
 initI18n();
 
@@ -259,7 +260,7 @@ function toExportTextureFilePath(imagePath: string, extension: "png" | "json"): 
 function constructMainPanel(): { id: string; mainPanel: DraggablePanel } {
     // A non interactable main panel
     const id = StringUtil.generateRandomString(15);
-    const mainPanel = new DraggablePanel(id, panelContainer, false);
+    const mainPanel = new DraggablePanel(id, getPanelContainer(), false);
     mainPanel.deleteable = false;
 
     const parent = mainPanel.panel.parentElement!;
@@ -279,58 +280,10 @@ function constructMainPanel(): { id: string; mainPanel: DraggablePanel } {
     return { id, mainPanel };
 }
 
-export let copiedElementData: CopiedElementData | undefined = undefined;
-export function setCopiedElementData(data: CopiedElementData | undefined): void {
-    copiedElementData = data;
-    new Notification("Copied Element", 2000, "notif");
-}
-
-export let draggedElement: GlobalElementMapValue | undefined = undefined;
-export function setDraggedElement(classElement: GlobalElementMapValue | undefined): void {
-    draggedElement = classElement;
-}
-
-export let resizedElement: ResizeableElements | undefined = undefined;
-export function setResizedElement(classElement: ResizeableElements | undefined): void {
-    resizedElement = classElement;
-}
-
-export const panelContainer: HTMLElement = document.getElementById("main_window")!;
-export let isInMainWindow: boolean = false;
-
-panelContainer.addEventListener("mouseenter", () => {
-    isInMainWindow = true;
-});
-
-panelContainer.addEventListener("mouseleave", () => {
-    isInMainWindow = false;
-});
-
-export type GlobalElementMapValue =
-    | DraggableButton
-    | DraggableCanvas
-    | DraggablePanel
-    | DraggableCollectionPanel
-    | DraggableLabel
-    | DraggableScrollingPanel
-    | DraggableStackPanel;
-
-/*
- * Contains all the elements in the main window.
- * Each accessable element has a unique id.
- * The id is used to access the element.
- */
-export const GLOBAL_ELEMENT_MAP: Map<string, GlobalElementMapValue> = new Map();
-export let GLOBAL_FILE_SYSTEM: any = {};
-
-export function setFileSystem(fs: any): void {
-    GLOBAL_FILE_SYSTEM = fs;
-}
-
 export class Builder {
     private static collectCurrentFormImagePaths(): string[] {
         const imagePaths = new Set<string>();
-        const elements = panelContainer.querySelectorAll<HTMLElement>("[data-image-path], [data-default-image-path], [data-hover-image-path], [data-pressed-image-path]");
+        const elements = getPanelContainer().querySelectorAll<HTMLElement>("[data-image-path], [data-default-image-path], [data-hover-image-path], [data-pressed-image-path]");
 
         for (const element of Array.from(elements)) {
             const candidates = [
@@ -487,7 +440,7 @@ export class Builder {
     public static async downloadFormPackageZip(includeServerForm: boolean = true): Promise<void> {
         const imagePaths = this.collectCurrentFormImagePaths();
         const textureEntries = await this.buildTextureArchiveEntries(imagePaths);
-        const jsonUI = Converter.convertToJsonUi(panelContainer, 0);
+        const jsonUI = Converter.convertToJsonUi(getPanelContainer(), 0);
         const entries: ZipEntry[] = [
             {
                 name: normalizeArchivePath(`ui/${this.getDownloadBaseName()}.json`),
@@ -632,7 +585,7 @@ export class Builder {
     }
 
     public static generateAndCopyJsonUI(type: "copy" | "download"): void {
-        const jsonUI = Converter.convertToJsonUi(panelContainer, 0);
+        const jsonUI = Converter.convertToJsonUi(getPanelContainer(), 0);
 
         if (type == "copy") {
             navigator.clipboard.writeText(jsonUI);
@@ -896,6 +849,7 @@ export class Builder {
         GLOBAL_ELEMENT_MAP.clear();
 
         const bgImage = document.getElementById("bg_image")!;
+        const panelContainer = getPanelContainer();
         panelContainer.innerHTML = "";
         panelContainer.appendChild(bgImage);
 
@@ -1057,13 +1011,6 @@ export class Builder {
     }
 }
 
-export interface ImageDataState {
-    png?: ImageData;
-    json?: NinesliceData;
-}
-
-export var images: Map<string, ImageDataState> = new Map();
-
 declare global {
     interface Window {
         Builder: typeof Builder;
@@ -1072,3 +1019,5 @@ declare global {
 }
 
 window.Builder = Builder;
+
+initEditorCanvasRuntime(document.getElementById("main_window")!);

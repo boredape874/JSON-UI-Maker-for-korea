@@ -1,4 +1,4 @@
-import { draggedElement, resizedElement } from "../index.js";
+import { draggedElement, resizedElement } from "../runtime/editorStore.js";
 
 let pendingEvent: MouseEvent | null = null;
 let ticking = false;

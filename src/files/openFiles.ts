@@ -1,4 +1,5 @@
-import { GLOBAL_FILE_SYSTEM, images, setFileSystem } from "../index.js";
+import { images } from "../runtime/imageStore.js";
+import { GLOBAL_FILE_SYSTEM, setFileSystem } from "../runtime/editorStore.js";
 import { assetUrl } from "../lib/assetUrl.js";
 import { Notification } from "../ui/notifs/noficationMaker.js";
 

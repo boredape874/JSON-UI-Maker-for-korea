@@ -10,10 +10,12 @@ import { DraggableScrollingPanel } from "./elements/scrollingPanel.js";
 import { DraggableStackPanel } from "./elements/stackPanel.js";
 import { ElementSharedFuncs } from "./elements/sharedElement.js";
 import { FileUploader } from "./files/openFiles.js";
-import { Builder, GLOBAL_ELEMENT_MAP, GlobalElementMapValue, ImageDataState, images } from "./index.js";
+import { Builder } from "./index.js";
 import { Notification } from "./ui/notifs/noficationMaker.js";
 import { GeneralUtil } from "./util/generalUtil.js";
 import { StringUtil } from "./util/stringUtil.js";
+import { GLOBAL_ELEMENT_MAP, type GlobalElementMapValue } from "./runtime/editorStore.js";
+import { images, type ImageDataState } from "./runtime/imageStore.js";
 
 interface UploadTreeInstructions {
     ContinuePath: boolean;

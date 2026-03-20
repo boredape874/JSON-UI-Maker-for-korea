@@ -1,4 +1,5 @@
-import { GlobalElementMapValue, setCopiedElementData } from "../index.js";
+import { type CopiedElementData, setCopiedElementData } from "../runtime/clipboardStore.js";
+import { type GlobalElementMapValue } from "../runtime/editorStore.js";
 import { selectedElement } from "../runtime/editorSelection.js";
 import { DraggableLabel } from "../elements/label.js";
 import { GeneralUtil } from "../util/generalUtil.js";
@@ -9,11 +10,7 @@ import { StringUtil } from "../util/stringUtil.js";
 import { DraggableButton } from "../elements/button.js";
 import { config } from "../CONFIG.js";
 import { DraggableScrollingPanel } from "../elements/scrollingPanel.js";
-
-export interface CopiedElementData {
-    [key: string]: any;
-    children?: CopiedElementData[];
-}
+import { Notification } from "../ui/notifs/noficationMaker.js";
 
 function processChildren(mainElement: HTMLElement): CopiedElementData[] {
     const children: HTMLElement[] = Array.from(mainElement.children) as HTMLElement[];
@@ -206,5 +203,6 @@ export class Copier {
         if (!copiedElement) return;
 
         setCopiedElementData(copiedElement);
+        new Notification("Copied Element", 2000, "notif");
     }
 }

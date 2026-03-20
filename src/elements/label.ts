@@ -1,4 +1,4 @@
-import { panelContainer } from "../index.js";
+import { getPanelContainer } from "../runtime/editorCanvasRuntime.js";
 import { config } from "../CONFIG.js";
 import { updatePropertiesArea } from "../ui/propertiesArea.js";
 import { StringUtil } from "../util/stringUtil.js";
@@ -49,7 +49,8 @@ export class DraggableLabel {
      * @param {HTMLElement} container
      */
     public constructor(ID: string, container: HTMLElement, labelOptions?: LabelOptions) {
-        const i = GeneralUtil.getElementDepth(container, panelContainer);
+        const rootPanelContainer = getPanelContainer();
+        const i = GeneralUtil.getElementDepth(container, rootPanelContainer);
 
         // Saves parameters
         (this as any)._constructorArgs = [ID, container, labelOptions];
@@ -71,7 +72,7 @@ export class DraggableLabel {
         this.label.style.resize = "none";
         this.label.style.minWidth = "10px";
         this.label.style.minHeight = "20px";
-        this.label.style.maxWidth = `${panelContainer.getBoundingClientRect().width}px`;
+        this.label.style.maxWidth = `${rootPanelContainer.getBoundingClientRect().width}px`;
         this.label.style.outline = `${config.settings.element_outline.value}px solid black`;
         this.label.style.font = "16px sans-serif";
         this.label.style.padding = "4px";

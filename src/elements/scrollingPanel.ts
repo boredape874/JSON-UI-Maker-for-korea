@@ -1,4 +1,4 @@
-import { panelContainer } from "../index.js";
+import { getPanelContainer } from "../runtime/editorCanvasRuntime.js";
 import { config } from "../CONFIG.js";
 import { MinecraftSlider } from "../ui/sliders/addMinecraftSlider.js";
 import { ElementSharedFuncs } from "./sharedElement.js";
@@ -37,7 +37,7 @@ export class DraggableScrollingPanel {
      * @param {HTMLElement} container
      */
     public constructor(ID: string, container: HTMLElement) {
-        const i = GeneralUtil.getElementDepth(container, panelContainer);
+        const i = GeneralUtil.getElementDepth(container, getPanelContainer());
 
         // Saves parameters
         (this as any)._constructorArgs = [ID, container];

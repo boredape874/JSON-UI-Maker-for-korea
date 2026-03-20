@@ -1,4 +1,4 @@
-import { panelContainer } from "../index.js";
+import { getPanelContainer } from "../runtime/editorCanvasRuntime.js";
 import { config } from "../CONFIG.js";
 import { ElementSharedFuncs } from "./sharedElement.js";
 import { GeneralUtil } from "../util/generalUtil.js";
@@ -36,7 +36,7 @@ export class DraggablePanel {
      * @param {HTMLElement} container
      */
     public constructor(ID: string, container: HTMLElement, interactable: boolean = true) {
-        const i = GeneralUtil.getElementDepth(container, panelContainer);
+        const i = GeneralUtil.getElementDepth(container, getPanelContainer());
 
         // Saves parameters
         (this as any)._constructorArgs = [ID, container, interactable];

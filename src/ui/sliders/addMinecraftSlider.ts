@@ -1,6 +1,7 @@
 import { DraggableCanvas } from "../../elements/canvas.js";
 import { FileUploader } from "../../files/openFiles.js";
-import { GLOBAL_ELEMENT_MAP, images } from "../../index.js";
+import { images } from "../../runtime/imageStore.js";
+import { GLOBAL_ELEMENT_MAP } from "../../runtime/editorStore.js";
 import { StringUtil } from "../../util/stringUtil.js";
 import { DraggableScrollingPanel } from "../../elements/scrollingPanel.js";
 

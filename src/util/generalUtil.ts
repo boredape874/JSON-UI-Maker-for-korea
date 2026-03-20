@@ -1,4 +1,4 @@
-import { GlobalElementMapValue, GLOBAL_ELEMENT_MAP } from "../index.js";
+import { GLOBAL_ELEMENT_MAP, GlobalElementMapValue } from "../runtime/editorStore.js";
 import { Binding } from "../scripter/bindings/types.js";
 
 export class GeneralUtil {

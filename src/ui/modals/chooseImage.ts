@@ -1,5 +1,5 @@
 import { config } from "../../CONFIG.js";
-import { GLOBAL_FILE_SYSTEM } from "../../index.js";
+import { GLOBAL_FILE_SYSTEM } from "../../runtime/editorStore.js";
 import { translateText } from "../../i18n.js";
 import { assetUrl } from "../../lib/assetUrl.js";
 import { Notification } from "../notifs/noficationMaker.js";

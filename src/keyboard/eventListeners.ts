@@ -1,6 +1,7 @@
 import { Copier } from "../copy_paste/copy.js";
 import { Paster } from "../copy_paste/paste.js";
-import { Builder, isInMainWindow } from "../index.js";
+import { Builder } from "../index.js";
+import { getIsInMainWindow } from "../runtime/editorCanvasRuntime.js";
 import { selectedElement } from "../runtime/editorSelection.js";
 import { BindingsArea } from "../scripter/bindings/bindingsArea.js";
 import { triggerArrowMovement } from "./arrowKeyElementMovement.js";

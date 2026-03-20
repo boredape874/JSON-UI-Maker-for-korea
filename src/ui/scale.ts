@@ -1,7 +1,7 @@
 import { config } from "../CONFIG.js";
 import { DraggableButton } from "../elements/button.js";
 import { DraggableCanvas } from "../elements/canvas.js";
-import { GLOBAL_ELEMENT_MAP, GlobalElementMapValue } from "../index.js";
+import { GLOBAL_ELEMENT_MAP, type GlobalElementMapValue } from "../runtime/editorStore.js";
 
 const slider = document.getElementById("ui_scale_slider") as HTMLInputElement;
 

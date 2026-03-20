@@ -1,4 +1,5 @@
-import { images, panelContainer } from "../index.js";
+import { images } from "../runtime/imageStore.js";
+import { getPanelContainer } from "../runtime/editorCanvasRuntime.js";
 import { Nineslice, NinesliceData } from "../nineslice.js";
 import { config } from "../CONFIG.js";
 import { keyboardEvent } from "../keyboard/eventListeners.js";
@@ -50,7 +51,7 @@ export class DraggableCanvas {
      * @param {HTMLElement} container
      */
     public constructor(ID: string, container: HTMLElement, imageData: ImageData, imagePath: string, nineSlice?: NinesliceData) {
-        const i = GeneralUtil.getElementDepth(container, panelContainer);
+        const i = GeneralUtil.getElementDepth(container, getPanelContainer());
 
         // Saves parameters
         (this as any)._constructorArgs = [ID, container, imageData, imagePath, nineSlice];

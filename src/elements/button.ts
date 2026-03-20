@@ -1,8 +1,9 @@
-import { GLOBAL_ELEMENT_MAP, panelContainer } from "../index.js";
+import { images, type ImageDataState } from "../runtime/imageStore.js";
+import { getPanelContainer } from "../runtime/editorCanvasRuntime.js";
+import { GLOBAL_ELEMENT_MAP } from "../runtime/editorStore.js";
 import { config } from "../CONFIG.js";
 import { Nineslice } from "../nineslice.js";
 import { keyboardEvent } from "../keyboard/eventListeners.js";
-import { images, ImageDataState } from "../index.js";
 import { DraggableCanvas } from "./canvas.js";
 import { StringUtil } from "../util/stringUtil.js";
 import { DraggableLabel } from "./label.js";
@@ -69,7 +70,7 @@ export class DraggableButton {
      */
     public constructor(ID: string, container: HTMLElement, buttonOptions?: ButtonOptions) {
         const { defaultTexture, hoverTexture, pressedTexture, collectionIndex, displayTexture, buttonText } = buttonOptions ?? {};
-        const i = GeneralUtil.getElementDepth(container, panelContainer);
+        const i = GeneralUtil.getElementDepth(container, getPanelContainer());
 
         // Saves parameters
         (this as any)._constructorArgs = [ID, container, buttonOptions];

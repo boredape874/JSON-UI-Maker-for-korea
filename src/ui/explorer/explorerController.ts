@@ -1,5 +1,5 @@
 import { config } from "../../CONFIG.js";
-import { GlobalElementMapValue } from "../../index.js";
+import { type GlobalElementMapValue } from "../../runtime/editorStore.js";
 import { selectedElement } from "../../runtime/editorSelection.js";
 import { GeneralUtil } from "../../util/generalUtil.js";
 import { classToTagName } from "../../converterTypes/HTMLClassToJonUITypes.js";

@@ -1,8 +1,10 @@
-import { Builder, copiedElementData, GLOBAL_ELEMENT_MAP, GlobalElementMapValue, images } from "../index.js";
+import { Builder } from "../index.js";
+import { copiedElementData, type CopiedElementData } from "../runtime/clipboardStore.js";
+import { images } from "../runtime/imageStore.js";
+import { GLOBAL_ELEMENT_MAP, type GlobalElementMapValue } from "../runtime/editorStore.js";
 import { selectedElement } from "../runtime/editorSelection.js";
 import { DraggableLabel } from "../elements/label.js";
 import { StringUtil } from "../util/stringUtil.js";
-import { CopiedElementData } from "./copy.js";
 import { DraggablePanel } from "../elements/panel.js";
 import { ElementSharedFuncs } from "../elements/sharedElement.js";
 import { DraggableCollectionPanel } from "../elements/collectionPanel.js";

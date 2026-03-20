@@ -1,4 +1,4 @@
-import { GLOBAL_ELEMENT_MAP } from "../../index.js";
+import { GLOBAL_ELEMENT_MAP } from "../../runtime/editorStore.js";
 import { GeneralUtil } from "../../util/generalUtil.js";
 
 const hardcoded_source_property_names = [

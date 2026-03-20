@@ -1,5 +1,6 @@
 import { DraggableLabel } from "../elements/label.js";
-import { GLOBAL_ELEMENT_MAP, Builder } from "../index.js";
+import { Builder } from "../index.js";
+import { GLOBAL_ELEMENT_MAP } from "../runtime/editorStore.js";
 import { Notification } from "../ui/notifs/noficationMaker.js";
 import { StringUtil } from "../util/stringUtil.js";
 

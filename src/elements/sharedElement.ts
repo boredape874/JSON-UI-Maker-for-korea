@@ -1,4 +1,5 @@
-import { GlobalElementMapValue, isInMainWindow, setDraggedElement, setResizedElement } from "../index.js";
+import { getIsInMainWindow } from "../runtime/editorCanvasRuntime.js";
+import { GlobalElementMapValue, setDraggedElement, setResizedElement } from "../runtime/editorStore.js";
 import { config } from "../CONFIG.js";
 import { keyboardEvent } from "../keyboard/eventListeners.js";
 import { updatePropertiesArea } from "../ui/propertiesArea.js";
@@ -161,7 +162,7 @@ export class ElementSharedFuncs {
      */
     public static stopResize(classElement: ResizeableElements): void {
         classElement.isResizing = false;
-        if (isInMainWindow) updatePropertiesArea();
+        if (getIsInMainWindow()) updatePropertiesArea();
         setResizedElement(undefined);
 
         // Record resize end for undo/redo
@@ -389,7 +390,7 @@ export class ElementSharedFuncs {
     public static stopDrag(classElement: GlobalElementMapValue): void {
         classElement.isDragging = false;
         classElement.getMainHTMLElement().style.cursor = "grab";
-        if (isInMainWindow) updatePropertiesArea();
+        if (getIsInMainWindow()) updatePropertiesArea();
 
         const parentElement = classElement.container;
         const parentClassElement = GeneralUtil.elementToClassElement(parentElement)!;

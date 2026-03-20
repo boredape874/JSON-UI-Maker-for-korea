@@ -6,7 +6,7 @@ import { DraggableLabel } from "../elements/label.js";
 import { DraggablePanel } from "../elements/panel.js";
 import { DraggableScrollingPanel } from "../elements/scrollingPanel.js";
 import { ElementSharedFuncs } from "../elements/sharedElement.js";
-import { Builder, GLOBAL_ELEMENT_MAP } from "../index.js";
+import { Builder } from "../index.js";
 import { selectedElement } from "../runtime/editorSelection.js";
 import { GeneralUtil } from "../util/generalUtil.js";
 import { MathUtil } from "../util/mathUtil.js";
