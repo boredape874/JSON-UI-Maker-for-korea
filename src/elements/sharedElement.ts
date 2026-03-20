@@ -14,6 +14,7 @@ import { DraggableStackPanel } from "./stackPanel.js";
 import { AllJsonUIElements } from "./elements.js";
 import { GeneralUtil } from "../util/generalUtil.js";
 import { MathUtil } from "../util/mathUtil.js";
+import { emitUiBridge } from "../ui/reactUiBridge.js";
 
 export type SelectableElements =
     | DraggableButton
@@ -426,10 +427,12 @@ export class ElementSharedFuncs {
     public static hide(classElement: GlobalElementMapValue): void {
         console.log("hide");
         classElement.getMainHTMLElement().style.visibility = "hidden";
+        emitUiBridge("explorer-changed");
     }
 
     public static show(classElement: GlobalElementMapValue): void {
         console.log("show");
         classElement.getMainHTMLElement().style.visibility = "visible";
+        emitUiBridge("explorer-changed");
     }
 }

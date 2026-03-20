@@ -4,6 +4,7 @@ import { GeneralUtil } from "../../util/generalUtil.js";
 import { classToTagName } from "../../converterTypes/HTMLClassToJonUITypes.js";
 import { StringUtil } from "../../util/stringUtil.js";
 import { assetUrl } from "../../lib/assetUrl.js";
+import { emitUiBridge } from "../reactUiBridge.js";
 
 const textElementIdMap: Map<string, HTMLDivElement> = new Map<string, HTMLDivElement>();
 const explorerBaseElement = document.getElementById("explorer")!;
@@ -35,21 +36,11 @@ export class ExplorerController {
     }
 
     static updateExplorer() {
-        if (!config.rootElement) return;
-
-        ExplorerController.reset();
-        textElementIdMap.clear();
-
-        const rootClassElement = GeneralUtil.elementToClassElement(config.rootElement!)!;
-        ExplorerController.tree(rootClassElement, explorerBaseElement as HTMLDivElement);
-
-        ExplorerController.selectedElementUpdate();
+        emitUiBridge("explorer-changed");
     }
 
     static reset(): void {
-        const explorer: HTMLElement = explorerBaseElement;
-
-        explorer.innerHTML = "";
+        emitUiBridge("explorer-changed");
     }
 
     static tree(classElement: GlobalElementMapValue, lastTextElement: HTMLDivElement, depth: number = 0): void {
@@ -155,42 +146,6 @@ export class ExplorerController {
     }
 
     static selectedElementUpdate(): void {
-        const selectedExplorerElement = explorerBaseElement.querySelector(".selected");
-        if (selectedExplorerElement) {
-            selectedExplorerElement.classList.remove("selected");
-        }
-
-        if (!selectedElement) return;
-
-        const nextSelectedExplorerElement = textElementIdMap.get(selectedElement!.dataset.id!);
-        console.log(GeneralUtil.elementToClassElement(selectedElement!));
-        if (nextSelectedExplorerElement) {
-            const textElement = Array.from(nextSelectedExplorerElement.children).filter((child) =>
-                child.classList.contains("explorerText")
-            )[0] as HTMLDivElement;
-
-            textElement!.classList.add("selected");
-
-            // Unfolds the element
-            let parentElement = nextSelectedExplorerElement as HTMLElement;
-            while (parentElement?.className !== "explorer") {
-                const siblings = Array.from(parentElement.parentElement!.children) as HTMLElement[];
-
-                for (const child of siblings) {
-                    if (child.classList.contains("explorerDiv")) {
-                        child.style.display = "block";
-
-                        const childTextArrowElement = Array.from(parentElement.children).filter((child) => child.classList.contains("explorerArrow"))[0] as
-                            | HTMLImageElement
-                            | undefined;
-                        if (!childTextArrowElement) continue;
-
-                        childTextArrowElement.src = assetUrl("assets/arrow_down.webp");
-                    }
-                }
-
-                parentElement = parentElement.parentElement!;
-            }
-        }
+        emitUiBridge("explorer-changed");
     }
 }

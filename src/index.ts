@@ -36,6 +36,7 @@ import "./ui/modals/settings.js";
 import { authModal } from "./ui/modals/authModal.js";
 import { uploadPresetModal } from "./ui/modals/uploadPresetModal.js";
 import { presetManagementModal } from "./ui/modals/presetManagementModal.js";
+import { emitUiBridge } from "./ui/reactUiBridge.js";
 import { authManager } from "./auth.js";
 import { presetManager } from "./presetManager.js";
 import { loadSqlJs } from "./database.js";
@@ -281,6 +282,8 @@ export function setSelectedElement(element: HTMLElement | undefined): void {
     selectedElement = element;
     BindingsArea.updateBindingsEditor();
     ExplorerController.selectedElementUpdate();
+    emitUiBridge("properties-changed");
+    emitUiBridge("explorer-changed");
 }
 
 export let copiedElementData: CopiedElementData | undefined = undefined;

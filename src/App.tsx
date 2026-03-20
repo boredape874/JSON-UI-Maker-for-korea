@@ -1,4 +1,6 @@
 import { assetUrl } from "./lib/assetUrl.js";
+import { ExplorerPanel } from "./ui/react/ExplorerPanel.js";
+import { PropertiesPanel } from "./ui/react/PropertiesPanel.js";
 
 const directoryPickerProps = {
     webkitdirectory: "",
@@ -182,7 +184,7 @@ export function App() {
 
                     <div className="breaker"></div>
 
-                    <div id="explorer" className="explorer"></div>
+                    <ExplorerPanel />
                 </div>
 
                 <div className="canvasViewport">
@@ -214,7 +216,7 @@ export function App() {
                 </div>
             </div>
 
-            <div id="properties" className="properties"></div>
+            <PropertiesPanel />
             <div id="notif-container"></div>
             <div id="mainWarningMessage"></div>
         </>
