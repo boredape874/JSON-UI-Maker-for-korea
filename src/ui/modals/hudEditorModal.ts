@@ -898,7 +898,7 @@ function buildHudJson(): string {
         namespace: "hud",
     };
 
-    const rootInsert: Record<string, unknown>[] = [];
+    const wrapperControls: Record<string, unknown>[] = [];
 
     const title = state.elements.title;
     if (title.enabled) {
@@ -912,11 +912,11 @@ function buildHudJson(): string {
                 (json.title_slot_template as Record<string, unknown>).alpha = `@hud.${titleAnimation.entryAnimation}`;
             }
             Object.assign(json, titleAnimation.definitions);
-            rootInsert.push({ "title_data@hud.title_data": {} });
+            wrapperControls.push({ "title_data@hud.title_data": {} });
 
             for (let index = 1; index <= slotCount; index++) {
                 const slotLayout = getSliceSlotLayout(title, index - 1);
-                rootInsert.push({
+                wrapperControls.push({
                     [`title_slot${index}@hud.title_slot_template`]: {
                         $slot_binding: `#text${index}`,
                         anchor_from: slotLayout.anchor,
@@ -935,7 +935,7 @@ function buildHudJson(): string {
                 (json.title_control as Record<string, unknown>).alpha = `@hud.${titleAnimation.entryAnimation}`;
             }
             Object.assign(json, titleAnimation.definitions);
-            rootInsert.push({ "title_ctrl@hud.title_control": {} });
+            wrapperControls.push({ "title_ctrl@hud.title_control": {} });
         }
 
         if (title.hideVanilla) {
@@ -964,11 +964,11 @@ function buildHudJson(): string {
                 (json.subtitle_slot_template as Record<string, unknown>).alpha = `@hud.${subtitleAnimation.entryAnimation}`;
             }
             Object.assign(json, subtitleAnimation.definitions);
-            rootInsert.push({ "subtitle_data@hud.subtitle_data": {} });
+            wrapperControls.push({ "subtitle_data@hud.subtitle_data": {} });
 
             for (let index = 1; index <= slotCount; index++) {
                 const slotLayout = getSliceSlotLayout(subtitle, index - 1);
-                rootInsert.push({
+                wrapperControls.push({
                     [`sub_slot${index}@hud.subtitle_slot_template`]: {
                         $slot_binding: `#text${index}`,
                         anchor_from: slotLayout.anchor,
@@ -987,7 +987,7 @@ function buildHudJson(): string {
                 (json.subtitle_control as Record<string, unknown>).alpha = `@hud.${subtitleAnimation.entryAnimation}`;
             }
             Object.assign(json, subtitleAnimation.definitions);
-            rootInsert.push({ "subtitle_control@hud.subtitle_control": {} });
+            wrapperControls.push({ "subtitle_control@hud.subtitle_control": {} });
         }
 
         if (subtitle.hideVanilla) {
@@ -1038,7 +1038,7 @@ function buildHudJson(): string {
 
         if (actionbar.preserve) {
             json.preserved_actionbar_display = buildPreservedActionbarDisplay(actionbar);
-            rootInsert.unshift({ "preserved_actionbar@hud.preserved_actionbar_display": {} });
+            wrapperControls.unshift({ "preserved_actionbar@hud.preserved_actionbar_display": {} });
         }
 
         if (actionbar.hideVanilla) {
@@ -1049,13 +1049,22 @@ function buildHudJson(): string {
         }
     }
 
-    if (rootInsert.length > 0) {
+    if (wrapperControls.length > 0) {
+        json.hud_editor_root = {
+            type: "panel",
+            size: ["100%", "100%"],
+            controls: wrapperControls,
+        };
         json.root_panel = {
             modifications: [
                 {
                     array_name: "controls",
                     operation: "insert_back",
-                    value: rootInsert,
+                    value: [
+                        {
+                            "hud_editor_root@hud.hud_editor_root": {},
+                        },
+                    ],
                 },
             ],
         };
