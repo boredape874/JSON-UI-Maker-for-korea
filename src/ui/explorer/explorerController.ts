@@ -3,6 +3,7 @@ import { GlobalElementMapValue, selectedElement } from "../../index.js";
 import { GeneralUtil } from "../../util/generalUtil.js";
 import { classToTagName } from "../../converterTypes/HTMLClassToJonUITypes.js";
 import { StringUtil } from "../../util/stringUtil.js";
+import { assetUrl } from "../../lib/assetUrl.js";
 
 const textElementIdMap: Map<string, HTMLDivElement> = new Map<string, HTMLDivElement>();
 const explorerBaseElement = document.getElementById("explorer")!;
@@ -17,12 +18,12 @@ export class ExplorerController {
         textDiv.textContent = text;
 
         const hideImg = document.createElement("img") as HTMLImageElement;
-        hideImg.src = "icons/visible.webp";
+        hideImg.src = assetUrl("icons/visible.webp");
         hideImg.classList.add("explorerVisibilityToggle");
 
         if (hasChildren) {
             const arrowDiv = document.createElement("img") as HTMLImageElement;
-            arrowDiv.src = "assets/arrow_down.webp";
+            arrowDiv.src = assetUrl("assets/arrow_down.webp");
             arrowDiv.classList.add("explorerArrow");
             arrowDiv.style.marginLeft = "5px";
             div.appendChild(arrowDiv);
@@ -85,10 +86,10 @@ export class ExplorerController {
                 e.preventDefault();
 
                 if (textVisibilityToggleElement.src.endsWith("icons/visible.webp")) {
-                    textVisibilityToggleElement.src = "icons/hidden.webp";
+                    textVisibilityToggleElement.src = assetUrl("icons/hidden.webp");
                     classElement.hide();
                 } else {
-                    textVisibilityToggleElement.src = "icons/visible.webp";
+                    textVisibilityToggleElement.src = assetUrl("icons/visible.webp");
                     classElement.show();
                 }
             };
@@ -103,7 +104,9 @@ export class ExplorerController {
                 e.stopPropagation();
                 e.preventDefault();
 
-                textArrowElement.src = textArrowElement.src.endsWith("assets/arrow_down.webp") ? "assets/arrow_right.webp" : "assets/arrow_down.webp";
+                textArrowElement.src = textArrowElement.src.endsWith("assets/arrow_down.webp")
+                    ? assetUrl("assets/arrow_right.webp")
+                    : assetUrl("assets/arrow_down.webp");
 
                 // Toggles the visibility of the children
                 for (const child of Array.from(textElement.children) as HTMLElement[]) {
@@ -124,7 +127,7 @@ export class ExplorerController {
             textElement.style.left = `${StringUtil.cssDimToNumber(textElement.style.left) - config.magicNumbers.explorer.overallOffset}px`;
 
             const lockedImg = document.createElement("img") as HTMLImageElement;
-            lockedImg.src = "icons/locked.webp";
+            lockedImg.src = assetUrl("icons/locked.webp");
             lockedImg.classList.add("explorerLocked");
             textElement.appendChild(lockedImg);
         }
@@ -182,7 +185,7 @@ export class ExplorerController {
                             | undefined;
                         if (!childTextArrowElement) continue;
 
-                        childTextArrowElement.src = "assets/arrow_down.webp";
+                        childTextArrowElement.src = assetUrl("assets/arrow_down.webp");
                     }
                 }
 

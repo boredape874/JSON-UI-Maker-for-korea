@@ -1,6 +1,7 @@
 import { config } from "../../CONFIG.js";
 import { GLOBAL_FILE_SYSTEM } from "../../index.js";
 import { translateText } from "../../i18n.js";
+import { assetUrl } from "../../lib/assetUrl.js";
 import { Notification } from "../notifs/noficationMaker.js";
 import {
     downloadExternalImage,
@@ -38,7 +39,7 @@ class ChooseImageFileTree {
 
         if (hasChildren) {
             const arrowDiv = document.createElement("img") as HTMLImageElement;
-            arrowDiv.src = "assets/arrow_down.webp";
+            arrowDiv.src = assetUrl("assets/arrow_down.webp");
             arrowDiv.classList.add("explorerArrow");
             arrowDiv.style.marginLeft = "5px";
             div.appendChild(arrowDiv);
@@ -48,7 +49,7 @@ class ChooseImageFileTree {
 
         if (hasNineslice) {
             const ninesliceImg = document.createElement("img") as HTMLImageElement;
-            ninesliceImg.src = "icons/nineslice.webp";
+            ninesliceImg.src = assetUrl("icons/nineslice.webp");
             ninesliceImg.classList.add("explorerHasNineslice");
             div.appendChild(ninesliceImg);
         }
@@ -74,8 +75,8 @@ class ChooseImageFileTree {
                     event.preventDefault();
 
                     const nextIcon = textArrowElement.src.endsWith("assets/arrow_down.webp")
-                        ? "assets/arrow_right.webp"
-                        : "assets/arrow_down.webp";
+                        ? assetUrl("assets/arrow_right.webp")
+                        : assetUrl("assets/arrow_down.webp");
                     textArrowElement.src = nextIcon;
 
                     for (const child of Array.from(textElement.children) as HTMLElement[]) {
@@ -544,7 +545,7 @@ function revealTreeItem(element: HTMLElement): void {
             const directChildren = Array.from(current.children) as HTMLElement[];
             const arrow = directChildren.find((child) => child.classList.contains("explorerArrow")) as HTMLImageElement | undefined;
             if (arrow) {
-                arrow.src = "assets/arrow_down.webp";
+                arrow.src = assetUrl("assets/arrow_down.webp");
             }
 
             for (const child of directChildren) {

@@ -1,3 +1,5 @@
+import { assetUrl } from "../lib/assetUrl.js";
+
 function hexRange(start: number, end: number): string[] {
     const values: string[] = [];
     for (let value = start; value <= end; value++) {
@@ -13,7 +15,7 @@ const DEFAULT_GLYPH_HEX_CODES = [
 ];
 
 export const DEFAULT_GLYPH_SHEETS = DEFAULT_GLYPH_HEX_CODES.map((hexCode) => `glyph_${hexCode}.png`);
-export const DEFAULT_GLYPH_BASE_PATH = "assets/glyphs";
+export const DEFAULT_GLYPH_BASE_PATH = assetUrl("assets/glyphs");
 
 export function getGlyphSheetHex(sheetName: string): string {
     return sheetName.replace(/^glyph_/u, "").replace(/\.png$/iu, "").toUpperCase();

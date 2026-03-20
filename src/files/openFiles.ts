@@ -1,4 +1,5 @@
 import { GLOBAL_FILE_SYSTEM, images, setFileSystem } from "../index.js";
+import { assetUrl } from "../lib/assetUrl.js";
 import { Notification } from "../ui/notifs/noficationMaker.js";
 
 export class FileUploader {
@@ -126,7 +127,7 @@ export class FileUploader {
     }
 
     public static async getAssetAsFile(path: string, filename: string): Promise<File> {
-        const response = await fetch(path);
+        const response = await fetch(assetUrl(path));
         const blob = await response.blob();
         const file = new File([blob], filename, { type: blob.type });
         return file;

@@ -1,5 +1,7 @@
 ﻿import { Notification } from "../notifs/noficationMaker.js";
 
+import { assetUrl } from "../../lib/assetUrl.js";
+
 type HudChannel = "title" | "subtitle" | "actionbar";
 type HudSourceChannel = HudChannel;
 type HudBackground = "vanilla" | "solid" | "none";
@@ -416,7 +418,7 @@ function getCanvasBackgroundHtml(): string {
         return `<img class="hudEditorCanvasBackgroundImage" src="${bgImage.src}" alt="HUD Background">`;
     }
 
-    return `<img class="hudEditorCanvasBackgroundImage" src="background.png" alt="HUD Background">`;
+    return `<img class="hudEditorCanvasBackgroundImage" src="${assetUrl("background.png")}" alt="HUD Background">`;
 }
 
 function getPreviewScale(): number {
