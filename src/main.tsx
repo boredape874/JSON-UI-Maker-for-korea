@@ -17,6 +17,7 @@ async function main(): Promise<void> {
 
     const { bootstrapLegacyApp } = await import("./index.js");
     await bootstrapLegacyApp();
+    window.dispatchEvent(new Event("legacy-app-ready"));
 }
 
 void main();
