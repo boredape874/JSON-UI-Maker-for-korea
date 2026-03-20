@@ -384,13 +384,6 @@ function buildProgressFill(sourceControlName: string, sourcePropertyName: string
 function buildTitleControl(element: HudElement): Record<string, unknown> {
     const bodyControls: Record<string, unknown>[] = [];
 
-    const background = backgroundDefinition(element);
-    if (background) {
-        bodyControls.push({
-            title_background: background,
-        });
-    }
-
     if (element.displayMode === "progress") {
         bodyControls.push({
             title_fill: {
@@ -463,11 +456,18 @@ function buildTitleControl(element: HudElement): Record<string, unknown> {
         controls: [
             {
                 title_body: {
-                    type: "panel",
+                    type: element.background === "none" ? "panel" : "image",
                     size: getAutoSizedTextContainer(element, 8),
                     anchor_from: element.anchor,
                     anchor_to: element.anchor,
                     controls: bodyControls,
+                    ...(element.background !== "none"
+                        ? {
+                            texture: element.background === "vanilla" ? "textures/ui/hud_tip_text_background" : "textures/ui/white_background",
+                            alpha: element.backgroundAlpha,
+                            ...(element.background === "solid" ? { color: hexToRgb(element.backgroundColor) } : {}),
+                        }
+                        : {}),
                 },
             },
         ],
@@ -508,11 +508,6 @@ function buildSubtitleControl(element: HudElement): Record<string, unknown> {
             ],
         },
     };
-    if (backgroundDefinition(element)) {
-        bodyControls.push({
-            subtitle_background: backgroundDefinition(element)!,
-        });
-    }
     if (element.displayMode === "progress") {
         bodyControls.push({
             subtitle_fill: buildProgressFill("subtitle_data", "#source_text", element),
@@ -555,11 +550,18 @@ function buildSubtitleControl(element: HudElement): Record<string, unknown> {
             dataControl,
             {
                 subtitle_body: {
-                    type: "panel",
+                    type: element.background === "none" ? "panel" : "image",
                     size: getAutoSizedTextContainer(element, 8),
                     anchor_from: element.anchor,
                     anchor_to: element.anchor,
                     controls: bodyControls,
+                    ...(element.background !== "none"
+                        ? {
+                            texture: element.background === "vanilla" ? "textures/ui/hud_tip_text_background" : "textures/ui/white_background",
+                            alpha: element.backgroundAlpha,
+                            ...(element.background === "solid" ? { color: hexToRgb(element.backgroundColor) } : {}),
+                        }
+                        : {}),
                 },
             },
         ],
@@ -631,12 +633,6 @@ function buildTitleSliceData(element: HudElement): Record<string, unknown> {
 
 function buildSliceSlotTemplate(element: HudElement, sourceControlName: string, labelPrefix: string): Record<string, unknown> {
     const controls: Record<string, unknown>[] = [];
-    const background = backgroundDefinition(element);
-    if (background) {
-        controls.push({
-            [`${labelPrefix}_background`]: background,
-        });
-    }
 
     const label: Record<string, unknown> = {
         type: "label",
