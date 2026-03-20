@@ -1,6 +1,7 @@
 import { DEFAULT_GLYPH_BASE_PATH, DEFAULT_GLYPH_SHEETS, getGlyphCodepoint, getGlyphSheetHex, getGlyphSlotHex } from "../../glyph/defaultGlyphSheets.js";
 import { translateText } from "../../i18n.js";
 import { Notification } from "../notifs/noficationMaker.js";
+import { openGlyphEditorModalBridge } from "../react/modalBridge.js";
 
 type GlyphEditorState = {
     displayCanvas: HTMLCanvasElement | null;
@@ -24,16 +25,8 @@ const state: GlyphEditorState = {
     insertImageName: null,
 };
 
-function getModal(): HTMLElement {
-    return document.getElementById("modalGlyphEditor") as HTMLElement;
-}
-
-function getCloseButton(): HTMLElement {
-    return document.getElementById("modalGlyphEditorClose") as HTMLElement;
-}
-
-function getForm(): HTMLDivElement {
-    return document.getElementsByClassName("modalGlyphEditorForm")[0] as HTMLDivElement;
+function getForm(): HTMLDivElement | null {
+    return document.getElementsByClassName("modalGlyphEditorForm")[0] as HTMLDivElement | undefined ?? null;
 }
 
 function createImageCanvas(width: number, height: number): { canvas: HTMLCanvasElement; context: CanvasRenderingContext2D } {
@@ -121,6 +114,8 @@ async function copySelectedGlyphText(): Promise<void> {
 
 function updateGlyphInfo(): void {
     const form = getForm();
+    if (!form) return;
+
     const status = form.querySelector(".glyphEditorStatus") as HTMLDivElement | null;
     const selectedCell = form.querySelector(".glyphEditorSelectedCell") as HTMLSpanElement | null;
     const unicodeValue = form.querySelector(".glyphEditorUnicode") as HTMLSpanElement | null;
@@ -314,6 +309,7 @@ async function handleInsertImageUpload(file: File): Promise<void> {
 
 function buildGlyphEditor(): void {
     const form = getForm();
+    if (!form) return;
     if (form.dataset.initialized === "true") return;
 
     form.dataset.initialized = "true";
@@ -435,22 +431,15 @@ function buildGlyphEditor(): void {
     redrawGlyphCanvas();
 }
 
-function close(): void {
-    getModal().style.display = "none";
-}
-
-export async function glyphEditorModal(): Promise<void> {
-    const modal = getModal();
-    const closeBtn = getCloseButton();
+export async function ensureGlyphEditorReady(): Promise<void> {
     const form = getForm();
 
-    if (!modal || !closeBtn || !form) {
+    if (!form) {
         new Notification("Could not load the glyph sheet.", 2800, "error");
         return;
     }
 
     buildGlyphEditor();
-    modal.style.display = "block";
 
     const select = form.querySelector(".glyphEditorSheetSelect") as HTMLSelectElement | null;
     if (!state.sheetName && select?.value) {
@@ -458,9 +447,8 @@ export async function glyphEditorModal(): Promise<void> {
     } else {
         redrawGlyphCanvas();
     }
+}
 
-    closeBtn.onclick = close;
-    modal.onclick = (event: MouseEvent) => {
-        if (event.target === modal) close();
-    };
+export async function glyphEditorModal(): Promise<void> {
+    openGlyphEditorModalBridge();
 }

@@ -41,6 +41,8 @@ type ModalBridgeEvent =
     | { type: "open-paste-form"; resolve: (value: PasteFormResult | undefined) => void; defaults?: PasteFormDefaults }
     | { type: "open-ui-workspace"; resolve: (value: UiWorkspaceSelection | undefined) => void; workspace: UiWorkspaceModalData }
     | { type: "open-add-button"; resolve: (value: AddButtonOptions) => void }
+    | { type: "open-glyph-editor" }
+    | { type: "close-glyph-editor" }
     | { type: "open-help" }
     | { type: "close-help" }
     | { type: "open-settings" }
@@ -92,6 +94,14 @@ export function openAddButtonModal(): Promise<AddButtonOptions> {
 
 export function openHelpModal(): void {
     emitModalBridge({ type: "open-help" });
+}
+
+export function openGlyphEditorModalBridge(): void {
+    emitModalBridge({ type: "open-glyph-editor" });
+}
+
+export function closeGlyphEditorModalBridge(): void {
+    emitModalBridge({ type: "close-glyph-editor" });
 }
 
 export function closeHelpModal(): void {

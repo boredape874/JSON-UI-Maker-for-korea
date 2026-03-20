@@ -13,6 +13,9 @@ import { openSettingsModal } from "./ui/react/modalBridge.js";
 import { TexturePresetsModal } from "./ui/react/TexturePresetsModal.js";
 import { UploadPresetModal } from "./ui/react/UploadPresetModal.js";
 import { PresetManagementModal } from "./ui/react/PresetManagementModal.js";
+import { HudEditorModalHost } from "./ui/react/HudEditorModalHost.js";
+import { GlyphEditorModal } from "./ui/react/GlyphEditorModal.js";
+import { ChooseImageModalShell } from "./ui/react/ChooseImageModalShell.js";
 
 const directoryPickerProps = {
     webkitdirectory: "",
@@ -152,27 +155,12 @@ export function App() {
             <TexturePresetsModal />
             <UploadPresetModal />
             <PresetManagementModal />
+            <GlyphEditorModal />
             {SaveFormsModalComponent ? <SaveFormsModalComponent /> : null}
 
-            <div id="hudEditorScreen" className="hudEditorScreen">
-                <div className="hudEditorScreenHeader">
-                    <div className="hudEditorScreenTitle">HUD Editor</div>
-                    <button type="button" id="hudEditorScreenClose" className="propertyInputButton hudEditorScreenClose">Close HUD Editor</button>
-                </div>
-                <div className="hudEditorScreenBody modalHudEditorForm"></div>
-            </div>
+            <HudEditorModalHost />
 
-            <div id="modalGlyphEditor" className="modal"><div className="modal-content glyphEditorModalContent"><span id="modalGlyphEditorClose" className="modalClose">&times;</span><h2 className="modalHeader">Glyph Editor</h2><div className="modalGlyphEditorForm"></div></div></div>
-
-            <div id="modalChooseImage" className="modal">
-                <div className="modal-content chooseImageModalContent">
-                    <span id="modalChooseImageClose" className="modalClose">&times;</span>
-                    <h2 className="modalHeader">Choose Image</h2>
-                    <img src={icon("icons/nineslice.webp")} style={{ width: 20, position: "relative", top: 5, left: 5 }} alt="Nineslice" />
-                    <label style={{ fontWeight: 500, color: "rgb(255, 255, 255)" }}>: Nineslice Image</label>
-                    <div className="modalChooseImageForm"></div>
-                </div>
-            </div>
+            <ChooseImageModalShell />
 
             <div className="main">
                 <div className="buttons">

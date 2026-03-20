@@ -1,6 +1,7 @@
 ﻿import { Notification } from "../notifs/noficationMaker.js";
 
 import { assetUrl } from "../../lib/assetUrl.js";
+import { closeHudEditorBridge, openHudEditorBridge, subscribeHudEditorModalBridge } from "../react/hudEditorModalBridge.js";
 
 type HudChannel = "title" | "subtitle" | "actionbar";
 type HudSourceChannel = HudChannel;
@@ -262,16 +263,60 @@ const state: HudEditorState = {
     drag: null,
 };
 
+type HudEditorHostElements = {
+    modal: HTMLElement;
+    closeButton: HTMLElement;
+    form: HTMLDivElement;
+};
+
+let hudEditorHost: HudEditorHostElements | null = null;
+let hudEditorHostWaiters: Array<(host: HudEditorHostElements) => void> = [];
+let activeHudEditorPromise: Promise<void> | null = null;
+let cleanupHudEditorSession: (() => void) | null = null;
+
+export function registerHudEditorHost(host: HudEditorHostElements | null): void {
+    hudEditorHost = host;
+
+    if (!host) {
+        if (activeHudEditorPromise) {
+            closeHudEditorBridge();
+        }
+        return;
+    }
+
+    hudEditorHostWaiters.forEach((resolve) => resolve(host));
+    hudEditorHostWaiters = [];
+}
+
+function waitForHudEditorHost(): Promise<HudEditorHostElements> {
+    if (hudEditorHost) {
+        return Promise.resolve(hudEditorHost);
+    }
+
+    return new Promise((resolve) => {
+        hudEditorHostWaiters.push(resolve);
+    });
+}
+
 function getModal(): HTMLElement {
-    return document.getElementById("hudEditorScreen") as HTMLElement;
+    if (!hudEditorHost) {
+        throw new Error("HUD editor host is not registered.");
+    }
+    return hudEditorHost.modal;
 }
 
 function getCloseButton(): HTMLElement {
-    return document.getElementById("hudEditorScreenClose") as HTMLElement;
+    if (!hudEditorHost) {
+        throw new Error("HUD editor host is not registered.");
+    }
+    return hudEditorHost.closeButton;
 }
 
 function getForm(): HTMLDivElement {
-    return document.getElementsByClassName("modalHudEditorForm")[0] as HTMLDivElement;
+    if (!hudEditorHost) {
+        throw new Error("HUD editor host is not registered.");
+    }
+    return hudEditorHost.form;
 }
 
 function escapeHtml(value: string): string {
@@ -2779,8 +2824,12 @@ function bindStaticActions(): void {
     });
 }
 
-function attachDragHandlers(): void {
+function attachDragHandlers(): () => void {
     const modal = getModal();
+    const previousOnMouseMove = modal.onmousemove;
+    const previousOnMouseUp = modal.onmouseup;
+    const previousOnMouseLeave = modal.onmouseleave;
+    const previousWindowOnMouseUp = window.onmouseup;
     const finishDrag = () => {
         if (!state.drag) return;
         const element = state.elements[state.drag.id as HudChannel] ?? getProgressBarById(state.drag.id);
@@ -2824,32 +2873,64 @@ function attachDragHandlers(): void {
     window.onmouseup = finishDrag;
 
     modal.onmouseleave = finishDrag;
+
+    return () => {
+        modal.onmousemove = previousOnMouseMove;
+        modal.onmouseup = previousOnMouseUp;
+        modal.onmouseleave = previousOnMouseLeave;
+        window.onmouseup = previousWindowOnMouseUp;
+    };
 }
 
 function mountHudEditor(): void {
+    cleanupHudEditorSession?.();
     renderModalShell();
     bindStaticActions();
-    attachDragHandlers();
+    const detachDragHandlers = attachDragHandlers();
     renderAll();
+    cleanupHudEditorSession = () => {
+        state.drag = null;
+        detachDragHandlers();
+    };
 }
 
 export async function hudEditorModal(): Promise<void> {
+    if (activeHudEditorPromise) {
+        return activeHudEditorPromise;
+    }
+
+    await waitForHudEditorHost();
     mountHudEditor();
-    const modal = getModal();
-    modal.style.display = "flex";
     document.body.style.overflow = "hidden";
 
-    return new Promise((resolve) => {
+    activeHudEditorPromise = new Promise((resolve) => {
         const handleResize = () => renderAll();
-        const close = () => {
-            modal.style.display = "none";
+        const previousCleanup = cleanupHudEditorSession;
+        const closeButton = getCloseButton();
+        const previousCloseHandler = closeButton.onclick;
+        const unsubscribe = subscribeHudEditorModalBridge((event) => {
+            if (event.type !== "close") {
+                return;
+            }
+
+            unsubscribe();
+            cleanupHudEditorSession?.();
+            cleanupHudEditorSession = null;
             document.body.style.overflow = "";
-            getCloseButton().onclick = null;
-            window.removeEventListener("resize", handleResize);
+            activeHudEditorPromise = null;
             resolve();
-        };
+        });
 
         window.addEventListener("resize", handleResize);
-        getCloseButton().onclick = close;
+        closeButton.onclick = () => closeHudEditorBridge();
+        cleanupHudEditorSession = () => {
+            previousCleanup?.();
+            closeButton.onclick = previousCloseHandler;
+            window.removeEventListener("resize", handleResize);
+        };
     });
+
+    openHudEditorBridge();
+
+    return activeHudEditorPromise;
 }
