@@ -1016,12 +1016,55 @@ export class Builder {
     }
 }
 
+const builderApi = {
+    handleUiTexturesUpload: () => Builder.handleUiTexturesUpload(),
+    uploadForm: () => Builder.uploadForm(),
+    importUiWorkspace: () => Builder.importUiWorkspace(),
+    openPasteFormModal: () => Builder.openPasteFormModal(),
+    openHudEditorModal: () => Builder.openHudEditorModal(),
+    openGlyphEditorModal: () => Builder.openGlyphEditorModal(),
+    openAuthModal: (signup: boolean = false) => Builder.openAuthModal(signup),
+    logout: () => Builder.logout(),
+    openUploadPresetModal: () => Builder.openUploadPresetModal(),
+    openPresetManagementModal: () => Builder.openPresetManagementModal(),
+    texturePresetsModal: () => Builder.texturePresetsModal(),
+    undo: () => Builder.undo(),
+    redo: () => Builder.redo(),
+    openHelpMenu: () => Builder.openHelpMenu(),
+    addPanel: () => Builder.addPanel(),
+    openAddImageMenu: () => Builder.openAddImageMenu(),
+    addButton: () => Builder.addButton(),
+    addCollectionPanel: () => Builder.addCollectionPanel(),
+    addLabel: () => Builder.addLabel(),
+    addScrollingPanel: () => Builder.addScrollingPanel(),
+    reset: () => Builder.reset(),
+    deleteSelected: () => Builder.deleteSelected(),
+    delete: (id?: string) => (id ? Builder.delete(id) : undefined),
+    updateExplorer: () => Builder.updateExplorer(),
+    openSaveFormsModal: () => Builder.openSaveFormsModal(),
+    formatBindingsArea: () => Builder.formatBindingsArea(),
+    refreshPresetTextures: () => Builder.refreshPresetTextures(),
+    setFormIdentity: (name: string) => Builder.setFormIdentity(name),
+    generateAndCopyJsonUI: (type: "copy" | "download") => Builder.generateAndCopyJsonUI(type),
+    downloadFormPackageZip: (includeServerForm: boolean = true) => Builder.downloadFormPackageZip(includeServerForm),
+    downloadServerForm: (type: "copy" | "download") => Builder.downloadServerForm(type),
+    downloadCurrentFormImages: () => Builder.downloadCurrentFormImages(),
+    downloadCurrentFormImagesZip: () => Builder.downloadCurrentFormImagesZip(),
+    downloadLoadedPresetTextures: () => Builder.downloadLoadedPresetTextures(),
+    downloadLoadedPresetTexturesZip: () => Builder.downloadLoadedPresetTexturesZip(),
+    isValidPath: (mainHTMLElement: HTMLElement) => Builder.isValidPath(mainHTMLElement),
+    setSettingToggle: (setting: keyof typeof config.settings, value: any) => Builder.setSettingToggle(setting, value),
+    updateAuthUI: () => Builder.updateAuthUI(),
+};
+
+type BuilderPublicApi = typeof builderApi;
+
 declare global {
     interface Window {
-        Builder: typeof Builder;
+        Builder: BuilderPublicApi;
         Converter: typeof Converter;
     }
 }
 
-window.Builder = Builder;
-setBuilderRuntime(Builder);
+window.Builder = builderApi;
+setBuilderRuntime(builderApi);
