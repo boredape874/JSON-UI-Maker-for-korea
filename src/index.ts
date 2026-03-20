@@ -50,6 +50,7 @@ import { getPanelContainer, initEditorCanvasRuntime } from "./runtime/editorCanv
 import { GLOBAL_ELEMENT_MAP, GLOBAL_FILE_SYSTEM, GlobalElementMapValue, draggedElement, resizedElement, setDraggedElement, setFileSystem, setResizedElement } from "./runtime/editorStore.js";
 import { images } from "./runtime/imageStore.js";
 import { setBuilderRuntime } from "./runtime/builderRuntime.js";
+import { emitUiBridge } from "./ui/reactUiBridge.js";
 
 initI18n();
 
@@ -175,11 +176,7 @@ async function loadSavedAssets(): Promise<void> {
         }
         
         console.log(`Successfully loaded ${loadedCount} saved assets`);
-        
-        // Refresh the UI if needed
-        if ((window as any).Builder) {
-            (window as any).Builder.updateExplorer();
-        }
+        emitUiBridge("explorer-changed");
     } catch (error) {
         console.error('Error loading saved assets:', error);
     }

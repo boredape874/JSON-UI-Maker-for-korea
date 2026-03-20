@@ -1,4 +1,6 @@
 // Authentication management
+import { setAuthUiState } from "./ui/react/authUiBridge.js";
+
 export interface User {
   id: number;
   username: string;
@@ -46,10 +48,10 @@ class AuthManager {
       this.currentUser = { id: user.id, username: user.username };
       this.saveToStorage();
 
-      // Update UI immediately
-      if ((window as any).Builder) {
-          (window as any).Builder.updateAuthUI();
-      }
+      setAuthUiState({
+        signedIn: true,
+        username: user.username,
+      });
 
       return { success: true, message: 'Account created successfully' };
     } catch (error) {
@@ -69,10 +71,10 @@ class AuthManager {
         this.currentUser = { id: user.id, username: user.username };
         this.saveToStorage();
 
-        // Update UI immediately
-        if ((window as any).Builder) {
-            (window as any).Builder.updateAuthUI();
-        }
+        setAuthUiState({
+          signedIn: true,
+          username: user.username,
+        });
 
         return { success: true, message: 'Signed in successfully' };
       } else {
@@ -87,6 +89,10 @@ class AuthManager {
   logout(): void {
     this.currentUser = null;
     localStorage.removeItem(this.STORAGE_KEY);
+    setAuthUiState({
+      signedIn: false,
+      username: null,
+    });
   }
 
   getCurrentUser(): User | null {
