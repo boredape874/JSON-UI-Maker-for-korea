@@ -958,9 +958,7 @@ export class Builder {
         }
         
         // Also refresh the preset management modal if it's open
-        if ((window as any).presetManagementModal) {
-            (window as any).presetManagementModal.refreshPresets();
-        }
+        void presetManagementModal.refreshPresets();
     }
 
     public static logout(): void {

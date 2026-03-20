@@ -1,4 +1,3 @@
-import { ComponentType, useEffect, useState } from "react";
 import { assetUrl } from "./lib/assetUrl.js";
 import { CreateFormModal } from "./ui/react/CreateFormModal.js";
 import { AuthModal } from "./ui/react/AuthModal.js";
@@ -16,6 +15,9 @@ import { PresetManagementModal } from "./ui/react/PresetManagementModal.js";
 import { HudEditorModalHost } from "./ui/react/HudEditorModalHost.js";
 import { GlyphEditorModal } from "./ui/react/GlyphEditorModal.js";
 import { ChooseImageModalShell } from "./ui/react/ChooseImageModalShell.js";
+import { ExplorerPanel } from "./ui/react/ExplorerPanel.js";
+import { PropertiesPanel } from "./ui/react/PropertiesPanel.js";
+import { SaveFormsModal } from "./ui/react/SaveFormsModal.js";
 
 const directoryPickerProps = {
     webkitdirectory: "",
@@ -28,37 +30,6 @@ function icon(path: string): string {
 
 export function App() {
     const auth = useAuthUiState();
-    const [legacyReady, setLegacyReady] = useState(false);
-    const [ExplorerPanelComponent, setExplorerPanelComponent] = useState<ComponentType | null>(null);
-    const [PropertiesPanelComponent, setPropertiesPanelComponent] = useState<ComponentType | null>(null);
-    const [SaveFormsModalComponent, setSaveFormsModalComponent] = useState<ComponentType | null>(null);
-
-    useEffect(() => {
-        const markReady = () => setLegacyReady(true);
-        window.addEventListener("legacy-app-ready", markReady);
-        return () => window.removeEventListener("legacy-app-ready", markReady);
-    }, []);
-
-    useEffect(() => {
-        if (!legacyReady) return;
-        let mounted = true;
-
-        void import("./ui/react/ExplorerPanel.js").then((module) => {
-            if (mounted) setExplorerPanelComponent(() => module.ExplorerPanel);
-        });
-
-        void import("./ui/react/PropertiesPanel.js").then((module) => {
-            if (mounted) setPropertiesPanelComponent(() => module.PropertiesPanel);
-        });
-
-        void import("./ui/react/SaveFormsModal.js").then((module) => {
-            if (mounted) setSaveFormsModalComponent(() => module.SaveFormsModal);
-        });
-
-        return () => {
-            mounted = false;
-        };
-    }, [legacyReady]);
 
     return (
         <>
@@ -156,7 +127,7 @@ export function App() {
             <UploadPresetModal />
             <PresetManagementModal />
             <GlyphEditorModal />
-            {SaveFormsModalComponent ? <SaveFormsModalComponent /> : null}
+            <SaveFormsModal />
 
             <HudEditorModalHost />
 
@@ -184,7 +155,7 @@ export function App() {
 
                     <div className="breaker"></div>
 
-                    {ExplorerPanelComponent ? <ExplorerPanelComponent /> : <div id="explorer" className="explorer"></div>}
+                    <ExplorerPanel />
                 </div>
 
                 <div className="canvasViewport">
@@ -216,7 +187,7 @@ export function App() {
                 </div>
             </div>
 
-            {PropertiesPanelComponent ? <PropertiesPanelComponent /> : <div id="properties" className="properties"></div>}
+            <PropertiesPanel />
             <div id="notif-container"></div>
             <div id="mainWarningMessage"></div>
         </>

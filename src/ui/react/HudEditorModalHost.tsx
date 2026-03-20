@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { registerHudEditorHost } from "../modals/hudEditorModal.js";
 import { closeHudEditorBridge, subscribeHudEditorModalBridge } from "./hudEditorModalBridge.js";
+import { HudEditorWorkspace } from "./HudEditorWorkspace.js";
 
 export function HudEditorModalHost() {
     const [open, setOpen] = useState(false);
@@ -41,7 +42,9 @@ export function HudEditorModalHost() {
                     Close HUD Editor
                 </button>
             </div>
-            <div ref={formRef} className="hudEditorScreenBody modalHudEditorForm"></div>
+            <div ref={formRef} className="hudEditorScreenBody modalHudEditorForm">
+                <HudEditorWorkspace />
+            </div>
         </div>
     );
 }

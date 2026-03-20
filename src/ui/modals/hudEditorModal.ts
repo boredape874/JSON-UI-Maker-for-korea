@@ -7,7 +7,7 @@ import { closeHudEditorBridge, openHudEditorBridge, subscribeHudEditorModalBridg
 type HudChannel = "title" | "subtitle" | "actionbar";
 type HudSourceChannel = HudChannel;
 type HudBackground = "vanilla" | "solid" | "none";
-type HudFontSize = "small" | "normal" | "large" | "extra_large";
+export type HudFontSize = "small" | "normal" | "large" | "extra_large";
 type HudTextSliceMode = "single" | "slice";
 type HudDisplayMode = "text" | "progress";
 type HudClipDirection = "left" | "right" | "up" | "down";
@@ -19,7 +19,7 @@ type HudSliceSlot = {
     x: number;
     y: number;
 };
-type HudAnchor =
+export type HudAnchor =
     | "top_left"
     | "top_middle"
     | "top_right"
@@ -30,7 +30,7 @@ type HudAnchor =
     | "bottom_middle"
     | "bottom_right";
 
-type HudElement = {
+export type HudElement = {
     id: HudChannel;
     label: string;
     enabled: boolean;
@@ -70,7 +70,7 @@ type HudElement = {
     sliceSlots?: HudSliceSlot[];
 };
 
-type HudProgressBar = {
+export type HudProgressBar = {
     id: string;
     label: string;
     enabled: boolean;
@@ -109,7 +109,7 @@ type HudProgressBar = {
     ignoreTrail: boolean;
 };
 
-type HudCanvasItem = {
+export type HudCanvasItem = {
     id: string;
     kind: "channel" | "progressBar";
     label: string;
@@ -123,7 +123,7 @@ type HudCanvasItem = {
     layer: number;
 };
 
-type HudEditorState = {
+export type HudEditorState = {
     selectedId: string;
     autoFitPreview: boolean;
     previewZoom: number;
@@ -274,6 +274,7 @@ let hudEditorHost: HudEditorHostElements | null = null;
 let hudEditorHostWaiters: Array<(host: HudEditorHostElements) => void> = [];
 let activeHudEditorPromise: Promise<void> | null = null;
 let cleanupHudEditorSession: (() => void) | null = null;
+const hudEditorStoreListeners = new Set<() => void>();
 
 export function registerHudEditorHost(host: HudEditorHostElements | null): void {
     hudEditorHost = host;
@@ -1798,6 +1799,483 @@ function updateOutput(): void {
     });
 }
 
+export type HudEditorPreviewGuide = {
+    id: "title" | "subtitle" | "actionbar";
+    label: string;
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+};
+
+export type HudEditorPreviewItem = {
+    id: string;
+    kind: "channel" | "progressBar" | "slice";
+    slotIndex?: number;
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+    layer: number;
+    selected: boolean;
+    withBg: boolean;
+    ignored: boolean;
+    background: HudBackground;
+    backgroundColor: string;
+    backgroundAlpha: number;
+    text: string;
+    textColor: string;
+    shadow: boolean;
+    fontSize: HudFontSize;
+    animationPreset?: HudAnimationPreset;
+    fill?: {
+        left: string;
+        top: string;
+        width: string;
+        height: string;
+        color: string;
+    };
+};
+
+export type HudEditorScriptHelper = {
+    key: string;
+    title: string;
+    content: string;
+    copyText: string;
+    notice: string;
+};
+
+export type HudEditorSnapshot = {
+    state: HudEditorState;
+    selectedElement: HudElement | HudProgressBar;
+    previewScale: number;
+    canvasBackgroundUrl: string;
+    activeGuideAnchor: HudAnchor;
+    guides: HudEditorPreviewGuide[];
+    previewItems: HudEditorPreviewItem[];
+    hudJson: string;
+    animatedBarJson: string;
+    uiDefsJson: string;
+    hasEnabledProgressBars: boolean;
+    scriptHelpers: HudEditorScriptHelper[];
+};
+
+function notifyHudEditorStore(): void {
+    hudEditorStoreListeners.forEach((listener) => listener());
+}
+
+export function subscribeHudEditorStore(listener: () => void): () => void {
+    hudEditorStoreListeners.add(listener);
+    return () => hudEditorStoreListeners.delete(listener);
+}
+
+export function getHudEditorCanvasBackgroundUrl(): string {
+    const mainWindow = document.getElementById("main_window");
+    const bgImage = mainWindow?.querySelector(".bg_image") as HTMLImageElement | null;
+    return bgImage?.src || assetUrl("background.png");
+}
+
+export function getHudEditorSnapshot(): HudEditorSnapshot {
+    const selectedElement = getSelectedElement();
+    const titleGuide = computePreviewRect({ ...state.elements.title, x: 0, y: 130, width: 440, height: 56, anchor: "top_middle" });
+    const subtitleGuide = computePreviewRect({ ...state.elements.subtitle, x: 0, y: 190, width: 380, height: 42, anchor: "top_middle" });
+    const actionbarGuide = computePreviewRect({ ...state.elements.actionbar, x: 0, y: -96, width: 340, height: 38, anchor: "bottom_middle" });
+    const activeGuideAnchor = !isProgressBarElement(selectedElement) && isSliceMode(selectedElement) && typeof state.drag?.slotIndex === "number" && state.drag.id === selectedElement.id
+        ? ensureSliceSlots(selectedElement)[state.drag.slotIndex]?.anchor ?? selectedElement.anchor
+        : selectedElement.anchor;
+
+    const previewItems = [
+        ...Object.values(state.elements),
+        ...state.progressBars,
+    ].filter((element) => element.enabled).flatMap((element): HudEditorPreviewItem[] => {
+        if (!isProgressBarElement(element) && isSliceMode(element)) {
+            const slotCount = clamp(element.sliceSlotCount ?? 1, 1, 30);
+            const slotTexts = previewSliceSlotTexts(element);
+            return Array.from({ length: slotCount }, (_, rawIndex) => {
+                const slotLayout = getSliceSlotLayout(element, rawIndex);
+                const rect = computePreviewRect({
+                    ...element,
+                    anchor: slotLayout.anchor,
+                    x: slotLayout.x,
+                    y: slotLayout.y,
+                });
+                return {
+                    id: element.id,
+                    kind: "slice",
+                    slotIndex: rawIndex,
+                    left: rect.left,
+                    top: rect.top,
+                    width: element.width,
+                    height: element.height,
+                    layer: element.layer,
+                    selected: element.id === state.selectedId,
+                    withBg: element.background !== "none",
+                    ignored: element.ignored,
+                    background: element.background,
+                    backgroundColor: element.backgroundColor,
+                    backgroundAlpha: element.backgroundAlpha,
+                    text: slotTexts[rawIndex] || `슬롯 ${rawIndex + 1}`,
+                    textColor: element.textColor,
+                    shadow: element.shadow,
+                    fontSize: element.fontSize,
+                };
+            });
+        }
+
+        const rect = computePreviewRect(element);
+        const progressValues = isProgressBarElement(element)
+            ? previewProgressBarValues(element)
+            : { current: previewNumericValue(element), max: Math.max(1, element.maxValue || 1) };
+        const fillRatio = clamp(progressValues.current / Math.max(1, progressValues.max), 0, 1);
+        const fillWidth = element.clipDirection === "up" || element.clipDirection === "down"
+            ? "100%"
+            : `${fillRatio * 100}%`;
+        const fillHeight = element.clipDirection === "up" || element.clipDirection === "down"
+            ? `${fillRatio * 100}%`
+            : "100%";
+        const fillLeft = element.clipDirection === "right" ? `${(1 - fillRatio) * 100}%` : "0";
+        const fillTop = element.clipDirection === "up" ? `${(1 - fillRatio) * 100}%` : "0";
+
+        return [{
+            id: element.id,
+            kind: isProgressBarElement(element) ? "progressBar" : "channel",
+            left: rect.left,
+            top: rect.top,
+            width: element.width,
+            height: element.height,
+            layer: element.layer,
+            selected: element.id === state.selectedId,
+            withBg: element.background !== "none",
+            ignored: element.ignored,
+            background: element.background,
+            backgroundColor: element.backgroundColor,
+            backgroundAlpha: element.backgroundAlpha,
+            text: isProgressBarElement(element)
+                ? (element.showText ? `${progressValues.current} / ${progressValues.max}` : element.label)
+                : (element.displayMode === "progress" && element.id !== "actionbar"
+                    ? `${progressValues.current} / ${progressValues.max}`
+                    : previewElementText(element)),
+            textColor: element.textColor,
+            shadow: element.shadow,
+            fontSize: element.fontSize,
+            animationPreset: !isProgressBarElement(element) ? element.animationPreset : undefined,
+            fill: isProgressBarElement(element) || (element.displayMode === "progress" && element.id !== "actionbar")
+                ? {
+                    left: fillLeft,
+                    top: fillTop,
+                    width: fillWidth,
+                    height: fillHeight,
+                    color: element.fillColor,
+                }
+                : undefined,
+        }];
+    });
+
+    const scriptHelpers: HudEditorScriptHelper[] = [];
+    if (state.elements.title.enabled && state.elements.title.titleMode === "slice") {
+        scriptHelpers.push({
+            key: "title-slice",
+            title: "Title Script Helper",
+            content: buildTitleSliceScriptHelper(state.elements.title),
+            copyText: buildTitleSliceScriptHelper(state.elements.title),
+            notice: "Title Script helper를 클립보드에 복사했습니다.",
+        });
+    }
+    if (state.elements.subtitle.enabled && state.elements.subtitle.subtitleMode === "slice") {
+        scriptHelpers.push({
+            key: "subtitle-slice",
+            title: "Subtitle Script Helper",
+            content: buildSubtitleSliceScriptHelper(state.elements.subtitle),
+            copyText: buildSubtitleSliceScriptHelper(state.elements.subtitle),
+            notice: "Subtitle Script helper를 클립보드에 복사했습니다.",
+        });
+    }
+    for (const bar of state.progressBars.filter((entry) => entry.enabled)) {
+        const helper = buildProgressBarScriptHelper(bar);
+        scriptHelpers.push({
+            key: `progress-${bar.id}`,
+            title: `${bar.label} Script Helper`,
+            content: helper,
+            copyText: helper,
+            notice: `${bar.label} Script helper를 클립보드에 복사했습니다.`,
+        });
+    }
+
+    return {
+        state,
+        selectedElement,
+        previewScale: getPreviewScale(),
+        canvasBackgroundUrl: getHudEditorCanvasBackgroundUrl(),
+        activeGuideAnchor,
+        guides: [
+            { id: "title", label: "바닐라 타이틀", left: titleGuide.left, top: titleGuide.top, width: 440, height: 56 },
+            { id: "subtitle", label: "바닐라 서브타이틀", left: subtitleGuide.left, top: subtitleGuide.top, width: 380, height: 42 },
+            { id: "actionbar", label: "바닐라 액션바", left: actionbarGuide.left, top: actionbarGuide.top, width: 340, height: 38 },
+        ],
+        previewItems,
+        hudJson: buildHudJson(),
+        animatedBarJson: buildAnimatedBarJson(),
+        uiDefsJson: buildUiDefsJson(),
+        hasEnabledProgressBars: hasEnabledProgressBars(),
+        scriptHelpers,
+    };
+}
+
+function setSelectedElementValue(field: string, value: string | number | boolean): void {
+    const element = getSelectedElement();
+    if (isProgressBarElement(element)) {
+        const target = element as Record<string, unknown>;
+        target[field] = value;
+        return;
+    }
+
+    const target = element as Record<string, unknown>;
+    const previousX = element.x;
+    const previousY = element.y;
+    target[field] = value;
+
+    if (isSliceMode(element)) {
+        const slots = ensureSliceSlots(element);
+        if (field === "x") {
+            const delta = element.x - previousX;
+            element.sliceSlots = slots.map((slot) => ({ ...slot, x: slot.x + delta }));
+        } else if (field === "y") {
+            const delta = element.y - previousY;
+            element.sliceSlots = slots.map((slot) => ({ ...slot, y: slot.y + delta }));
+        } else if (field === "anchor") {
+            element.sliceSlots = slots.map((slot) => ({ ...slot, anchor: element.anchor }));
+        }
+    }
+}
+
+export function selectHudEditorItem(id: string): void {
+    state.selectedId = id;
+    notifyHudEditorStore();
+}
+
+export function addHudEditorProgressBar(): void {
+    const id = `progress_bar_${state.nextProgressBarId}`;
+    state.nextProgressBarId += 1;
+    const bar = createDefaultProgressBar(id, `Progress ${state.progressBars.length + 1}`);
+    state.progressBars.push(bar);
+    state.selectedId = bar.id;
+    notifyHudEditorStore();
+}
+
+export function deleteHudEditorProgressBar(id: string): void {
+    state.progressBars = state.progressBars.filter((bar) => bar.id !== id);
+    if (state.selectedId === id) {
+        state.selectedId = "title";
+    }
+    notifyHudEditorStore();
+}
+
+export function updateSelectedHudEditorField(field: string, value: string | number | boolean): void {
+    setSelectedElementValue(field, value);
+    notifyHudEditorStore();
+}
+
+export function updateHudEditorSliceSlot(slotIndex: number, field: keyof HudSliceSlot, value: number | HudAnchor): void {
+    const element = getSelectedElement();
+    if (isProgressBarElement(element)) {
+        return;
+    }
+    const slots = ensureSliceSlots(element);
+    const slot = slots[slotIndex];
+    if (!slot) {
+        return;
+    }
+    slot[field] = value as never;
+    notifyHudEditorStore();
+}
+
+export function addHudEditorSliceSlot(targetId: HudChannel): void {
+    const target = state.elements[targetId];
+    target.sliceSlotCount = clamp((target.sliceSlotCount ?? 1) + 1, 1, 30);
+    ensureSliceSlots(target);
+    notifyHudEditorStore();
+}
+
+export function removeHudEditorSliceSlot(targetId: HudChannel): void {
+    const target = state.elements[targetId];
+    target.sliceSlotCount = clamp((target.sliceSlotCount ?? 1) - 1, 1, 30);
+    ensureSliceSlots(target);
+    notifyHudEditorStore();
+}
+
+export function setHudEditorAutoFitPreview(enabled: boolean): void {
+    state.autoFitPreview = enabled;
+    notifyHudEditorStore();
+}
+
+export function setHudEditorPreviewZoom(zoom: number): void {
+    state.autoFitPreview = false;
+    state.previewZoom = zoom;
+    notifyHudEditorStore();
+}
+
+export function toggleHudEditorGuides(): void {
+    state.showAnchorGuides = !state.showAnchorGuides;
+    notifyHudEditorStore();
+}
+
+export function toggleHudEditorAutoAnchorSnap(): void {
+    state.autoAnchorSnap = !state.autoAnchorSnap;
+    notifyHudEditorStore();
+}
+
+export function startHudEditorDrag(id: string, clientX: number, clientY: number, slotIndex?: number): void {
+    const element = state.elements[id as HudChannel] ?? getProgressBarById(id);
+    if (!element) {
+        return;
+    }
+    if (!isProgressBarElement(element) && isSliceMode(element) && !Number.isFinite(slotIndex as number)) {
+        return;
+    }
+    state.selectedId = id;
+    state.drag = {
+        id,
+        startMouseX: clientX,
+        startMouseY: clientY,
+        startX: element.x,
+        startY: element.y,
+        slotIndex: Number.isFinite(slotIndex as number) ? slotIndex : undefined,
+        startSliceSlots: !isProgressBarElement(element) && isSliceMode(element) ? ensureSliceSlots(element).map((slot) => ({ ...slot })) : undefined,
+    };
+    notifyHudEditorStore();
+}
+
+export function copyHudEditorText(content: string, notice: string): Promise<void> {
+    return navigator.clipboard.writeText(content).then(() => {
+        new Notification(notice, 2200, "notif");
+    });
+}
+
+export function downloadHudEditorJsonFile(filename: string, content: string): void {
+    const blob = new Blob([content], { type: "application/json" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+    new Notification(`${filename}을 다운로드했습니다.`, 2200, "notif");
+}
+
+export function resetHudEditorState(): void {
+    state.selectedId = "title";
+    state.autoFitPreview = true;
+    state.previewZoom = 1;
+    state.progressBars = [];
+    state.nextProgressBarId = 1;
+    state.elements.title = {
+        ...state.elements.title,
+        enabled: true,
+        ignored: false,
+        sampleText: "Title",
+        prefix: "",
+        stripPrefix: false,
+        hideVanilla: false,
+        preserve: false,
+        anchor: "top_middle",
+        x: 0,
+        y: 130,
+        width: 440,
+        height: 56,
+        layer: 30,
+        fontSize: "extra_large",
+        textColor: "#ffffff",
+        shadow: true,
+        background: "vanilla",
+        backgroundAlpha: 0.75,
+        backgroundColor: "#1f2432",
+        displayMode: "text",
+        maxValue: 100,
+        fillColor: "#5be37a",
+        clipDirection: "left",
+        animationPreset: "fade_hold_fade",
+        animInDuration: 0.25,
+        animHoldDuration: 2,
+        animOutDuration: 0.25,
+        titleMode: "single",
+        sliceSlotCount: 1,
+        sliceSlotSize: 20,
+        sliceColumns: 2,
+        sliceGapX: 8,
+        sliceGapY: 8,
+        sliceSlots: undefined,
+    };
+    state.elements.subtitle = {
+        ...state.elements.subtitle,
+        enabled: true,
+        ignored: false,
+        sampleText: "Subtitle",
+        prefix: "",
+        stripPrefix: false,
+        hideVanilla: false,
+        preserve: false,
+        anchor: "top_middle",
+        x: 0,
+        y: 190,
+        width: 380,
+        height: 42,
+        layer: 31,
+        fontSize: "large",
+        textColor: "#dfe9ff",
+        shadow: true,
+        background: "vanilla",
+        backgroundAlpha: 0.75,
+        backgroundColor: "#1f2432",
+        displayMode: "text",
+        maxValue: 100,
+        fillColor: "#6fc3ff",
+        clipDirection: "left",
+        animationPreset: "fade_hold_fade",
+        animInDuration: 0.2,
+        animHoldDuration: 2,
+        animOutDuration: 0.2,
+        subtitleMode: "single",
+        sliceSlotCount: 1,
+        sliceSlotSize: 20,
+        sliceColumns: 2,
+        sliceGapX: 8,
+        sliceGapY: 8,
+        sliceSlots: undefined,
+    };
+    state.elements.actionbar = {
+        ...state.elements.actionbar,
+        enabled: true,
+        ignored: false,
+        sampleText: "Actionbar",
+        prefix: "",
+        stripPrefix: false,
+        hideVanilla: false,
+        preserve: false,
+        anchor: "bottom_middle",
+        x: 0,
+        y: -96,
+        width: 340,
+        height: 38,
+        layer: 32,
+        fontSize: "normal",
+        textColor: "#ffffff",
+        shadow: true,
+        background: "vanilla",
+        backgroundAlpha: 0.75,
+        backgroundColor: "#1f2432",
+        displayMode: "text",
+        maxValue: 100,
+        fillColor: "#5be37a",
+        clipDirection: "left",
+        animationPreset: "fade_out",
+        animInDuration: 0.15,
+        animHoldDuration: 2.7,
+        animOutDuration: 3,
+    };
+    notifyHudEditorStore();
+    new Notification("HUD를 바닐라 기본 위치로 초기화했습니다.", 2200, "notif");
+}
+
 function getAnchorReference(anchor: HudAnchor): { x: number; y: number } {
     switch (anchor) {
         case "top_left": return { x: 0, y: 0 };
@@ -2596,12 +3074,7 @@ function renderScriptHelper(): void {
 }
 
 function renderAll(): void {
-    renderSidebar();
-    renderPreviewToolbar();
-    renderCanvas();
-    renderInspector();
-    renderScriptHelper();
-    updateOutput();
+    notifyHudEditorStore();
 }
 
 function renderModalShell(): void {
@@ -2884,8 +3357,6 @@ function attachDragHandlers(): () => void {
 
 function mountHudEditor(): void {
     cleanupHudEditorSession?.();
-    renderModalShell();
-    bindStaticActions();
     const detachDragHandlers = attachDragHandlers();
     renderAll();
     cleanupHudEditorSession = () => {
@@ -2916,9 +3387,6 @@ export async function hudEditorModal(): Promise<void> {
             unsubscribe();
             cleanupHudEditorSession?.();
             cleanupHudEditorSession = null;
-            if (hudEditorHost) {
-                hudEditorHost.form.innerHTML = "";
-            }
             document.body.style.overflow = "";
             activeHudEditorPromise = null;
             resolve();

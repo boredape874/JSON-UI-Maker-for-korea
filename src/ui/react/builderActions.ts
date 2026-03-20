@@ -1,3 +1,5 @@
+import { getBuilderRuntime } from "../../runtime/builderRuntime.js";
+
 type BuilderApi = {
     handleUiTexturesUpload?: () => void;
     uploadForm?: () => void;
@@ -23,6 +25,7 @@ type BuilderApi = {
     deleteSelected?: () => void;
     openSaveFormsModal?: () => void;
     formatBindingsArea?: () => void;
+    refreshPresetTextures?: () => void;
     setFormIdentity?: (name: string) => boolean;
     generateAndCopyJsonUI?: (type: "copy" | "download") => void;
     downloadFormPackageZip?: (includeServerForm?: boolean) => Promise<void>;
@@ -34,7 +37,16 @@ type BuilderApi = {
 };
 
 function getBuilder(): BuilderApi | undefined {
-    return (window as { Builder?: BuilderApi }).Builder;
+    const windowBuilder = (window as { Builder?: BuilderApi }).Builder;
+    if (windowBuilder) {
+        return windowBuilder;
+    }
+
+    try {
+        return getBuilderRuntime() as BuilderApi;
+    } catch {
+        return undefined;
+    }
 }
 
 function call<K extends keyof BuilderApi>(method: K, ...args: Parameters<NonNullable<BuilderApi[K]>>): ReturnType<NonNullable<BuilderApi[K]>> | undefined {
@@ -67,6 +79,7 @@ export const builderActions = {
     deleteSelected: () => call("deleteSelected"),
     openSaveFormsModal: () => call("openSaveFormsModal"),
     formatBindingsArea: () => call("formatBindingsArea"),
+    refreshPresetTextures: () => call("refreshPresetTextures"),
     setFormIdentity: (name: string) => call("setFormIdentity", name) ?? false,
     generateAndCopyJsonUI: (type: "copy" | "download") => call("generateAndCopyJsonUI", type),
     downloadFormPackageZip: (includeServerForm = true) => call("downloadFormPackageZip", includeServerForm),

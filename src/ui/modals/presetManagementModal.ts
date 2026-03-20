@@ -17,4 +17,3 @@ export class PresetManagementModal {
 }
 
 export const presetManagementModal = new PresetManagementModal();
-(window as any).presetManagementModal = presetManagementModal;

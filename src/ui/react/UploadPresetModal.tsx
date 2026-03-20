@@ -1,5 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
+import { presetManager } from "../../presetManager.js";
 import { Notification } from "../notifs/noficationMaker.js";
+import { builderActions } from "./builderActions.js";
 import { closeUploadPresetBridge, subscribeModalBridge } from "./modalBridge.js";
 
 export function UploadPresetModal() {
@@ -38,15 +40,13 @@ export function UploadPresetModal() {
 
         setSubmitting(true);
         try {
-            const result = await (window as any).presetManager.uploadPreset(files, presetName.trim(), isPublic);
+            const result = await presetManager.uploadPreset(files, presetName.trim(), isPublic);
             setMessage({ type: result.success ? "success" : "error", text: result.message });
             if (!result.success) return;
 
             window.setTimeout(() => {
                 closeUploadPresetBridge();
-                if ((window as any).Builder) {
-                    (window as any).Builder.refreshPresetTextures();
-                }
+                builderActions.refreshPresetTextures();
                 Notification && new Notification("Preset uploaded successfully", 2000, "notif");
             }, 1000);
         } catch (error) {
