@@ -1,6 +1,13 @@
 import { selectedElement } from "./runtime/editorSelection.js";
 import { GeneralUtil } from "./util/generalUtil.js";
-import { isGridableElement, isResizeableElement } from "./elements/sharedElement.js";
+
+function isGridableElement(el: any): el is { grid: (enabled: boolean) => void } {
+    return !!el && typeof el.grid === "function";
+}
+
+function isResizeableElement(el: any): el is { resize?: (e: MouseEvent) => void; stopResize?: (e: MouseEvent) => void } {
+    return !!el && (typeof el.resize === "function" || typeof el.stopResize === "function");
+}
 
 const configSettings = {
     boundary_constraints: {

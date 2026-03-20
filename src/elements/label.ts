@@ -1,13 +1,13 @@
 import { getPanelContainer } from "../runtime/editorCanvasRuntime.js";
 import { config } from "../CONFIG.js";
-import { updatePropertiesArea } from "../ui/propertiesArea.js";
 import { StringUtil } from "../util/stringUtil.js";
 import { TextPrompt } from "../ui/textPrompt.js";
 import { collectSourcePropertyNames } from "../scripter/bindings/source_property_name.js";
 import { GeneralUtil } from "../util/generalUtil.js";
 import { ElementSharedFuncs } from "./sharedElement.js";
 import { ExplorerController } from "../ui/explorer/explorerController.js";
-import { undoRedoManager } from "../keyboard/undoRedo.js";
+import { getUndoRedoRuntime } from "../runtime/undoRedoRuntime.js";
+import { emitUiBridge } from "../ui/reactUiBridge.js";
 
 interface LabelOptions {
     text: string;
@@ -173,7 +173,7 @@ export class DraggableLabel {
         this.shadowLabel.style.width = `${labelRect.width}px`;
         this.shadowLabel.style.height = `${labelRect.height}px`;
 
-        if (updateProperties) updatePropertiesArea();
+        if (updateProperties) emitUiBridge("properties-changed");
 
         this.shadowLabel.style.left = `${StringUtil.cssDimToNumber(this.label.style.left) + this.shadowOffsetX + offset[0]}px`;
         this.shadowLabel.style.top = `${StringUtil.cssDimToNumber(this.label.style.top) + this.shadowOffsetY + offset[1]}px`;
@@ -213,7 +213,7 @@ export class DraggableLabel {
         this.label.addEventListener("blur", () => {
             if (hasUnsavedTextChanges && lastTextValue !== this.label.value) {
                 // Record text change only when focus leaves and text actually changed
-                undoRedoManager.push({
+                getUndoRedoRuntime().push({
                     type: 'modify',
                     elementId: this.label.dataset.id!,
                     previousState: { text: lastTextValue },
@@ -226,7 +226,7 @@ export class DraggableLabel {
         // Handle Enter key for labels (treat as "commit" action)
         this.label.addEventListener("keydown", (e) => {
             if (e.key === 'Enter' && hasUnsavedTextChanges) {
-                undoRedoManager.push({
+                getUndoRedoRuntime().push({
                     type: 'modify',
                     elementId: this.label.dataset.id!,
                     previousState: { text: lastTextValue },

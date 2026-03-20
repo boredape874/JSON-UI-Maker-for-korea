@@ -1,64 +1,45 @@
 import { getIsInMainWindow } from "../runtime/editorCanvasRuntime.js";
+import { getKeyboardEvent } from "../runtime/keyboardRuntime.js";
 import { GlobalElementMapValue, setDraggedElement, setResizedElement } from "../runtime/editorStore.js";
 import { config } from "../CONFIG.js";
-import { keyboardEvent } from "../keyboard/eventListeners.js";
-import { updatePropertiesArea } from "../ui/propertiesArea.js";
 import { StringUtil } from "../util/stringUtil.js";
-import { undoRedoManager } from "../keyboard/undoRedo.js";
-import { DraggableButton } from "./button.js";
-import { DraggableCanvas } from "./canvas.js";
-import { DraggableCollectionPanel } from "./collectionPanel.js";
-import { DraggablePanel } from "./panel.js";
-import { DraggableScrollingPanel } from "./scrollingPanel.js";
-import { DraggableLabel } from "./label.js";
-import { DraggableStackPanel } from "./stackPanel.js";
+import { getUndoRedoRuntime } from "../runtime/undoRedoRuntime.js";
 import { AllJsonUIElements } from "./elements.js";
 import { GeneralUtil } from "../util/generalUtil.js";
 import { MathUtil } from "../util/mathUtil.js";
 import { emitUiBridge } from "../ui/reactUiBridge.js";
 import { selectedElement, setSelectedElement } from "../runtime/editorSelection.js";
 
-export type SelectableElements =
-    | DraggableButton
-    | DraggablePanel
-    | DraggableCanvas
-    | DraggableCollectionPanel
-    | DraggableScrollingPanel
-    | DraggableLabel
-    | DraggableStackPanel;
+export interface SelectableElements extends GlobalElementMapValue {
+    selected: boolean;
+    select(e: MouseEvent): void;
+    unSelect(e?: MouseEvent): void;
+}
 export function isSelectableElement(el: unknown): el is SelectableElements {
-    return (
-        el instanceof DraggableButton ||
-        el instanceof DraggablePanel ||
-        el instanceof DraggableCanvas ||
-        el instanceof DraggableCollectionPanel ||
-        el instanceof DraggableScrollingPanel ||
-        el instanceof DraggableLabel ||
-        el instanceof DraggableStackPanel
-    );
+    return !!el && typeof (el as any).select === "function" && typeof (el as any).unSelect === "function" && "selected" in (el as object);
 }
 
-export type ResizeableElements = DraggableButton | DraggablePanel | DraggableCanvas | DraggableCollectionPanel | DraggableScrollingPanel | DraggableStackPanel;
+export interface ResizeableElements extends GlobalElementMapValue {
+    isResizing: boolean;
+    resizeStartWidth?: number;
+    resizeStartHeight?: number;
+    resizeStartX?: number;
+    resizeStartY?: number;
+    resizeStartLeft?: number;
+    resizeStartTop?: number;
+    container: HTMLElement;
+    resize(e: MouseEvent): void;
+    stopResize(e?: MouseEvent): void;
+}
 export function isResizeableElement(el: unknown): el is ResizeableElements {
-    return (
-        el instanceof DraggableButton ||
-        el instanceof DraggablePanel ||
-        el instanceof DraggableCanvas ||
-        el instanceof DraggableCollectionPanel ||
-        el instanceof DraggableScrollingPanel ||
-        el instanceof DraggableStackPanel
-    );
+    return !!el && typeof (el as any).resize === "function" && typeof (el as any).stopResize === "function";
 }
 
-export type GridableElements = DraggableButton | DraggablePanel | DraggableCanvas | DraggableCollectionPanel | DraggableStackPanel;
+export interface GridableElements extends GlobalElementMapValue {
+    grid(enabled: boolean): void;
+}
 export function isGridableElement(el: unknown): el is GridableElements {
-    return (
-        el instanceof DraggableButton ||
-        el instanceof DraggablePanel ||
-        el instanceof DraggableCanvas ||
-        el instanceof DraggableCollectionPanel ||
-        el instanceof DraggableStackPanel
-    );
+    return !!el && typeof (el as any).grid === "function";
 }
 
 export class ElementSharedFuncs {
@@ -86,7 +67,7 @@ export class ElementSharedFuncs {
         setResizedElement(classElement);
 
         // Record resize start for undo/redo
-        undoRedoManager.recordResizeStart(panel.dataset.id!);
+        getUndoRedoRuntime().recordResizeStart(panel.dataset.id!);
     }
 
     /**
@@ -112,7 +93,7 @@ export class ElementSharedFuncs {
         let updateTop: boolean = true;
 
         // ALT only → centered resize
-        if (keyboardEvent.altKey) {
+        if (getKeyboardEvent().altKey) {
             newLeft = classElement.resizeStartLeft! - widthChange;
             newTop = classElement.resizeStartTop! - heightChange;
 
@@ -132,7 +113,7 @@ export class ElementSharedFuncs {
         }
 
         // SHIFT only → square aspect ratio
-        else if (keyboardEvent.shiftKey) {
+        else if (getKeyboardEvent().shiftKey) {
             if (newHeight > newWidth) {
                 newWidth = newHeight;
             } else {
@@ -162,11 +143,11 @@ export class ElementSharedFuncs {
      */
     public static stopResize(classElement: ResizeableElements): void {
         classElement.isResizing = false;
-        if (getIsInMainWindow()) updatePropertiesArea();
+        if (getIsInMainWindow()) emitUiBridge("properties-changed");
         setResizedElement(undefined);
 
         // Record resize end for undo/redo
-        undoRedoManager.recordResizeEnd();
+        getUndoRedoRuntime().recordResizeEnd();
     }
 
     /**
@@ -195,7 +176,7 @@ export class ElementSharedFuncs {
                 classElement.selected = true;
                 setSelectedElement(element);
                 element.style.outline = `${config.settings.element_outline.value}px solid blue`;
-                updatePropertiesArea();
+                emitUiBridge("properties-changed");
                 return;
             }
         }
@@ -204,7 +185,7 @@ export class ElementSharedFuncs {
         setSelectedElement(element);
         element.style.outline = `${config.settings.element_outline.value}px solid blue`;
 
-        updatePropertiesArea();
+        emitUiBridge("properties-changed");
     }
 
     /**
@@ -216,7 +197,7 @@ export class ElementSharedFuncs {
         setSelectedElement(undefined);
         const element = classElement.getMainHTMLElement();
         element.style.outline = `${config.settings.element_outline.value}px solid black`;
-        updatePropertiesArea();
+        emitUiBridge("properties-changed");
     }
 
     /**
@@ -258,7 +239,7 @@ export class ElementSharedFuncs {
             classElement.selected = true;
             setSelectedElement(mainElement);
             mainElement.style.outline = `${config.settings.element_outline.value}px solid blue`;
-            updatePropertiesArea();
+            emitUiBridge("properties-changed");
         }
 
         // Get position relative to parent container
@@ -271,7 +252,7 @@ export class ElementSharedFuncs {
         setDraggedElement(classElement);
 
         // Record drag start for undo/redo
-        undoRedoManager.recordDragStart(mainElement.dataset.id!);
+        getUndoRedoRuntime().recordDragStart(mainElement.dataset.id!);
     }
 
     /**
@@ -390,7 +371,7 @@ export class ElementSharedFuncs {
     public static stopDrag(classElement: GlobalElementMapValue): void {
         classElement.isDragging = false;
         classElement.getMainHTMLElement().style.cursor = "grab";
-        if (getIsInMainWindow()) updatePropertiesArea();
+        if (getIsInMainWindow()) emitUiBridge("properties-changed");
 
         const parentElement = classElement.container;
         const parentClassElement = GeneralUtil.elementToClassElement(parentElement)!;
@@ -398,7 +379,7 @@ export class ElementSharedFuncs {
         setDraggedElement(undefined);
 
         // Record drag end for undo/redo
-        undoRedoManager.recordDragEnd();
+        getUndoRedoRuntime().recordDragEnd();
     }
 
     /**

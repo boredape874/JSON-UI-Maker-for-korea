@@ -1,8 +1,8 @@
 import { images } from "../runtime/imageStore.js";
 import { getPanelContainer } from "../runtime/editorCanvasRuntime.js";
+import { getKeyboardEvent } from "../runtime/keyboardRuntime.js";
 import { Nineslice, NinesliceData } from "../nineslice.js";
 import { config } from "../CONFIG.js";
-import { keyboardEvent } from "../keyboard/eventListeners.js";
 import { StringUtil } from "../util/stringUtil.js";
 import { ElementSharedFuncs } from "./sharedElement.js";
 import { GeneralUtil } from "../util/generalUtil.js";
@@ -205,7 +205,7 @@ export class DraggableCanvas {
         // only if the image is a 9-slice
         if (!this.nineSlice) {
             newHeight = newWidth / this.aspectRatio;
-        } else if (keyboardEvent?.shiftKey) {
+        } else if (getKeyboardEvent()?.shiftKey) {
             if (newHeight > newWidth) {
                 newWidth = newHeight;
             } else {

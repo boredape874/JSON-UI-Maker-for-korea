@@ -1,9 +1,9 @@
 import { images, type ImageDataState } from "../runtime/imageStore.js";
 import { getPanelContainer } from "../runtime/editorCanvasRuntime.js";
+import { getKeyboardEvent } from "../runtime/keyboardRuntime.js";
 import { GLOBAL_ELEMENT_MAP } from "../runtime/editorStore.js";
 import { config } from "../CONFIG.js";
 import { Nineslice } from "../nineslice.js";
-import { keyboardEvent } from "../keyboard/eventListeners.js";
 import { DraggableCanvas } from "./canvas.js";
 import { StringUtil } from "../util/stringUtil.js";
 import { DraggableLabel } from "./label.js";
@@ -244,7 +244,7 @@ export class DraggableButton {
 
         if (!currentRenderState!.json) {
             newHeight = newWidth / this.aspectRatio;
-        } else if (keyboardEvent?.shiftKey) {
+        } else if (getKeyboardEvent()?.shiftKey) {
             if (newHeight > newWidth) {
                 newWidth = newHeight;
             } else {

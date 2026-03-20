@@ -1,6 +1,7 @@
 import { DraggableLabel } from "../elements/label.js";
 import { getBuilderRuntime } from "../runtime/builderRuntime.js";
 import { GLOBAL_ELEMENT_MAP } from "../runtime/editorStore.js";
+import { setUndoRedoRuntime } from "../runtime/undoRedoRuntime.js";
 import { Notification } from "../ui/notifs/noficationMaker.js";
 import { StringUtil } from "../util/stringUtil.js";
 
@@ -400,3 +401,4 @@ export class UndoRedoManager {
 }
 
 export const undoRedoManager = new UndoRedoManager();
+setUndoRedoRuntime(undoRedoManager);

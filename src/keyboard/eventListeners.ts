@@ -3,6 +3,7 @@ import { Paster } from "../copy_paste/paste.js";
 import { getBuilderRuntime } from "../runtime/builderRuntime.js";
 import { getIsInMainWindow } from "../runtime/editorCanvasRuntime.js";
 import { selectedElement } from "../runtime/editorSelection.js";
+import { getKeyboardEvent, setKeyboardEvent } from "../runtime/keyboardRuntime.js";
 import { BindingsArea } from "../scripter/bindings/bindingsArea.js";
 import { triggerArrowMovement } from "./arrowKeyElementMovement.js";
 import { undoRedoManager } from "./undoRedo.js";
@@ -25,9 +26,10 @@ document.addEventListener("focusout", (e) => {
 /**
  * @type {KeyboardEvent}
  */
-export let keyboardEvent: KeyboardEvent = new KeyboardEvent("keypress");
+export let keyboardEvent: KeyboardEvent = getKeyboardEvent();
 
 window.addEventListener("keydown", (e) => {
+    setKeyboardEvent(e);
     keyboardEvent = e;
 
     if (e?.key?.startsWith("Arrow") && !inTextArea) triggerArrowMovement(e);
@@ -54,9 +56,11 @@ window.addEventListener("keydown", (e) => {
 });
 
 window.addEventListener("keypress", (e) => {
+    setKeyboardEvent(e);
     keyboardEvent = e;
 });
 
 window.addEventListener("keyup", (e) => {
+    setKeyboardEvent(e);
     keyboardEvent = e;
 });
