@@ -8,7 +8,6 @@ import { assetUrl } from "../../lib/assetUrl.js";
 import { emitUiBridge } from "../reactUiBridge.js";
 
 const textElementIdMap: Map<string, HTMLDivElement> = new Map<string, HTMLDivElement>();
-const explorerBaseElement = document.getElementById("explorer")!;
 
 export class ExplorerController {
     static constructTextElement(text: string, hasChildren: boolean): HTMLDivElement {

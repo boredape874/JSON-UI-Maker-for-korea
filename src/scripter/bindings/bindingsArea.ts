@@ -26,15 +26,14 @@ export class BindingsArea {
   }
 ]`;
 
-    public static bindingsTextArea = document.getElementById("bindings") as HTMLTextAreaElement;
-    public static errorMessage = document.getElementById("errorMessage") as HTMLLabelElement;
     public static isBindingsTextAreaFocused = false;
-    public static BindingsTextPrompt = new TextPrompt(this.bindingsTextArea);
-    public static hudBindingSourceSelect = document.getElementById("hudBindingSource") as HTMLSelectElement | null;
-    public static hudBindingSourceKeyInput = document.getElementById("hudBindingSourceKey") as HTMLInputElement | null;
-    public static hudBindingMatchInput = document.getElementById("hudBindingMatchText") as HTMLInputElement | null;
-
-    public static lastValue: string = this.bindingsTextArea.value;
+    private static _bindingsTextArea: HTMLTextAreaElement | null = null;
+    private static _errorMessage: HTMLLabelElement | null = null;
+    private static _bindingsTextPrompt: TextPrompt | null = null;
+    private static _hudBindingSourceSelect: HTMLSelectElement | null = null;
+    private static _hudBindingSourceKeyInput: HTMLInputElement | null = null;
+    private static _hudBindingMatchInput: HTMLInputElement | null = null;
+    public static lastValue: string = "";
 
     public static isEditable: boolean = false;
 
@@ -47,8 +46,70 @@ export class BindingsArea {
         ["(", ")"],
     ]);
 
+    private static get bindingsTextArea(): HTMLTextAreaElement {
+        if (!this._bindingsTextArea) {
+            const element = document.getElementById("bindings");
+            if (!(element instanceof HTMLTextAreaElement)) {
+                throw new Error("Bindings textarea not found.");
+            }
+
+            this._bindingsTextArea = element;
+        }
+
+        return this._bindingsTextArea;
+    }
+
+    private static get errorMessage(): HTMLLabelElement {
+        if (!this._errorMessage) {
+            const element = document.getElementById("errorMessage");
+            if (!(element instanceof HTMLLabelElement)) {
+                throw new Error("Bindings error label not found.");
+            }
+
+            this._errorMessage = element;
+        }
+
+        return this._errorMessage;
+    }
+
+    private static get BindingsTextPrompt(): TextPrompt {
+        if (!this._bindingsTextPrompt) {
+            this._bindingsTextPrompt = new TextPrompt(this.bindingsTextArea);
+        }
+
+        return this._bindingsTextPrompt;
+    }
+
+    private static get hudBindingSourceSelect(): HTMLSelectElement | null {
+        if (this._hudBindingSourceSelect === null) {
+            const element = document.getElementById("hudBindingSource");
+            this._hudBindingSourceSelect = element instanceof HTMLSelectElement ? element : null;
+        }
+
+        return this._hudBindingSourceSelect;
+    }
+
+    private static get hudBindingSourceKeyInput(): HTMLInputElement | null {
+        if (this._hudBindingSourceKeyInput === null) {
+            const element = document.getElementById("hudBindingSourceKey");
+            this._hudBindingSourceKeyInput = element instanceof HTMLInputElement ? element : null;
+        }
+
+        return this._hudBindingSourceKeyInput;
+    }
+
+    private static get hudBindingMatchInput(): HTMLInputElement | null {
+        if (this._hudBindingMatchInput === null) {
+            const element = document.getElementById("hudBindingMatchText");
+            this._hudBindingMatchInput = element instanceof HTMLInputElement ? element : null;
+        }
+
+        return this._hudBindingMatchInput;
+    }
+
     static init() {
         this.bindingsTextArea.value = "";
+        this.lastValue = "";
         this.bindingsTextArea.placeholder = translateText("Select an element to edit bindings.");
         this.editable(false);
         this.initHudBindingHelper();

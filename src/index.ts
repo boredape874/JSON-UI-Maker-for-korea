@@ -41,7 +41,7 @@ import { loadSqlJs } from "./database.js";
 import { dbManager } from "./database.js";
 import { initI18n } from "./i18n.js";
 import "./elements/groupedEventlisteners.js";
-import "./ui/scale.js";
+import { initScaleUi } from "./ui/scale.js";
 import { undoRedoManager } from "./keyboard/undoRedo.js";
 import { createSyntheticFormFromWorkspace, loadUiWorkspace } from "./ui/uiWorkspace.js";
 import { createZipBlob, ZipEntry } from "./util/zip.js";
@@ -58,12 +58,6 @@ console.log("Script Loaded");
 initDefaultImages();
 console.log("Image-Files Loaded");
 
-BindingsArea.init();
-console.log("Bindings-Area Loaded");
-
-ScriptGenerator.init();
-console.log("Script Generator Loaded");
-
 let bootstrapPromise: Promise<void> | null = null;
 
 export function bootstrapLegacyApp(): Promise<void> {
@@ -72,6 +66,22 @@ export function bootstrapLegacyApp(): Promise<void> {
     }
 
     bootstrapPromise = (async () => {
+    const mainWindow = document.getElementById("main_window");
+    if (!(mainWindow instanceof HTMLDivElement)) {
+        throw new Error("Main editor window #main_window was not found.");
+    }
+
+    initEditorCanvasRuntime(mainWindow);
+
+    BindingsArea.init();
+    console.log("Bindings-Area Loaded");
+
+    initScaleUi();
+    console.log("Scale UI Loaded");
+
+    ScriptGenerator.init();
+    console.log("Script Generator Loaded");
+
     // Initialize database and auth
     try {
         await loadSqlJs();
@@ -1018,5 +1028,3 @@ declare global {
 
 window.Builder = Builder;
 setBuilderRuntime(Builder);
-
-initEditorCanvasRuntime(document.getElementById("main_window")!);
