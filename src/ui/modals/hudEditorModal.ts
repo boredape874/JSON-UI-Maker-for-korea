@@ -1,6 +1,7 @@
 ﻿import { Notification } from "../notifs/noficationMaker.js";
 
 import { assetUrl } from "../../lib/assetUrl.js";
+import { getPanelContainer } from "../../runtime/editorCanvasRuntime.js";
 import { closeHudEditorBridge, openHudEditorBridge, subscribeHudEditorModalBridge } from "../react/hudEditorModalBridge.js";
 
 type HudChannel = "title" | "subtitle" | "actionbar";
@@ -457,8 +458,7 @@ function getProgressBarPrefixMatchExpression(bar: HudProgressBar, sourceName: st
 }
 
 function getCanvasBackgroundHtml(): string {
-    const mainWindow = document.getElementById("main_window");
-    const bgImage = mainWindow?.querySelector(".bg_image") as HTMLImageElement | null;
+    const bgImage = getPanelContainer().querySelector(".bg_image") as HTMLImageElement | null;
     if (bgImage?.src) {
         return `<img class="hudEditorCanvasBackgroundImage" src="${bgImage.src}" alt="HUD Background">`;
     }
@@ -2916,6 +2916,9 @@ export async function hudEditorModal(): Promise<void> {
             unsubscribe();
             cleanupHudEditorSession?.();
             cleanupHudEditorSession = null;
+            if (hudEditorHost) {
+                hudEditorHost.form.innerHTML = "";
+            }
             document.body.style.overflow = "";
             activeHudEditorPromise = null;
             resolve();

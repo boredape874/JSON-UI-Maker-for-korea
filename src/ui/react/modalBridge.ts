@@ -36,11 +36,14 @@ type UiWorkspaceModalData = {
     candidates: UiWorkspaceCandidateData[];
 };
 
+type ChooseImageResult = string;
+
 type ModalBridgeEvent =
     | { type: "open-create-form"; resolve: (value: CreateFormOptions) => void; defaults: CreateFormDefaults }
     | { type: "open-paste-form"; resolve: (value: PasteFormResult | undefined) => void; defaults?: PasteFormDefaults }
     | { type: "open-ui-workspace"; resolve: (value: UiWorkspaceSelection | undefined) => void; workspace: UiWorkspaceModalData }
     | { type: "open-add-button"; resolve: (value: AddButtonOptions) => void }
+    | { type: "open-choose-image"; resolve: (value: ChooseImageResult) => void; reject: (reason?: unknown) => void }
     | { type: "open-glyph-editor" }
     | { type: "close-glyph-editor" }
     | { type: "open-help" }
@@ -52,6 +55,7 @@ type ModalBridgeEvent =
     | { type: "open-upload-preset" }
     | { type: "close-upload-preset" }
     | { type: "open-preset-management" }
+    | { type: "refresh-preset-management" }
     | { type: "close-preset-management" }
     | { type: "open-save-forms"; currentFormName: string }
     | { type: "close-save-forms" };
@@ -89,6 +93,12 @@ export function openUiWorkspaceModal(workspace: UiWorkspaceModalData): Promise<U
 export function openAddButtonModal(): Promise<AddButtonOptions> {
     return new Promise((resolve) => {
         emitModalBridge({ type: "open-add-button", resolve });
+    });
+}
+
+export function openChooseImageModal(): Promise<ChooseImageResult> {
+    return new Promise((resolve, reject) => {
+        emitModalBridge({ type: "open-choose-image", resolve, reject });
     });
 }
 
@@ -134,6 +144,10 @@ export function closeUploadPresetBridge(): void {
 
 export function openPresetManagementBridge(): void {
     emitModalBridge({ type: "open-preset-management" });
+}
+
+export function refreshPresetManagementBridge(): void {
+    emitModalBridge({ type: "refresh-preset-management" });
 }
 
 export function closePresetManagementBridge(): void {

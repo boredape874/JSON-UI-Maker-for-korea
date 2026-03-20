@@ -25,8 +25,23 @@ const state: GlyphEditorState = {
     insertImageName: null,
 };
 
+type GlyphEditorHostElements = {
+    form: HTMLDivElement;
+};
+
+let glyphEditorHost: GlyphEditorHostElements | null = null;
+
+export function registerGlyphEditorHost(host: GlyphEditorHostElements | null): void {
+    glyphEditorHost = host;
+
+    if (!host) {
+        state.displayCanvas = null;
+        state.displayContext = null;
+    }
+}
+
 function getForm(): HTMLDivElement | null {
-    return document.getElementsByClassName("modalGlyphEditorForm")[0] as HTMLDivElement | undefined ?? null;
+    return glyphEditorHost?.form ?? null;
 }
 
 function createImageCanvas(width: number, height: number): { canvas: HTMLCanvasElement; context: CanvasRenderingContext2D } {

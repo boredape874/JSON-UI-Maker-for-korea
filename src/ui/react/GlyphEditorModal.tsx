@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
-import { ensureGlyphEditorReady } from "../modals/glyphEditorModal.js";
+import { useEffect, useRef, useState } from "react";
+import { ensureGlyphEditorReady, registerGlyphEditorHost } from "../modals/glyphEditorModal.js";
 import { closeGlyphEditorModalBridge, subscribeModalBridge } from "./modalBridge.js";
 
 export function GlyphEditorModal() {
     const [open, setOpen] = useState(false);
+    const formRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => subscribeModalBridge((event) => {
         if (event.type === "open-glyph-editor") {
@@ -20,6 +21,16 @@ export function GlyphEditorModal() {
         void ensureGlyphEditorReady();
     }, [open]);
 
+    useEffect(() => {
+        const form = formRef.current;
+        if (!form) {
+            return;
+        }
+
+        registerGlyphEditorHost({ form });
+        return () => registerGlyphEditorHost(null);
+    }, []);
+
     return (
         <div
             id="modalGlyphEditor"
@@ -32,7 +43,7 @@ export function GlyphEditorModal() {
             <div className="modal-content glyphEditorModalContent">
                 <span className="modalClose" style={{ cursor: "pointer" }} onClick={() => closeGlyphEditorModalBridge()}>&times;</span>
                 <h2 className="modalHeader">Glyph Editor</h2>
-                <div className="modalGlyphEditorForm"></div>
+                <div ref={formRef} className="modalGlyphEditorForm"></div>
             </div>
         </div>
     );
