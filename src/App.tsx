@@ -1,6 +1,8 @@
 import { assetUrl } from "./lib/assetUrl.js";
 import { ExplorerPanel } from "./ui/react/ExplorerPanel.js";
 import { PropertiesPanel } from "./ui/react/PropertiesPanel.js";
+import { CreateFormModal } from "./ui/react/CreateFormModal.js";
+import { SaveFormsModal } from "./ui/react/SaveFormsModal.js";
 
 const directoryPickerProps = {
     webkitdirectory: "",
@@ -104,8 +106,8 @@ export function App() {
 
             <div id="modalSettings" className="modal"><div className="modal-content"><span id="modalSettingsClose" className="modalClose">&times;</span><h2 className="modalHeader">Settings</h2><div className="modalSettingsForm"></div></div></div>
             <div id="modalAddButton" className="modal"><div className="modal-content"><span id="modalAddButtonClose" className="modalClose">&times;</span><h2 className="modalHeader">Add Button</h2><div className="modalAddButtonForm"></div></div></div>
-            <div id="modalCreateForm" className="modal"><div className="modal-content"><h2 className="modalHeader">Create Form</h2><div className="modalCreateFormForm"></div></div></div>
-            <div id="modalSaveForms" className="modal"><div className="modal-content modalSaveFormsContent"><span id="modalSaveFormsClose" className="modalClose">&times;</span><h2 className="modalHeader">Save Forms</h2><div className="modalSaveFormsForm"></div></div></div>
+            <CreateFormModal />
+            <SaveFormsModal />
             <div id="modalPasteForm" className="modal"><div className="modal-content" style={{ maxWidth: 860 }}><span id="modalPasteFormClose" className="modalClose">&times;</span><h2 className="modalHeader">Paste Form Code</h2><div className="modalPasteFormForm"></div></div></div>
             <div id="modalUiWorkspace" className="modal"><div className="modal-content" style={{ maxWidth: 900 }}><span id="modalUiWorkspaceClose" className="modalClose">&times;</span><h2 className="modalHeader">Import UI Folder</h2><div className="modalUiWorkspaceForm"></div></div></div>
 
