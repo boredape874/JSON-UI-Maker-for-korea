@@ -1,4 +1,4 @@
-import { GLOBAL_ELEMENT_MAP, GlobalElementMapValue, selectedElement } from "./index.js";
+import { selectedElement } from "./runtime/editorSelection.js";
 import { GeneralUtil } from "./util/generalUtil.js";
 import { isGridableElement, isResizeableElement } from "./elements/sharedElement.js";
 
@@ -84,12 +84,11 @@ const configSettings = {
         displayName: "Element Outline",
 
         onchange: (value: number) => {
-            const elements: GlobalElementMapValue[] = Array.from(GLOBAL_ELEMENT_MAP.values());
+            const elements = document.querySelectorAll<HTMLElement>("[data-id]");
 
-            for (const element of elements) {
-                const getMainHTMLElement = element.getMainHTMLElement();
-                getMainHTMLElement.style.outlineWidth = `${value}px`;
-                getMainHTMLElement.style.borderWidth = `${value}px`;
+            for (const element of Array.from(elements)) {
+                element.style.outlineWidth = `${value}px`;
+                element.style.borderWidth = `${value}px`;
             }
         },
     },

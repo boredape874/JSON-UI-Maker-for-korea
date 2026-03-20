@@ -1,5 +1,5 @@
 import { config } from "../../CONFIG.js";
-import { selectedElement } from "../../index.js";
+import { selectedElement, subscribeSelectionChange } from "../../runtime/editorSelection.js";
 import { TextPrompt } from "../../ui/textPrompt.js";
 import { GeneralUtil } from "../../util/generalUtil.js";
 import { binding_keys } from "./binding_keys.js";
@@ -52,6 +52,7 @@ export class BindingsArea {
         this.bindingsTextArea.placeholder = translateText("Select an element to edit bindings.");
         this.editable(false);
         this.initHudBindingHelper();
+        subscribeSelectionChange(() => this.updateBindingsEditor());
 
         this.bindingsTextArea.addEventListener("focus", () => {
             this.isBindingsTextAreaFocused = true;

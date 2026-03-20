@@ -1,4 +1,5 @@
-import { Builder, copiedElementData, GLOBAL_ELEMENT_MAP, GlobalElementMapValue, images, selectedElement } from "../index.js";
+import { Builder, copiedElementData, GLOBAL_ELEMENT_MAP, GlobalElementMapValue, images } from "../index.js";
+import { selectedElement } from "../runtime/editorSelection.js";
 import { DraggableLabel } from "../elements/label.js";
 import { StringUtil } from "../util/stringUtil.js";
 import { CopiedElementData } from "./copy.js";

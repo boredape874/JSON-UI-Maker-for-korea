@@ -1,4 +1,4 @@
-import { selectedElement } from "../index.js";
+import { selectedElement } from "../runtime/editorSelection.js";
 import { config } from "../CONFIG.js";
 
 /**

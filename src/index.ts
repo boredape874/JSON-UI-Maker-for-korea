@@ -48,6 +48,7 @@ import "./ui/scale.js";
 import { undoRedoManager } from "./keyboard/undoRedo.js";
 import { createSyntheticFormFromWorkspace, loadUiWorkspace } from "./ui/uiWorkspace.js";
 import { createZipBlob, ZipEntry } from "./util/zip.js";
+import { selectedElement, setSelectedElement } from "./runtime/editorSelection.js";
 
 initI18n();
 
@@ -276,15 +277,6 @@ function constructMainPanel(): { id: string; mainPanel: DraggablePanel } {
     GLOBAL_ELEMENT_MAP.set(id, mainPanel);
 
     return { id, mainPanel };
-}
-
-export let selectedElement: HTMLElement | undefined = undefined;
-export function setSelectedElement(element: HTMLElement | undefined): void {
-    selectedElement = element;
-    BindingsArea.updateBindingsEditor();
-    ExplorerController.selectedElementUpdate();
-    emitUiBridge("properties-changed");
-    emitUiBridge("explorer-changed");
 }
 
 export let copiedElementData: CopiedElementData | undefined = undefined;

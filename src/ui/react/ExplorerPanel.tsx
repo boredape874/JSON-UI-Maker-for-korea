@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { GlobalElementMapValue, selectedElement } from "../../index.js";
+import { selectedElement } from "../../runtime/editorSelection.js";
 import { classToTagName } from "../../converterTypes/HTMLClassToJonUITypes.js";
 import { GeneralUtil } from "../../util/generalUtil.js";
 import { assetUrl } from "../../lib/assetUrl.js";
@@ -20,12 +20,19 @@ const explorerMagicNumbers = {
     overallOffset: 15,
 };
 
-function buildNode(element: GlobalElementMapValue): ExplorerNode {
+type ExplorerElement = {
+    getMainHTMLElement(): HTMLElement;
+    hide(): void;
+    show(): void;
+    select(event: MouseEvent): void;
+};
+
+function buildNode(element: ExplorerElement): ExplorerNode {
     const mainElement = element.getMainHTMLElement();
     const children = Array.from(mainElement.children)
         .map((child) => (child as HTMLElement).dataset.skip === "true" ? ((child as HTMLElement).firstChild as HTMLElement | null) : (child as HTMLElement))
         .filter((child): child is HTMLElement => Boolean(child?.dataset.id))
-        .map((child) => GeneralUtil.elementToClassElement(child)!)
+        .map((child) => GeneralUtil.elementToClassElement(child) as ExplorerElement)
         .map((child) => buildNode(child));
 
     const type = classToTagName.get(mainElement.classList[0]!) ?? mainElement.classList[0] ?? "Element";

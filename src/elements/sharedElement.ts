@@ -1,4 +1,4 @@
-import { GlobalElementMapValue, isInMainWindow, selectedElement, setDraggedElement, setResizedElement, setSelectedElement } from "../index.js";
+import { GlobalElementMapValue, isInMainWindow, setDraggedElement, setResizedElement } from "../index.js";
 import { config } from "../CONFIG.js";
 import { keyboardEvent } from "../keyboard/eventListeners.js";
 import { updatePropertiesArea } from "../ui/propertiesArea.js";
@@ -15,6 +15,7 @@ import { AllJsonUIElements } from "./elements.js";
 import { GeneralUtil } from "../util/generalUtil.js";
 import { MathUtil } from "../util/mathUtil.js";
 import { emitUiBridge } from "../ui/reactUiBridge.js";
+import { selectedElement, setSelectedElement } from "../runtime/editorSelection.js";
 
 export type SelectableElements =
     | DraggableButton

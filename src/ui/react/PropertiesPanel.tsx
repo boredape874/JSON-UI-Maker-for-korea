@@ -1,5 +1,5 @@
 import { ChangeEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
-import { selectedElement } from "../../index.js";
+import { selectedElement } from "../../runtime/editorSelection.js";
 import { undoRedoManager } from "../../keyboard/undoRedo.js";
 import { chooseImageModal } from "../modals/chooseImage.js";
 import { propertiesMap } from "../propertiesArea.js";

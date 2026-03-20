@@ -1,4 +1,5 @@
-import { GlobalElementMapValue, selectedElement, setCopiedElementData } from "../index.js";
+import { GlobalElementMapValue, setCopiedElementData } from "../index.js";
+import { selectedElement } from "../runtime/editorSelection.js";
 import { DraggableLabel } from "../elements/label.js";
 import { GeneralUtil } from "../util/generalUtil.js";
 import { DraggablePanel } from "../elements/panel.js";
