@@ -501,6 +501,93 @@ input[type="file"] {
     border-radius: 14px;
 }
 
+.hudEditorAnchorGrid {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    pointer-events: none;
+}
+
+.hudEditorAnchorZone {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 8px 10px;
+    color: rgba(216, 222, 235, 0.26);
+    font-size: 11px;
+    line-height: 1;
+    border: 1px dashed rgba(255, 255, 255, 0.06);
+    box-sizing: border-box;
+}
+
+.hudEditorAnchorZoneTopMiddle,
+.hudEditorAnchorZoneCenter,
+.hudEditorAnchorZoneBottomMiddle {
+    justify-content: center;
+}
+
+.hudEditorAnchorZoneTopRight,
+.hudEditorAnchorZoneRightMiddle,
+.hudEditorAnchorZoneBottomRight {
+    justify-content: flex-end;
+}
+
+.hudEditorAnchorZoneLeftMiddle,
+.hudEditorAnchorZoneCenter,
+.hudEditorAnchorZoneRightMiddle {
+    align-items: center;
+}
+
+.hudEditorAnchorZoneBottomLeft,
+.hudEditorAnchorZoneBottomMiddle,
+.hudEditorAnchorZoneBottomRight {
+    align-items: flex-end;
+}
+
+.hudEditorAnchorZoneActive {
+    background: rgba(102, 217, 255, 0.08);
+    color: rgba(102, 217, 255, 0.95);
+    border-color: rgba(102, 217, 255, 0.38);
+}
+
+.hudEditorAnchorLine {
+    position: absolute;
+    pointer-events: none;
+    background: rgba(102, 217, 255, 0.16);
+}
+
+.hudEditorAnchorLineVertical1,
+.hudEditorAnchorLineVertical2 {
+    top: 0;
+    bottom: 0;
+    width: 1px;
+}
+
+.hudEditorAnchorLineVertical1 {
+    left: 33.3333%;
+}
+
+.hudEditorAnchorLineVertical2 {
+    left: 66.6666%;
+}
+
+.hudEditorAnchorLineHorizontal1,
+.hudEditorAnchorLineHorizontal2 {
+    left: 0;
+    right: 0;
+    height: 1px;
+}
+
+.hudEditorAnchorLineHorizontal1 {
+    top: 33.3333%;
+}
+
+.hudEditorAnchorLineHorizontal2 {
+    top: 66.6666%;
+}
+
 .hudEditorGuideLabel {
     position: absolute;
     border: 1px dashed rgba(255, 255, 255, 0.2);

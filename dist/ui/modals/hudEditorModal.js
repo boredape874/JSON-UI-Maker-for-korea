@@ -5,6 +5,8 @@ const state = {
     selectedId: "title",
     autoFitPreview: true,
     previewZoom: 1,
+    autoAnchorSnap: true,
+    showAnchorGuides: true,
     elements: {
         title: {
             id: "title",
@@ -342,12 +344,20 @@ function buildTitleControl(element) {
     }
     return withIgnored({
         type: "panel",
-        size: getAutoSizedTextContainer(element, 8),
-        anchor_from: element.anchor,
-        anchor_to: element.anchor,
-        offset: [element.x, element.y],
-        layer: element.layer,
-        controls,
+        size: ["100%", "100%"],
+        controls: [
+            {
+                title_positioned: {
+                    type: "panel",
+                    size: getAutoSizedTextContainer(element, 8),
+                    anchor_from: element.anchor,
+                    anchor_to: element.anchor,
+                    offset: [element.x, element.y],
+                    layer: element.layer,
+                    controls,
+                },
+            },
+        ],
         bindings: [
             {
                 binding_name: "#hud_title_text_string",
@@ -423,12 +433,21 @@ function buildSubtitleControl(element) {
     }
     return withIgnored({
         type: "panel",
-        size: getAutoSizedTextContainer(element, 8),
-        anchor_from: element.anchor,
-        anchor_to: element.anchor,
-        offset: [element.x, element.y],
-        layer: element.layer,
-        controls,
+        size: ["100%", "100%"],
+        controls: [
+            controls[0],
+            {
+                subtitle_positioned: {
+                    type: "panel",
+                    size: getAutoSizedTextContainer(element, 8),
+                    anchor_from: element.anchor,
+                    anchor_to: element.anchor,
+                    offset: [element.x, element.y],
+                    layer: element.layer,
+                    controls: controls.slice(1),
+                },
+            },
+        ],
         bindings: [
             {
                 binding_type: "view",
@@ -583,31 +602,39 @@ function buildActionbarControl(element) {
     if (element.background === "none") {
         label.size = ["100%", "default"];
     }
-    const control = withIgnored({
+    const content = {
         type: element.background === "none" ? "panel" : "image",
         size: element.background === "none" ? [element.width, element.height] : ["100%c + 10px", "100%cm + 4px"],
         anchor_from: element.anchor,
         anchor_to: element.anchor,
         offset: [element.x, element.y],
-        $atext: "$actionbar_text",
-        visible: element.prefix ? prefixMatchExpression("$atext", element.prefix) : "(not ($atext = ''))",
         controls: [
             {
                 actionbar_label: label,
             },
         ],
-    }, element.ignored);
+    };
     if (element.layer !== 32) {
-        control.layer = element.layer;
+        content.layer = element.layer;
     }
     if (element.background !== "none") {
-        control.texture = element.background === "vanilla" ? "textures/ui/hud_tip_text_background" : "textures/ui/white_background";
-        control.alpha = element.backgroundAlpha;
+        content.texture = element.background === "vanilla" ? "textures/ui/hud_tip_text_background" : "textures/ui/white_background";
+        content.alpha = element.backgroundAlpha;
         if (element.background === "solid") {
-            control.color = hexToRgb(element.backgroundColor);
+            content.color = hexToRgb(element.backgroundColor);
         }
     }
-    return control;
+    return withIgnored({
+        type: "panel",
+        size: ["100%", "100%"],
+        $atext: "$actionbar_text",
+        visible: element.prefix ? prefixMatchExpression("$atext", element.prefix) : "(not ($atext = ''))",
+        controls: [
+            {
+                actionbar_positioned: content,
+            },
+        ],
+    }, element.ignored);
 }
 function buildPreservedActionbarDisplay(element) {
     const controls = [
@@ -670,14 +697,31 @@ function buildPreservedActionbarDisplay(element) {
     controls.push({
         actionbar_label: label,
     });
-    const display = withIgnored({
+    const displayContent = {
         type: element.background === "none" ? "panel" : "image",
         size: element.background === "none" ? [element.width, element.height] : ["100%c + 10px", "100%cm + 4px"],
         anchor_from: element.anchor,
         anchor_to: element.anchor,
         offset: [element.x, element.y],
         layer: element.layer,
-        controls,
+        controls: controls.slice(1),
+    };
+    if (element.background !== "none") {
+        displayContent.texture = element.background === "vanilla" ? "textures/ui/hud_tip_text_background" : "textures/ui/white_background";
+        displayContent.alpha = element.backgroundAlpha;
+        if (element.background === "solid") {
+            displayContent.color = hexToRgb(element.backgroundColor);
+        }
+    }
+    return withIgnored({
+        type: "panel",
+        size: ["100%", "100%"],
+        controls: [
+            controls[0],
+            {
+                preserved_actionbar_positioned: displayContent,
+            },
+        ],
         bindings: [
             {
                 binding_type: "view",
@@ -687,14 +731,6 @@ function buildPreservedActionbarDisplay(element) {
             },
         ],
     }, element.ignored);
-    if (element.background !== "none") {
-        display.texture = element.background === "vanilla" ? "textures/ui/hud_tip_text_background" : "textures/ui/white_background";
-        display.alpha = element.backgroundAlpha;
-        if (element.background === "solid") {
-            display.color = hexToRgb(element.backgroundColor);
-        }
-    }
-    return display;
 }
 function buildAnimationDefinitions(elementKey, element, destroyTarget) {
     if (element.animationPreset === "none") {
@@ -933,6 +969,53 @@ function getAnchorReference(anchor) {
         case "bottom_right": return { x: PREVIEW_WIDTH, y: PREVIEW_HEIGHT };
     }
 }
+function getAnchorOffset(anchor, width, height) {
+    const horizontal = anchor.endsWith("left") ? 0 : anchor.endsWith("right") ? width : width / 2;
+    const vertical = anchor.startsWith("top") ? 0 : anchor.startsWith("bottom") ? height : height / 2;
+    return { x: horizontal, y: vertical };
+}
+function getAnchorForPoint(x, y) {
+    const col = x < PREVIEW_WIDTH / 3 ? "left" : x < (PREVIEW_WIDTH * 2) / 3 ? "middle" : "right";
+    const row = y < PREVIEW_HEIGHT / 3 ? "top" : y < (PREVIEW_HEIGHT * 2) / 3 ? "middle" : "bottom";
+    return `${row}_${col}`.replace("middle_left", "left_middle").replace("middle_middle", "center").replace("middle_right", "right_middle");
+}
+function getOffsetFromTopLeft(anchor, left, top, width, height) {
+    const base = getAnchorReference(anchor);
+    const anchorOffset = getAnchorOffset(anchor, width, height);
+    return {
+        x: Math.round(left + anchorOffset.x - base.x),
+        y: Math.round(top + anchorOffset.y - base.y),
+    };
+}
+function snapElementAnchor(element) {
+    const rect = computePreviewRect(element);
+    const centerX = rect.left + element.width / 2;
+    const centerY = rect.top + element.height / 2;
+    const nextAnchor = getAnchorForPoint(centerX, centerY);
+    const nextOffset = getOffsetFromTopLeft(nextAnchor, rect.left, rect.top, element.width, element.height);
+    element.anchor = nextAnchor;
+    element.x = nextOffset.x;
+    element.y = nextOffset.y;
+}
+function snapSliceSlotAnchor(element, slotIndex) {
+    const slots = ensureSliceSlots(element);
+    const slot = slots[slotIndex];
+    if (!slot)
+        return;
+    const rect = computePreviewRect({
+        ...element,
+        anchor: slot.anchor,
+        x: slot.x,
+        y: slot.y,
+    });
+    const centerX = rect.left + element.width / 2;
+    const centerY = rect.top + element.height / 2;
+    const nextAnchor = getAnchorForPoint(centerX, centerY);
+    const nextOffset = getOffsetFromTopLeft(nextAnchor, rect.left, rect.top, element.width, element.height);
+    slot.anchor = nextAnchor;
+    slot.x = nextOffset.x;
+    slot.y = nextOffset.y;
+}
 function computePreviewRect(element) {
     const base = getAnchorReference(element.anchor);
     let left = base.x + element.x;
@@ -1043,6 +1126,8 @@ function renderPreviewToolbar() {
             <button type="button" class="propertyInputButton hudEditorZoomPreset ${!state.autoFitPreview && state.previewZoom === 0.75 ? "hudEditorZoomActive" : ""}" data-zoom="0.75">75%</button>
             <button type="button" class="propertyInputButton hudEditorZoomPreset ${!state.autoFitPreview && state.previewZoom === 1 ? "hudEditorZoomActive" : ""}" data-zoom="1">100%</button>
             <button type="button" class="propertyInputButton hudEditorZoomPreset ${!state.autoFitPreview && state.previewZoom === 1.25 ? "hudEditorZoomActive" : ""}" data-zoom="1.25">125%</button>
+            <button type="button" class="propertyInputButton hudEditorGuideToggle ${state.showAnchorGuides ? "hudEditorZoomActive" : ""}">\uC575\uCEE4 \uAC00\uC774\uB4DC</button>
+            <button type="button" class="propertyInputButton hudEditorSnapToggle ${state.autoAnchorSnap ? "hudEditorZoomActive" : ""}">\uC790\uB3D9 \uC575\uCEE4</button>
         </div>
         <div class="hudEditorPreviewToolbarRight">\uD604\uC7AC \uBC30\uC728 ${scale}%</div>
     `;
@@ -1056,6 +1141,14 @@ function renderPreviewToolbar() {
             state.previewZoom = Number.parseFloat(button.dataset.zoom || "1") || 1;
             renderAll();
         });
+    });
+    container.querySelector(".hudEditorGuideToggle")?.addEventListener("click", () => {
+        state.showAnchorGuides = !state.showAnchorGuides;
+        renderAll();
+    });
+    container.querySelector(".hudEditorSnapToggle")?.addEventListener("click", () => {
+        state.autoAnchorSnap = !state.autoAnchorSnap;
+        renderAll();
     });
 }
 function renderCanvas() {
@@ -1074,9 +1167,33 @@ function renderCanvas() {
     const titleGuide = computePreviewRect({ ...state.elements.title, x: 0, y: 130, width: 440, height: 56, anchor: "top_middle" });
     const subtitleGuide = computePreviewRect({ ...state.elements.subtitle, x: 0, y: 190, width: 380, height: 42, anchor: "top_middle" });
     const actionbarGuide = computePreviewRect({ ...state.elements.actionbar, x: 0, y: -96, width: 340, height: 38, anchor: "bottom_middle" });
+    const selectedElement = getSelectedElement();
+    const activeGuideAnchor = (() => {
+        if (isSliceMode(selectedElement) && typeof state.drag?.slotIndex === "number" && state.drag.id === selectedElement.id) {
+            return ensureSliceSlots(selectedElement)[state.drag.slotIndex]?.anchor ?? selectedElement.anchor;
+        }
+        return selectedElement.anchor;
+    })();
     preview.innerHTML = `
         ${getCanvasBackgroundHtml()}
         <div class="hudEditorSafeZone"></div>
+        ${state.showAnchorGuides ? `
+            <div class="hudEditorAnchorGrid">
+                <div class="hudEditorAnchorZone hudEditorAnchorZoneTopLeft ${activeGuideAnchor === "top_left" ? "hudEditorAnchorZoneActive" : ""}">top_left</div>
+                <div class="hudEditorAnchorZone hudEditorAnchorZoneTopMiddle ${activeGuideAnchor === "top_middle" ? "hudEditorAnchorZoneActive" : ""}">top_middle</div>
+                <div class="hudEditorAnchorZone hudEditorAnchorZoneTopRight ${activeGuideAnchor === "top_right" ? "hudEditorAnchorZoneActive" : ""}">top_right</div>
+                <div class="hudEditorAnchorZone hudEditorAnchorZoneLeftMiddle ${activeGuideAnchor === "left_middle" ? "hudEditorAnchorZoneActive" : ""}">left_middle</div>
+                <div class="hudEditorAnchorZone hudEditorAnchorZoneCenter ${activeGuideAnchor === "center" ? "hudEditorAnchorZoneActive" : ""}">center</div>
+                <div class="hudEditorAnchorZone hudEditorAnchorZoneRightMiddle ${activeGuideAnchor === "right_middle" ? "hudEditorAnchorZoneActive" : ""}">right_middle</div>
+                <div class="hudEditorAnchorZone hudEditorAnchorZoneBottomLeft ${activeGuideAnchor === "bottom_left" ? "hudEditorAnchorZoneActive" : ""}">bottom_left</div>
+                <div class="hudEditorAnchorZone hudEditorAnchorZoneBottomMiddle ${activeGuideAnchor === "bottom_middle" ? "hudEditorAnchorZoneActive" : ""}">bottom_middle</div>
+                <div class="hudEditorAnchorZone hudEditorAnchorZoneBottomRight ${activeGuideAnchor === "bottom_right" ? "hudEditorAnchorZoneActive" : ""}">bottom_right</div>
+            </div>
+            <div class="hudEditorAnchorLine hudEditorAnchorLineVertical1"></div>
+            <div class="hudEditorAnchorLine hudEditorAnchorLineVertical2"></div>
+            <div class="hudEditorAnchorLine hudEditorAnchorLineHorizontal1"></div>
+            <div class="hudEditorAnchorLine hudEditorAnchorLineHorizontal2"></div>
+        ` : ""}
         <div class="hudEditorGuideLabel" style="left:${titleGuide.left}px;top:${titleGuide.top}px;width:440px;height:56px;">\uBC14\uB2D0\uB77C \uD0C0\uC774\uD2C0</div>
         <div class="hudEditorGuideLabel" style="left:${subtitleGuide.left}px;top:${subtitleGuide.top}px;width:380px;height:42px;">\uBC14\uB2D0\uB77C \uC11C\uBE0C\uD0C0\uC774\uD2C0</div>
         <div class="hudEditorGuideLabel" style="left:${actionbarGuide.left}px;top:${actionbarGuide.top}px;width:340px;height:38px;">\uBC14\uB2D0\uB77C \uC561\uC158\uBC14</div>
@@ -1441,9 +1558,10 @@ function renderModalShell() {
                     </div>
                 </div>
                 <div class="hudEditorHelp">
-                    <div>\uAC00\uC774\uB4DC \uC0C1\uC790\uB294 \uBC14\uB2D0\uB77C \uAE30\uC900 \uC704\uCE58\uC785\uB2C8\uB2E4.</div>
-                    <div>HUD \uBC15\uC2A4\uB97C \uC9C1\uC811 \uB4DC\uB798\uADF8\uD574\uC11C \uC704\uCE58\uB97C \uC62E\uAE30\uACE0, \uC624\uB978\uCABD\uC5D0\uC11C \uD06C\uAE30\uC640 \uC811\uB450\uC5B4 \uCC98\uB9AC\uAE4C\uC9C0 \uC870\uC815\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.</div>
-                </div>
+                <div>\uAC00\uC774\uB4DC \uC0C1\uC790\uB294 \uBC14\uB2D0\uB77C \uAE30\uC900 \uC704\uCE58\uC785\uB2C8\uB2E4.</div>
+                <div>HUD \uBC15\uC2A4\uB97C \uC9C1\uC811 \uB4DC\uB798\uADF8\uD574\uC11C \uC704\uCE58\uB97C \uC62E\uAE30\uACE0, \uC624\uB978\uCABD\uC5D0\uC11C \uD06C\uAE30\uC640 \uC811\uB450\uC5B4 \uCC98\uB9AC\uAE4C\uC9C0 \uC870\uC815\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.</div>
+                <div>\uC790\uB3D9 \uC575\uCEE4\uB97C \uCF1C\uBA74 \uB4DC\uB798\uADF8 \uC885\uB8CC \uC2DC \uAC00\uC7A5 \uAC00\uAE4C\uC6B4 9\uBD84\uD560 \uAD6C\uC5ED \uAE30\uC900\uC73C\uB85C anchor\uAC00 \uBC14\uB00C\uACE0, offset\uB3C4 \uADF8 anchor \uAE30\uC900\uC73C\uB85C \uB2E4\uC2DC \uACC4\uC0B0\uB429\uB2C8\uB2E4.</div>
+            </div>
                 <div class="hudEditorJsonCard">
                     <div class="hudEditorSidebarTitle">\uC0DD\uC131\uB418\uB294 JSON</div>
                     <textarea class="hudEditorOutput" spellcheck="false"></textarea>
@@ -1591,6 +1709,21 @@ function bindStaticActions() {
 }
 function attachDragHandlers() {
     const modal = getModal();
+    const finishDrag = () => {
+        if (!state.drag)
+            return;
+        const element = state.elements[state.drag.id];
+        if (state.autoAnchorSnap) {
+            if (isSliceMode(element) && typeof state.drag.slotIndex === "number") {
+                snapSliceSlotAnchor(element, state.drag.slotIndex);
+            }
+            else if (!isSliceMode(element)) {
+                snapElementAnchor(element);
+            }
+        }
+        state.drag = null;
+        renderAll();
+    };
     modal.onmousemove = (event) => {
         if (!state.drag)
             return;
@@ -1615,12 +1748,9 @@ function attachDragHandlers() {
         }
         renderAll();
     };
-    modal.onmouseup = () => {
-        state.drag = null;
-    };
-    modal.onmouseleave = () => {
-        state.drag = null;
-    };
+    modal.onmouseup = finishDrag;
+    window.onmouseup = finishDrag;
+    modal.onmouseleave = finishDrag;
 }
 function mountHudEditor() {
     renderModalShell();
