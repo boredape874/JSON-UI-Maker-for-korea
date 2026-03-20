@@ -10,7 +10,7 @@ import { DraggableScrollingPanel } from "./elements/scrollingPanel.js";
 import { DraggableStackPanel } from "./elements/stackPanel.js";
 import { ElementSharedFuncs } from "./elements/sharedElement.js";
 import { FileUploader } from "./files/openFiles.js";
-import { Builder } from "./index.js";
+import { getBuilderRuntime } from "./runtime/builderRuntime.js";
 import { Notification } from "./ui/notifs/noficationMaker.js";
 import { GeneralUtil } from "./util/generalUtil.js";
 import { StringUtil } from "./util/stringUtil.js";
@@ -238,7 +238,7 @@ export class FormUploader {
 
         const namespace = parsed.namespace as string;
 
-        Builder.reset();
+        getBuilderRuntime().reset();
         config.nameSpace = namespace;
         config.formFileName = uploadedFileName
             ? StringUtil.toSafeFileName(uploadedFileName)

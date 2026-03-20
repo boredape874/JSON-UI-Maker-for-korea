@@ -1,5 +1,5 @@
-import { Builder } from "../index.js";
 import { copiedElementData, type CopiedElementData } from "../runtime/clipboardStore.js";
+import { getBuilderRuntime } from "../runtime/builderRuntime.js";
 import { images } from "../runtime/imageStore.js";
 import { GLOBAL_ELEMENT_MAP, type GlobalElementMapValue } from "../runtime/editorStore.js";
 import { selectedElement } from "../runtime/editorSelection.js";
@@ -250,7 +250,7 @@ export class Paster {
 
         const parent = selectedElement ?? config.rootElement!;
 
-        if (!Builder.isValidPath(parent)) {
+        if (!getBuilderRuntime().isValidPath(parent)) {
             new Notification("Selected element cannot have children", 5000, "error");
             return;
         }

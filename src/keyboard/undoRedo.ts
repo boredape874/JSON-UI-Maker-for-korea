@@ -1,5 +1,5 @@
 import { DraggableLabel } from "../elements/label.js";
-import { Builder } from "../index.js";
+import { getBuilderRuntime } from "../runtime/builderRuntime.js";
 import { GLOBAL_ELEMENT_MAP } from "../runtime/editorStore.js";
 import { Notification } from "../ui/notifs/noficationMaker.js";
 import { StringUtil } from "../util/stringUtil.js";
@@ -78,7 +78,7 @@ export class UndoRedoManager {
             case 'delete':
                 // Delete the element (when redoing a delete)
                 if (operation.elementId) {
-                    Builder.delete(operation.elementId);
+                    getBuilderRuntime().delete(operation.elementId);
                 }
                 break;
             case 'modify':
@@ -102,7 +102,7 @@ export class UndoRedoManager {
                     if (element && element.deleteable) {
                         element.delete();
                         GLOBAL_ELEMENT_MAP.delete(operation.elementId);
-                        Builder.updateExplorer();
+                        getBuilderRuntime().updateExplorer();
                         import("../ui/propertiesArea.js").then(module => module.updatePropertiesArea());
                     }
                 }
@@ -129,16 +129,16 @@ export class UndoRedoManager {
 
         switch (elementType) {
             case 'label':
-                Builder.addLabel();
+                getBuilderRuntime().addLabel();
                 break;
             case 'panel':
-                Builder.addPanel();
+                getBuilderRuntime().addPanel();
                 break;
             case 'collection_panel':
-                Builder.addCollectionPanel();
+                getBuilderRuntime().addCollectionPanel();
                 break;
             case 'scrolling_panel':
-                Builder.addScrollingPanel();
+                getBuilderRuntime().addScrollingPanel();
                 break;
             case 'canvas':
                 // Would need image data - for now skip
@@ -180,7 +180,7 @@ export class UndoRedoManager {
             }
         }
 
-        Builder.updateExplorer();
+        getBuilderRuntime().updateExplorer();
 
         // Update properties area to reflect changes
         import("../ui/propertiesArea.js").then(module => module.updatePropertiesArea());

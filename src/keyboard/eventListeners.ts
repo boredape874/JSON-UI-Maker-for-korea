@@ -1,6 +1,6 @@
 import { Copier } from "../copy_paste/copy.js";
 import { Paster } from "../copy_paste/paste.js";
-import { Builder } from "../index.js";
+import { getBuilderRuntime } from "../runtime/builderRuntime.js";
 import { getIsInMainWindow } from "../runtime/editorCanvasRuntime.js";
 import { selectedElement } from "../runtime/editorSelection.js";
 import { BindingsArea } from "../scripter/bindings/bindingsArea.js";
@@ -31,7 +31,7 @@ window.addEventListener("keydown", (e) => {
     keyboardEvent = e;
 
     if (e?.key?.startsWith("Arrow") && !inTextArea) triggerArrowMovement(e);
-    if (e?.key === "Delete") Builder.deleteSelected();
+    if (e?.key === "Delete") getBuilderRuntime().deleteSelected();
 
     if (BindingsArea.isBindingsTextAreaFocused && selectedElement) BindingsArea.handleKeyboardInput(e);
 
@@ -40,7 +40,7 @@ window.addEventListener("keydown", (e) => {
         if (e?.ctrlKey && e?.key === "v") Paster.paste();
         if (e?.ctrlKey && e?.key === "x" && selectedElement) {
             Copier.copyElement(selectedElement.dataset.id!);
-            Builder.deleteSelected();
+            getBuilderRuntime().deleteSelected();
         }
         if (e?.ctrlKey && e?.key === "z") {
             e.preventDefault();

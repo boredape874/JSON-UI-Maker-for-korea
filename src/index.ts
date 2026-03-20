@@ -50,6 +50,7 @@ import { selectedElement, setSelectedElement } from "./runtime/editorSelection.j
 import { getPanelContainer, initEditorCanvasRuntime } from "./runtime/editorCanvasRuntime.js";
 import { GLOBAL_ELEMENT_MAP, GLOBAL_FILE_SYSTEM, GlobalElementMapValue, draggedElement, resizedElement, setDraggedElement, setFileSystem, setResizedElement } from "./runtime/editorStore.js";
 import { images } from "./runtime/imageStore.js";
+import { setBuilderRuntime } from "./runtime/builderRuntime.js";
 
 initI18n();
 
@@ -1019,5 +1020,6 @@ declare global {
 }
 
 window.Builder = Builder;
+setBuilderRuntime(Builder);
 
 initEditorCanvasRuntime(document.getElementById("main_window")!);

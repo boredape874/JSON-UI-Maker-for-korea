@@ -1,20 +1,16 @@
-import type { DraggableButton } from "../elements/button.js";
-import type { DraggableCanvas } from "../elements/canvas.js";
-import type { DraggableCollectionPanel } from "../elements/collectionPanel.js";
-import type { DraggableLabel } from "../elements/label.js";
-import type { DraggablePanel } from "../elements/panel.js";
-import type { ResizeableElements } from "../elements/sharedElement.js";
-import type { DraggableScrollingPanel } from "../elements/scrollingPanel.js";
-import type { DraggableStackPanel } from "../elements/stackPanel.js";
+export interface GlobalElementMapValue {
+    getMainHTMLElement(): HTMLElement;
+    drag?(e: MouseEvent): void;
+    stopDrag?(): void;
+    resize?(e: MouseEvent): void;
+    stopResize?(e: MouseEvent): void;
+    [key: string]: any;
+}
 
-export type GlobalElementMapValue =
-    | DraggableButton
-    | DraggableCanvas
-    | DraggablePanel
-    | DraggableCollectionPanel
-    | DraggableLabel
-    | DraggableScrollingPanel
-    | DraggableStackPanel;
+export interface ResizeableElementRuntime {
+    resize(e: MouseEvent): void;
+    stopResize(e: MouseEvent): void;
+}
 
 export const GLOBAL_ELEMENT_MAP: Map<string, GlobalElementMapValue> = new Map();
 
@@ -28,7 +24,7 @@ export function setDraggedElement(classElement: GlobalElementMapValue | undefine
     draggedElement = classElement;
 }
 
-export let resizedElement: ResizeableElements | undefined = undefined;
-export function setResizedElement(classElement: ResizeableElements | undefined): void {
+export let resizedElement: ResizeableElementRuntime | undefined = undefined;
+export function setResizedElement(classElement: ResizeableElementRuntime | undefined): void {
     resizedElement = classElement;
 }

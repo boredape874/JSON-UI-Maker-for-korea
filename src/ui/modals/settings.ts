@@ -1,6 +1,6 @@
-import { Builder } from "../../index.js";
 import { config } from "../../CONFIG.js";
 import { translateText } from "../../i18n.js";
+import { getBuilderRuntime } from "../../runtime/builderRuntime.js";
 
 const modal: HTMLElement = document.getElementById("modalSettings")!;
 const openBtn: HTMLElement = document.getElementById("modalSettingsBtn")!;
@@ -49,13 +49,13 @@ openBtn.onclick = () => {
             input.style.top = "2px";
 
             input.oninput = (e: Event) => {
-                Builder.setSettingToggle(setting as keyof typeof config.settings, (e.target as HTMLInputElement).checked);
+                getBuilderRuntime().setSettingToggle(setting as keyof typeof config.settings, (e.target as HTMLInputElement).checked);
                 settingInfo.onchange?.(settingInfo?.value!);
             };
         } else if (settingInfo?.type === "number") {
             input.valueAsNumber = settingInfo?.value!;
             input.oninput = (e: Event) => {
-                Builder.setSettingToggle(setting as keyof typeof config.settings, (e.target as HTMLInputElement).valueAsNumber);
+                getBuilderRuntime().setSettingToggle(setting as keyof typeof config.settings, (e.target as HTMLInputElement).valueAsNumber);
                 settingInfo.onchange?.(settingInfo?.value!);
             };
         } else {
