@@ -3,22 +3,21 @@ import { ExplorerPanel } from "./ui/react/ExplorerPanel.js";
 import { PropertiesPanel } from "./ui/react/PropertiesPanel.js";
 import { CreateFormModal } from "./ui/react/CreateFormModal.js";
 import { SaveFormsModal } from "./ui/react/SaveFormsModal.js";
+import { builderActions } from "./ui/react/builderActions.js";
+import { useAuthUiState } from "./ui/react/authUiBridge.js";
 
 const directoryPickerProps = {
     webkitdirectory: "",
     directory: "",
 } as unknown as Record<string, string>;
 
-function callBuilder(method: string, ...args: unknown[]): void {
-    const builder = (window as { Builder?: Record<string, (...values: unknown[]) => void> }).Builder;
-    builder?.[method]?.(...args);
-}
-
 function icon(path: string): string {
     return assetUrl(path);
 }
 
 export function App() {
+    const auth = useAuthUiState();
+
     return (
         <>
             <div className="top-navbar">
@@ -31,7 +30,7 @@ export function App() {
                                     title="Import Textures"
                                     type="file"
                                     id="ui_textures_importer"
-                                    onChange={() => callBuilder("handleUiTexturesUpload")}
+                                    onChange={() => builderActions.handleUiTexturesUpload()}
                                     multiple
                                     {...directoryPickerProps}
                                 />
@@ -43,7 +42,7 @@ export function App() {
                                     title="Upload Form"
                                     type="file"
                                     id="form_importer"
-                                    onChange={() => callBuilder("uploadForm")}
+                                    onChange={() => builderActions.uploadForm()}
                                     accept=".json"
                                 />
                                 Upload Form
@@ -54,31 +53,31 @@ export function App() {
                                     title="Import UI Folder"
                                     type="file"
                                     id="ui_workspace_importer"
-                                    onChange={() => callBuilder("importUiWorkspace")}
+                                    onChange={() => builderActions.importUiWorkspace()}
                                     multiple
                                     {...directoryPickerProps}
                                 />
                                 Import UI Folder
                             </label>
 
-                            <button type="button" className="propertyInputButton" onClick={() => callBuilder("openPasteFormModal")}>Paste Form Code</button>
-                            <button type="button" className="propertyInputButton" onClick={() => callBuilder("openHudEditorModal")}>HUD Editor</button>
-                            <button type="button" className="propertyInputButton" onClick={() => callBuilder("openGlyphEditorModal")}>Glyph Editor</button>
+                            <button type="button" className="propertyInputButton" onClick={() => builderActions.openPasteFormModal()}>Paste Form Code</button>
+                            <button type="button" className="propertyInputButton" onClick={() => builderActions.openHudEditorModal()}>HUD Editor</button>
+                            <button type="button" className="propertyInputButton" onClick={() => builderActions.openGlyphEditorModal()}>Glyph Editor</button>
                         </div>
                     </div>
                 </div>
 
                 <div className="navbar-center">
-                    <div id="authStatus" className="auth-status-inline">
-                        <span id="authUserDisplay">Not signed in</span>
-                        <button id="authSignInBtn" onClick={() => callBuilder("openAuthModal", false)}>Sign In</button>
-                        <button id="authSignUpBtn" onClick={() => callBuilder("openAuthModal", true)}>Sign Up</button>
-                        <button id="authLogoutBtn" onClick={() => callBuilder("logout")} style={{ display: "none" }}>Logout</button>
-                    </div>
+            <div id="authStatus" className="auth-status-inline">
+                <span id="authUserDisplay">{auth.signedIn && auth.username ? `Signed in as: ${auth.username}` : "Not signed in"}</span>
+                {!auth.signedIn ? <button id="authSignInBtn" onClick={() => builderActions.openAuthModal(false)}>Sign In</button> : null}
+                {!auth.signedIn ? <button id="authSignUpBtn" onClick={() => builderActions.openAuthModal(true)}>Sign Up</button> : null}
+                {auth.signedIn ? <button id="authLogoutBtn" onClick={() => builderActions.logout()}>Logout</button> : null}
+            </div>
 
-                    <button id="presetUploadBtn" onClick={() => callBuilder("openUploadPresetModal")} style={{ display: "none" }} className="navbar-preset-btn primary">Upload Preset</button>
-                    <button id="presetManagementBtn" onClick={() => callBuilder("openPresetManagementModal")} style={{ display: "none" }} className="navbar-preset-btn secondary">Manage Presets</button>
-                    <button className="navbar-preset-btn tertiary" onClick={() => callBuilder("texturePresetsModal")}>Preset Textures</button>
+                    {auth.signedIn ? <button id="presetUploadBtn" onClick={() => builderActions.openUploadPresetModal()} className="navbar-preset-btn primary">Upload Preset</button> : null}
+                    {auth.signedIn ? <button id="presetManagementBtn" onClick={() => builderActions.openPresetManagementModal()} className="navbar-preset-btn secondary">Manage Presets</button> : null}
+                    <button className="navbar-preset-btn tertiary" onClick={() => builderActions.texturePresetsModal()}>Preset Textures</button>
 
                     <div className="navbar-divider"></div>
 
@@ -92,12 +91,12 @@ export function App() {
                         <input id="ui_scale_slider" type="range" min="10" max="100" />
                     </div>
 
-                    <button id="undo-btn" onClick={() => callBuilder("undo")} disabled title="Undo (Ctrl+Z)">Undo</button>
-                    <button id="redo-btn" onClick={() => callBuilder("redo")} disabled title="Redo (Ctrl+Y)">Redo</button>
+                    <button id="undo-btn" onClick={() => builderActions.undo()} disabled title="Undo (Ctrl+Z)">Undo</button>
+                    <button id="redo-btn" onClick={() => builderActions.redo()} disabled title="Redo (Ctrl+Y)">Redo</button>
                 </div>
 
                 <div className="navbar-right">
-                    <img src={icon("icons/help.webp")} className="help_button" onClick={() => callBuilder("openHelpMenu")} alt="Help" />
+                    <img src={icon("icons/help.webp")} className="help_button" onClick={() => builderActions.openHelpMenu()} alt="Help" />
                     <a href="https://discord.gg/zqfNbYCcA9" className="discord_link" target="_blank" rel="noreferrer">
                         <img src={icon("icons/discord.webp")} className="discord_icon" alt="Discord" />
                     </a>
@@ -168,20 +167,20 @@ export function App() {
                 <div className="buttons">
                     <div className="addElements">
                         Elements:
-                        <button type="button" onClick={() => callBuilder("addPanel")}>Add panel</button>
-                        <button type="button" onClick={() => callBuilder("openAddImageMenu")}>Add image</button>
-                        <button type="button" onClick={() => callBuilder("addButton")}>Add button</button>
-                        <button type="button" onClick={() => callBuilder("addCollectionPanel")}>Add Collection Panel</button>
-                        <button type="button" onClick={() => callBuilder("addLabel")}>Add Label</button>
-                        <button type="button" onClick={() => callBuilder("addScrollingPanel")}>Add Scrolling Panel</button>
+                        <button type="button" onClick={() => builderActions.addPanel()}>Add panel</button>
+                        <button type="button" onClick={() => builderActions.openAddImageMenu()}>Add image</button>
+                        <button type="button" onClick={() => builderActions.addButton()}>Add button</button>
+                        <button type="button" onClick={() => builderActions.addCollectionPanel()}>Add Collection Panel</button>
+                        <button type="button" onClick={() => builderActions.addLabel()}>Add Label</button>
+                        <button type="button" onClick={() => builderActions.addScrollingPanel()}>Add Scrolling Panel</button>
                     </div>
 
                     <div className="breaker"></div>
 
                     <div className="utilElements">
-                        <button className="utilElement" type="button" onClick={() => callBuilder("reset")}>Reset <img style={{ width: 17, top: 3, position: "relative", filter: "drop-shadow(0px 0px 5px #000000)" }} src={icon("icons/reset.webp")} alt="Reset" /></button>
-                        <button className="utilElement" type="button" onClick={() => callBuilder("deleteSelected")}>Delete Selected <img style={{ width: 20, top: 3, position: "relative", filter: "drop-shadow(0px 0px 5px #000000)" }} src={icon("icons/bin.webp")} alt="Delete" /></button>
-                        <button className="utilElement saveFormsLauncher" type="button" onClick={() => callBuilder("openSaveFormsModal")}>Save Forms <img style={{ width: 20, top: 3, position: "relative", filter: "drop-shadow(0px 0px 5px #000000)" }} src={icon("icons/download.webp")} alt="Save" /></button>
+                        <button className="utilElement" type="button" onClick={() => builderActions.reset()}>Reset <img style={{ width: 17, top: 3, position: "relative", filter: "drop-shadow(0px 0px 5px #000000)" }} src={icon("icons/reset.webp")} alt="Reset" /></button>
+                        <button className="utilElement" type="button" onClick={() => builderActions.deleteSelected()}>Delete Selected <img style={{ width: 20, top: 3, position: "relative", filter: "drop-shadow(0px 0px 5px #000000)" }} src={icon("icons/bin.webp")} alt="Delete" /></button>
+                        <button className="utilElement saveFormsLauncher" type="button" onClick={() => builderActions.openSaveFormsModal()}>Save Forms <img style={{ width: 20, top: 3, position: "relative", filter: "drop-shadow(0px 0px 5px #000000)" }} src={icon("icons/download.webp")} alt="Save" /></button>
                     </div>
 
                     <div className="breaker"></div>
@@ -211,7 +210,7 @@ export function App() {
                     <textarea spellCheck={false} className="bindings" id="bindings"></textarea>
                     <div style={{ display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center" }}>
                         <div style={{ fontSize: 20, color: "rgb(39, 165, 255)" }}>TAB</div>&nbsp;To indent
-                        <div onClick={() => callBuilder("formatBindingsArea")} style={{ position: "relative", marginLeft: 15, cursor: "pointer" }} className="utilElement">
+                        <div onClick={() => builderActions.formatBindingsArea()} style={{ position: "relative", marginLeft: 15, cursor: "pointer" }} className="utilElement">
                             Format <img style={{ width: 20, top: 3, position: "relative", filter: "drop-shadow(0px 0px 5px #000000)" }} src={icon("icons/curly_brackets.webp")} alt="Format" />
                         </div>
                     </div>

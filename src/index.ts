@@ -37,6 +37,7 @@ import { authModal } from "./ui/modals/authModal.js";
 import { uploadPresetModal } from "./ui/modals/uploadPresetModal.js";
 import { presetManagementModal } from "./ui/modals/presetManagementModal.js";
 import { emitUiBridge } from "./ui/reactUiBridge.js";
+import { setAuthUiState } from "./ui/react/authUiBridge.js";
 import { authManager } from "./auth.js";
 import { presetManager } from "./presetManager.js";
 import { loadSqlJs } from "./database.js";
@@ -992,40 +993,11 @@ export class Builder {
     }
 
     public static updateAuthUI(): void {
-        // Update UI elements based on auth state
         const user = authManager.getCurrentUser();
-        const authUserDisplay = document.getElementById('authUserDisplay');
-        const authSignInBtn = document.getElementById('authSignInBtn');
-        const authSignUpBtn = document.getElementById('authSignUpBtn');
-        const authLogoutBtn = document.getElementById('authLogoutBtn');
-        const presetUploadBtn = document.getElementById('presetUploadBtn');
-        const presetManagementBtn = document.getElementById('presetManagementBtn');
-
-        if (user) {
-            authUserDisplay!.textContent = `Signed in as: ${user.username}`;
-            authSignInBtn!.style.display = 'none';
-            authSignUpBtn!.style.display = 'none';
-            authLogoutBtn!.style.display = 'inline-block';
-            
-            if (presetUploadBtn) {
-                presetUploadBtn.style.display = 'block';
-            }
-            if (presetManagementBtn) {
-                presetManagementBtn.style.display = 'block';
-            }
-        } else {
-            authUserDisplay!.textContent = 'Not signed in';
-            authSignInBtn!.style.display = 'inline-block';
-            authSignUpBtn!.style.display = 'inline-block';
-            authLogoutBtn!.style.display = 'none';
-            
-            if (presetUploadBtn) {
-                presetUploadBtn.style.display = 'none';
-            }
-            if (presetManagementBtn) {
-                presetManagementBtn.style.display = 'none';
-            }
-        }
+        setAuthUiState({
+            signedIn: Boolean(user),
+            username: user?.username ?? null,
+        });
     }
 
     public static refreshPresetTextures(): void {
