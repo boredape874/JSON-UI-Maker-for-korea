@@ -1,8 +1,8 @@
-import { DEFAULT_GLYPH_BASE_PATH, getGlyphCodepoint, getGlyphSheetHex } from "../../glyph/defaultGlyphSheets.js";
+import { DEFAULT_GLYPH_BASE_PATH, getGlyphCodepoint, getGlyphSheetHex, getGlyphSlotHex } from "../../glyph/defaultGlyphSheets.js";
 import { Notification } from "../notifs/noficationMaker.js";
 import { openGlyphEditorModalBridge } from "../react/modalBridge.js";
 
-export function createImageCanvas(width: number, height: number): { canvas: HTMLCanvasElement; context: CanvasRenderingContext2D } {
+function createImageCanvas(width: number, height: number): { canvas: HTMLCanvasElement; context: CanvasRenderingContext2D } {
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
@@ -15,7 +15,7 @@ export function createImageCanvas(width: number, height: number): { canvas: HTML
     return { canvas, context };
 }
 
-export function cloneCanvas(source: HTMLCanvasElement): HTMLCanvasElement {
+function cloneCanvas(source: HTMLCanvasElement): HTMLCanvasElement {
     const { canvas, context } = createImageCanvas(source.width, source.height);
     context.drawImage(source, 0, 0);
     return canvas;
@@ -62,7 +62,7 @@ export function drawGlyphCanvas(displayCanvas: HTMLCanvasElement, workingCanvas:
     displayContext.strokeRect(column * cellWidth + 1, row * cellHeight + 1, cellWidth - 2, cellHeight - 2);
 }
 
-export function getCellMetrics(workingCanvas: HTMLCanvasElement | null): { cellWidth: number; cellHeight: number } | null {
+function getCellMetrics(workingCanvas: HTMLCanvasElement | null): { cellWidth: number; cellHeight: number } | null {
     if (!workingCanvas) return null;
 
     return {
@@ -71,24 +71,40 @@ export function getCellMetrics(workingCanvas: HTMLCanvasElement | null): { cellW
     };
 }
 
-export function getSelectedCellPosition(selectedCell: number): { column: number; row: number } {
+function getSelectedCellPosition(selectedCell: number): { column: number; row: number } {
     return {
         column: selectedCell % 16,
         row: Math.floor(selectedCell / 16),
     };
 }
 
-export function getSelectedCodepoint(sheetName: string | null, selectedCell: number): number {
-    return sheetName ? getGlyphCodepoint(sheetName, selectedCell) : selectedCell;
-}
+export type GlyphSelectionDetails = {
+    column: number;
+    row: number;
+    slotHex: string;
+    codepoint: number;
+    unicodeHex: string;
+    hasStandardCodepoint: boolean;
+    glyphText: string;
+};
 
-export function hasStandardGlyphCodepoint(sheetName: string | null): boolean {
+export function getGlyphSelectionDetails(sheetName: string | null, selectedCell: number): GlyphSelectionDetails {
+    const { column, row } = getSelectedCellPosition(selectedCell);
+    const slotHex = getGlyphSlotHex(selectedCell);
+    const codepoint = sheetName ? getGlyphCodepoint(sheetName, selectedCell) : selectedCell;
     const sheetHex = sheetName ? getGlyphSheetHex(sheetName) : "";
-    return /^[0-9A-F]{2}$/u.test(sheetHex);
-}
+    const hasStandardCodepoint = /^[0-9A-F]{2}$/u.test(sheetHex);
+    const unicodeHex = codepoint.toString(16).toUpperCase().padStart(4, "0");
 
-export function getSelectedGlyphCharacter(sheetName: string | null, selectedCell: number): string {
-    return String.fromCodePoint(getSelectedCodepoint(sheetName, selectedCell));
+    return {
+        column,
+        row,
+        slotHex,
+        codepoint,
+        unicodeHex,
+        hasStandardCodepoint,
+        glyphText: hasStandardCodepoint ? String.fromCodePoint(codepoint) : "-",
+    };
 }
 
 export function getSelectedCellFromCanvasClick(canvas: HTMLCanvasElement, event: MouseEvent): number {
@@ -180,24 +196,7 @@ export function findNextEmptyGlyphCell(workingCanvas: HTMLCanvasElement): number
     return null;
 }
 
-export function downloadWorkingSheet(workingCanvas: HTMLCanvasElement, sheetName: string): void {
-    const link = document.createElement("a");
-    link.href = workingCanvas.toDataURL("image/png");
-    link.download = sheetName;
-    link.click();
-}
-
-export async function copySelectedGlyphText(sheetName: string, selectedCell: number): Promise<void> {
-    try {
-        await navigator.clipboard.writeText(getSelectedGlyphCharacter(sheetName, selectedCell));
-        new Notification("Selected glyph text copied to clipboard!", 2200, "notif");
-    } catch (error) {
-        console.error(error);
-        new Notification("Could not copy the selected glyph text.", 2800, "error");
-    }
-}
-
-export function loadImageFromSrc(src: string): Promise<HTMLImageElement> {
+function loadImageFromSrc(src: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
         const image = new Image();
         image.onload = () => resolve(image);
@@ -206,7 +205,7 @@ export function loadImageFromSrc(src: string): Promise<HTMLImageElement> {
     });
 }
 
-export async function loadImageFromFile(file: File): Promise<HTMLImageElement> {
+async function loadImageFromFile(file: File): Promise<HTMLImageElement> {
     const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result ?? ""));
@@ -217,7 +216,7 @@ export async function loadImageFromFile(file: File): Promise<HTMLImageElement> {
     return loadImageFromSrc(dataUrl);
 }
 
-export function createWorkingCanvasFromImage(image: HTMLImageElement): HTMLCanvasElement {
+function createWorkingCanvasFromImage(image: HTMLImageElement): HTMLCanvasElement {
     const { canvas, context } = createImageCanvas(image.width, image.height);
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.drawImage(image, 0, 0);

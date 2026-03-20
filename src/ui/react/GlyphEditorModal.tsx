@@ -1,21 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { DEFAULT_GLYPH_SHEETS, getGlyphSlotHex } from "../../glyph/defaultGlyphSheets.js";
+import { DEFAULT_GLYPH_SHEETS } from "../../glyph/defaultGlyphSheets.js";
 import { translateText } from "../../i18n.js";
 import {
     clearGlyphCell,
-    copySelectedGlyphText,
     drawGlyphCanvas,
     findNextEmptyGlyphCell,
+    getGlyphSelectionDetails,
     getSelectedCellFromCanvasClick,
-    getSelectedCellPosition,
-    getSelectedCodepoint,
-    getSelectedGlyphCharacter,
-    hasStandardGlyphCodepoint,
     insertGlyphImage,
     loadBuiltInGlyphSheet,
     loadInsertGlyphImage,
     loadUploadedGlyphSheet,
-    downloadWorkingSheet,
 } from "../modals/glyphEditorModal.js";
 import { Notification } from "../notifs/noficationMaker.js";
 import { closeGlyphEditorModalBridge, subscribeModalBridge } from "./modalBridge.js";
@@ -63,12 +58,7 @@ export function GlyphEditorModal() {
         drawGlyphCanvas(canvasRef.current, workingCanvas, selectedCell);
     }, [open, workingCanvas, selectedCell]);
 
-    const selectedPosition = getSelectedCellPosition(selectedCell);
-    const slotHex = getGlyphSlotHex(selectedCell);
-    const codepoint = getSelectedCodepoint(sheetName, selectedCell);
-    const unicodeHex = codepoint.toString(16).toUpperCase().padStart(4, "0");
-    const hasStandardCodepoint = hasStandardGlyphCodepoint(sheetName);
-    const glyphText = hasStandardCodepoint && sheetName ? getSelectedGlyphCharacter(sheetName, selectedCell) : "-";
+    const selectionDetails = getGlyphSelectionDetails(sheetName, selectedCell);
     const status = !sheetName
         ? translateText("Choose a built-in glyph sheet or upload an edited sheet to begin.")
         : `${sheetName} - ${translateText("Click a cell in the grid to choose where the next image should be inserted.")}`;
@@ -182,16 +172,25 @@ export function GlyphEditorModal() {
             return;
         }
 
-        downloadWorkingSheet(workingCanvas, sheetName);
+        const link = document.createElement("a");
+        link.href = workingCanvas.toDataURL("image/png");
+        link.download = sheetName;
+        link.click();
     };
 
     const handleCopy = async () => {
-        if (!sheetName) {
-            new Notification("Please load a glyph sheet first.", 2500, "warning");
+        if (!sheetName || !selectionDetails.hasStandardCodepoint) {
+            new Notification("Only built-in glyph sheets expose a standard glyph character to copy.", 2800, "warning");
             return;
         }
 
-        await copySelectedGlyphText(sheetName, selectedCell);
+        try {
+            await navigator.clipboard.writeText(selectionDetails.glyphText);
+            new Notification("Selected glyph text copied to clipboard!", 2200, "notif");
+        } catch (error) {
+            console.error(error);
+            new Notification("Could not copy the selected glyph text.", 2800, "error");
+        }
     };
 
     return (
@@ -258,13 +257,15 @@ export function GlyphEditorModal() {
 
                             <div className="glyphEditorMetaCard">
                                 <div className="glyphEditorMetaTitle">{translateText("Selected Cell")}</div>
-                                <div className="glyphEditorMetaValue glyphEditorSelectedCell">{`${selectedPosition.row}, ${selectedPosition.column} (${slotHex})`}</div>
+                                <div className="glyphEditorMetaValue glyphEditorSelectedCell">{`${selectionDetails.row}, ${selectionDetails.column} (${selectionDetails.slotHex})`}</div>
                                 <div className="glyphEditorMetaTitle">{translateText("Unicode")}</div>
                                 <div className="glyphEditorMetaValue glyphEditorUnicode">
-                                    {hasStandardCodepoint ? `U+${unicodeHex} / \\u${unicodeHex}` : `${translateText("Slot")}: ${slotHex}`}
+                                    {selectionDetails.hasStandardCodepoint
+                                        ? `U+${selectionDetails.unicodeHex} / \\u${selectionDetails.unicodeHex}`
+                                        : `${translateText("Slot")}: ${selectionDetails.slotHex}`}
                                 </div>
                                 <div className="glyphEditorMetaTitle">{translateText("Glyph Text")}</div>
-                                <div className="glyphEditorMetaValue glyphEditorGlyphText">{glyphText}</div>
+                                <div className="glyphEditorMetaValue glyphEditorGlyphText">{selectionDetails.glyphText}</div>
                                 <div className="glyphEditorMetaTitle">{translateText("Insert Image")}</div>
                                 <div className="glyphEditorMetaValue glyphEditorImageStatus">{insertImageName ?? translateText("No image selected yet.")}</div>
                             </div>
