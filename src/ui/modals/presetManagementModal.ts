@@ -1,4 +1,4 @@
-import { closePresetManagementBridge, openPresetManagementBridge } from "../react/modalBridge.js";
+import { closePresetManagementBridge, openPresetManagementBridge, refreshPresetManagementBridge } from "../react/modalBridge.js";
 
 export class PresetManagementModal {
   init(): void {}
@@ -12,7 +12,7 @@ export class PresetManagementModal {
   }
 
   async refreshPresets(): Promise<void> {
-    openPresetManagementBridge();
+    refreshPresetManagementBridge();
   }
 }
 

@@ -45,10 +45,16 @@ export function PresetManagementModal() {
             void loadPresets();
         }
 
+        if (event.type === "refresh-preset-management") {
+            if (open) {
+                void loadPresets();
+            }
+        }
+
         if (event.type === "close-preset-management") {
             setOpen(false);
         }
-    }), []);
+    }), [open]);
 
     const savePresetName = async (presetId: number) => {
         if (!editingName.trim()) {
