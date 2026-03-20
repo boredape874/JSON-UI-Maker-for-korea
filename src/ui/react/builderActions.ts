@@ -23,15 +23,23 @@ type BuilderApi = {
     deleteSelected?: () => void;
     openSaveFormsModal?: () => void;
     formatBindingsArea?: () => void;
+    setFormIdentity?: (name: string) => boolean;
+    generateAndCopyJsonUI?: (type: "copy" | "download") => void;
+    downloadFormPackageZip?: (includeServerForm?: boolean) => Promise<void>;
+    downloadServerForm?: (type: "copy" | "download") => void;
+    downloadCurrentFormImages?: () => Promise<void>;
+    downloadCurrentFormImagesZip?: () => Promise<void>;
+    downloadLoadedPresetTextures?: () => Promise<void>;
+    downloadLoadedPresetTexturesZip?: () => Promise<void>;
 };
 
 function getBuilder(): BuilderApi | undefined {
     return (window as { Builder?: BuilderApi }).Builder;
 }
 
-function call<K extends keyof BuilderApi>(method: K, ...args: Parameters<NonNullable<BuilderApi[K]>>): void {
-    const fn = getBuilder()?.[method] as ((...values: unknown[]) => void) | undefined;
-    fn?.(...args);
+function call<K extends keyof BuilderApi>(method: K, ...args: Parameters<NonNullable<BuilderApi[K]>>): ReturnType<NonNullable<BuilderApi[K]>> | undefined {
+    const fn = getBuilder()?.[method] as ((...values: unknown[]) => ReturnType<NonNullable<BuilderApi[K]>>) | undefined;
+    return fn?.(...args);
 }
 
 export const builderActions = {
@@ -59,4 +67,12 @@ export const builderActions = {
     deleteSelected: () => call("deleteSelected"),
     openSaveFormsModal: () => call("openSaveFormsModal"),
     formatBindingsArea: () => call("formatBindingsArea"),
+    setFormIdentity: (name: string) => call("setFormIdentity", name) ?? false,
+    generateAndCopyJsonUI: (type: "copy" | "download") => call("generateAndCopyJsonUI", type),
+    downloadFormPackageZip: (includeServerForm = true) => call("downloadFormPackageZip", includeServerForm),
+    downloadServerForm: (type: "copy" | "download") => call("downloadServerForm", type),
+    downloadCurrentFormImages: () => call("downloadCurrentFormImages"),
+    downloadCurrentFormImagesZip: () => call("downloadCurrentFormImagesZip"),
+    downloadLoadedPresetTextures: () => call("downloadLoadedPresetTextures"),
+    downloadLoadedPresetTexturesZip: () => call("downloadLoadedPresetTexturesZip"),
 };

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { config } from "../../CONFIG.js";
 import { GlobalElementMapValue, selectedElement } from "../../index.js";
 import { classToTagName } from "../../converterTypes/HTMLClassToJonUITypes.js";
 import { GeneralUtil } from "../../util/generalUtil.js";
@@ -13,6 +12,12 @@ type ExplorerNode = {
     isRoot: boolean;
     hidden: boolean;
     children: ExplorerNode[];
+};
+
+const explorerMagicNumbers = {
+    folderIndentation: 10,
+    nonFolderIndentation: 35,
+    overallOffset: 15,
 };
 
 function buildNode(element: GlobalElementMapValue): ExplorerNode {
@@ -30,7 +35,7 @@ function buildNode(element: GlobalElementMapValue): ExplorerNode {
         id: mainElement.dataset.id!,
         label,
         hasChildren: children.length > 0,
-        isRoot: mainElement.dataset.id === config.rootElement?.dataset.id,
+        isRoot: mainElement.parentElement?.id === "main_window" || mainElement.parentElement?.classList.contains("main_window") || false,
         hidden: mainElement.style.visibility === "hidden",
         children,
     };
@@ -50,10 +55,10 @@ function ExplorerTreeNode({
     const target = document.querySelector<HTMLElement>(`[data-id="${node.id}"]`);
     const classElement = target ? GeneralUtil.elementToClassElement(target) : undefined;
     const left = node.isRoot
-        ? config.magicNumbers.explorer.nonFolderIndentation - config.magicNumbers.explorer.overallOffset
+        ? explorerMagicNumbers.nonFolderIndentation - explorerMagicNumbers.overallOffset
         : node.hasChildren
-            ? config.magicNumbers.explorer.folderIndentation
-            : config.magicNumbers.explorer.nonFolderIndentation;
+            ? explorerMagicNumbers.folderIndentation
+            : explorerMagicNumbers.nonFolderIndentation;
 
     return (
         <div className="explorerDiv" style={{ left: `${left}px` }}>
@@ -107,8 +112,9 @@ export function ExplorerPanel() {
     useEffect(() => subscribeUiBridge("explorer-changed", () => setVersion((value) => value + 1)), []);
 
     const rootNode = useMemo(() => {
-        if (!config.rootElement) return null;
-        const rootElement = GeneralUtil.elementToClassElement(config.rootElement);
+        const rootElementNode = document.querySelector<HTMLElement>("#main_window > [data-id]");
+        if (!rootElementNode) return null;
+        const rootElement = GeneralUtil.elementToClassElement(rootElementNode);
         return rootElement ? buildNode(rootElement) : null;
     }, [version]);
 

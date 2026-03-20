@@ -4,9 +4,14 @@ type CreateFormOptions = {
     [key: string]: any;
 };
 
+type CreateFormDefaults = {
+    formName: string;
+    titleFlag: string;
+};
+
 type ModalBridgeEvent =
-    | { type: "open-create-form"; resolve: (value: CreateFormOptions) => void }
-    | { type: "open-save-forms" }
+    | { type: "open-create-form"; resolve: (value: CreateFormOptions) => void; defaults: CreateFormDefaults }
+    | { type: "open-save-forms"; currentFormName: string }
     | { type: "close-save-forms" };
 
 const modalBridge = new EventTarget();
@@ -21,14 +26,14 @@ export function subscribeModalBridge(listener: (event: ModalBridgeEvent) => void
     return () => modalBridge.removeEventListener("modal-bridge", wrapped);
 }
 
-export function openCreateFormModal(): Promise<CreateFormOptions> {
+export function openCreateFormModal(defaults: CreateFormDefaults): Promise<CreateFormOptions> {
     return new Promise((resolve) => {
-        emitModalBridge({ type: "open-create-form", resolve });
+        emitModalBridge({ type: "open-create-form", resolve, defaults });
     });
 }
 
-export function openSaveFormsModal(): void {
-    emitModalBridge({ type: "open-save-forms" });
+export function openSaveFormsModal(currentFormName: string): void {
+    emitModalBridge({ type: "open-save-forms", currentFormName });
 }
 
 export function closeSaveFormsModal(): void {

@@ -1,8 +1,7 @@
+import { ComponentType, useEffect, useState } from "react";
 import { assetUrl } from "./lib/assetUrl.js";
-import { ExplorerPanel } from "./ui/react/ExplorerPanel.js";
-import { PropertiesPanel } from "./ui/react/PropertiesPanel.js";
 import { CreateFormModal } from "./ui/react/CreateFormModal.js";
-import { SaveFormsModal } from "./ui/react/SaveFormsModal.js";
+import { AuthModal } from "./ui/react/AuthModal.js";
 import { builderActions } from "./ui/react/builderActions.js";
 import { useAuthUiState } from "./ui/react/authUiBridge.js";
 
@@ -17,6 +16,37 @@ function icon(path: string): string {
 
 export function App() {
     const auth = useAuthUiState();
+    const [legacyReady, setLegacyReady] = useState(false);
+    const [ExplorerPanelComponent, setExplorerPanelComponent] = useState<ComponentType | null>(null);
+    const [PropertiesPanelComponent, setPropertiesPanelComponent] = useState<ComponentType | null>(null);
+    const [SaveFormsModalComponent, setSaveFormsModalComponent] = useState<ComponentType | null>(null);
+
+    useEffect(() => {
+        const markReady = () => setLegacyReady(true);
+        window.addEventListener("legacy-app-ready", markReady);
+        return () => window.removeEventListener("legacy-app-ready", markReady);
+    }, []);
+
+    useEffect(() => {
+        if (!legacyReady) return;
+        let mounted = true;
+
+        void import("./ui/react/ExplorerPanel.js").then((module) => {
+            if (mounted) setExplorerPanelComponent(() => module.ExplorerPanel);
+        });
+
+        void import("./ui/react/PropertiesPanel.js").then((module) => {
+            if (mounted) setPropertiesPanelComponent(() => module.PropertiesPanel);
+        });
+
+        void import("./ui/react/SaveFormsModal.js").then((module) => {
+            if (mounted) setSaveFormsModalComponent(() => module.SaveFormsModal);
+        });
+
+        return () => {
+            mounted = false;
+        };
+    }, [legacyReady]);
 
     return (
         <>
@@ -105,8 +135,9 @@ export function App() {
 
             <div id="modalSettings" className="modal"><div className="modal-content"><span id="modalSettingsClose" className="modalClose">&times;</span><h2 className="modalHeader">Settings</h2><div className="modalSettingsForm"></div></div></div>
             <div id="modalAddButton" className="modal"><div className="modal-content"><span id="modalAddButtonClose" className="modalClose">&times;</span><h2 className="modalHeader">Add Button</h2><div className="modalAddButtonForm"></div></div></div>
+            <AuthModal />
             <CreateFormModal />
-            <SaveFormsModal />
+            {SaveFormsModalComponent ? <SaveFormsModalComponent /> : null}
             <div id="modalPasteForm" className="modal"><div className="modal-content" style={{ maxWidth: 860 }}><span id="modalPasteFormClose" className="modalClose">&times;</span><h2 className="modalHeader">Paste Form Code</h2><div className="modalPasteFormForm"></div></div></div>
             <div id="modalUiWorkspace" className="modal"><div className="modal-content" style={{ maxWidth: 900 }}><span id="modalUiWorkspaceClose" className="modalClose">&times;</span><h2 className="modalHeader">Import UI Folder</h2><div className="modalUiWorkspaceForm"></div></div></div>
 
@@ -185,7 +216,7 @@ export function App() {
 
                     <div className="breaker"></div>
 
-                    <ExplorerPanel />
+                    {ExplorerPanelComponent ? <ExplorerPanelComponent /> : <div id="explorer" className="explorer"></div>}
                 </div>
 
                 <div className="canvasViewport">
@@ -217,7 +248,7 @@ export function App() {
                 </div>
             </div>
 
-            <PropertiesPanel />
+            {PropertiesPanelComponent ? <PropertiesPanelComponent /> : <div id="properties" className="properties"></div>}
             <div id="notif-container"></div>
             <div id="mainWarningMessage"></div>
         </>

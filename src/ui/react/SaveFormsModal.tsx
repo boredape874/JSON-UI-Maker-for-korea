@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { config } from "../../CONFIG.js";
-import { Builder } from "../../index.js";
 import { translateText } from "../../i18n.js";
 import { StringUtil } from "../../util/stringUtil.js";
+import { builderActions } from "./builderActions.js";
 import { closeSaveFormsModal, subscribeModalBridge } from "./modalBridge.js";
 
 function ActionCard({
@@ -25,11 +24,11 @@ function ActionCard({
 
 export function SaveFormsModal() {
     const [open, setOpen] = useState(false);
-    const [formName, setFormName] = useState(config.formFileName);
+    const [formName, setFormName] = useState("form_ui");
 
     useEffect(() => subscribeModalBridge((event) => {
         if (event.type === "open-save-forms") {
-            setFormName(config.formFileName);
+            setFormName(event.currentFormName);
             setOpen(true);
         }
         if (event.type === "close-save-forms") {
@@ -38,7 +37,7 @@ export function SaveFormsModal() {
     }), []);
 
     const preview = useMemo(() => {
-        const currentName = formName.trim() || config.formFileName || "form_ui";
+        const currentName = formName.trim() || "form_ui";
         return {
             fileName: StringUtil.toSafeFileName(currentName),
             namespace: StringUtil.toSafeNamespace(currentName),
@@ -46,7 +45,7 @@ export function SaveFormsModal() {
     }, [formName]);
 
     const runAction = (action: () => void) => {
-        if (!Builder.setFormIdentity(formName)) return;
+        if (!builderActions.setFormIdentity(formName)) return;
         action();
         closeSaveFormsModal();
     };
@@ -76,21 +75,21 @@ export function SaveFormsModal() {
                     <br />
                     <div className="saveFormsActionGrid">
                         <ActionCard title="Form" description="Copy or download the standard form JSON.">
-                            <button type="button" className="saveFormsActionButton" onClick={() => runAction(() => Builder.generateAndCopyJsonUI("copy"))}>{translateText("Copy")}</button>
-                            <button type="button" className="saveFormsActionButton" onClick={() => runAction(() => Builder.generateAndCopyJsonUI("download"))}>{translateText("Download")}</button>
-                            <button type="button" className="saveFormsActionButton" onClick={() => runAction(() => { void Builder.downloadFormPackageZip(true); })}>{translateText("Package ZIP")}</button>
+                            <button type="button" className="saveFormsActionButton" onClick={() => runAction(() => builderActions.generateAndCopyJsonUI("copy"))}>{translateText("Copy")}</button>
+                            <button type="button" className="saveFormsActionButton" onClick={() => runAction(() => builderActions.generateAndCopyJsonUI("download"))}>{translateText("Download")}</button>
+                            <button type="button" className="saveFormsActionButton" onClick={() => runAction(() => { void builderActions.downloadFormPackageZip(true); })}>{translateText("Package ZIP")}</button>
                         </ActionCard>
                         <ActionCard title="Server-Form" description="Copy or download the server form that points to this form.">
-                            <button type="button" className="saveFormsActionButton" onClick={() => runAction(() => Builder.downloadServerForm("copy"))}>{translateText("Copy")}</button>
-                            <button type="button" className="saveFormsActionButton" onClick={() => runAction(() => Builder.downloadServerForm("download"))}>{translateText("Download")}</button>
+                            <button type="button" className="saveFormsActionButton" onClick={() => runAction(() => builderActions.downloadServerForm("copy"))}>{translateText("Copy")}</button>
+                            <button type="button" className="saveFormsActionButton" onClick={() => runAction(() => builderActions.downloadServerForm("download"))}>{translateText("Download")}</button>
                         </ActionCard>
                         <ActionCard title="Used Images" description="Download the textures currently used by this form. ZIP keeps the in-game textures/... folder structure.">
-                            <button type="button" className="saveFormsActionButton" onClick={() => runAction(() => { void Builder.downloadCurrentFormImages(); })}>{translateText("Download")}</button>
-                            <button type="button" className="saveFormsActionButton" onClick={() => runAction(() => { void Builder.downloadCurrentFormImagesZip(); })}>{translateText("ZIP")}</button>
+                            <button type="button" className="saveFormsActionButton" onClick={() => runAction(() => { void builderActions.downloadCurrentFormImages(); })}>{translateText("Download")}</button>
+                            <button type="button" className="saveFormsActionButton" onClick={() => runAction(() => { void builderActions.downloadCurrentFormImagesZip(); })}>{translateText("ZIP")}</button>
                         </ActionCard>
                         <ActionCard title="Loaded Presets" description="Download every preset texture currently loaded in the site. ZIP keeps the textures/... folder structure.">
-                            <button type="button" className="saveFormsActionButton" onClick={() => runAction(() => { void Builder.downloadLoadedPresetTextures(); })}>{translateText("Download")}</button>
-                            <button type="button" className="saveFormsActionButton" onClick={() => runAction(() => { void Builder.downloadLoadedPresetTexturesZip(); })}>{translateText("ZIP")}</button>
+                            <button type="button" className="saveFormsActionButton" onClick={() => runAction(() => { void builderActions.downloadLoadedPresetTextures(); })}>{translateText("Download")}</button>
+                            <button type="button" className="saveFormsActionButton" onClick={() => runAction(() => { void builderActions.downloadLoadedPresetTexturesZip(); })}>{translateText("ZIP")}</button>
                         </ActionCard>
                     </div>
                 </div>

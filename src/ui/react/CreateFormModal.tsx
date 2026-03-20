@@ -1,5 +1,4 @@
 import { FormEvent, useEffect, useState } from "react";
-import { config } from "../../CONFIG.js";
 import { translateText } from "../../i18n.js";
 import { subscribeModalBridge } from "./modalBridge.js";
 
@@ -7,14 +6,14 @@ type CreateFormResolver = ((value: Record<string, any>) => void) | null;
 
 export function CreateFormModal() {
     const [open, setOpen] = useState(false);
-    const [formName, setFormName] = useState(config.formFileName);
-    const [titleFlag, setTitleFlag] = useState(config.title_flag);
+    const [formName, setFormName] = useState("form_ui");
+    const [titleFlag, setTitleFlag] = useState("default_title");
     const [resolver, setResolver] = useState<CreateFormResolver>(null);
 
     useEffect(() => subscribeModalBridge((event) => {
         if (event.type !== "open-create-form") return;
-        setFormName(config.formFileName);
-        setTitleFlag(config.title_flag);
+        setFormName(event.defaults.formName);
+        setTitleFlag(event.defaults.titleFlag);
         setResolver(() => event.resolve);
         setOpen(true);
     }), []);

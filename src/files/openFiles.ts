@@ -29,7 +29,6 @@ export class FileUploader {
         if (!fileInput?.files) return;
 
         const firstDir: string | undefined = fileInput?.files[0]?.webkitRelativePath.split("/")[0];
-        console.log(firstDir);
         if (firstDir !== "ui") {
             new Notification(
                 `Selected file is not a ui folder
@@ -42,9 +41,6 @@ export class FileUploader {
 
         const files = Array.from(fileInput.files);
 
-        // Debug: list all files
-        files.forEach((file) => console.log("Filename", file.name));
-
         FileUploader.processFileUpload(files);
     }
 
@@ -52,8 +48,6 @@ export class FileUploader {
         for (const file of files) {
             this.addToFileSystem(file);
         }
-        console.log(GLOBAL_FILE_SYSTEM);
-
         const pngFiles = files.filter(
             (file) => file.name.endsWith(".png") || file.name.endsWith(".jpg") || file.name.endsWith(".jpeg") || file.name.endsWith(".webp")
         );
@@ -61,10 +55,7 @@ export class FileUploader {
         const tasks = pngFiles.map(async (pngFile) => {
             const dir = pngFile.webkitRelativePath || (pngFile as any)._webkitRelativePath;
             const baseName = dir.replace(/\.[^.]*$/, "");
-            console.warn(baseName);
-
             const imageData = await this.readImageAsImageData(pngFile);
-            console.warn(imageData);
 
             const existingData = images.get(baseName) ?? {};
             existingData.png = imageData;
