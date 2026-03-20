@@ -40,6 +40,54 @@ const ANCHORS: HudAnchor[] = [
 const FONT_SIZES: HudFontSize[] = ["small", "normal", "large", "extra_large"];
 const CLIP_DIRECTIONS = ["left", "right", "up", "down"] as const;
 
+const ANCHOR_LABELS: Record<HudAnchor, string> = {
+    top_left: "좌상단",
+    top_middle: "상단 중앙",
+    top_right: "우상단",
+    left_middle: "좌측 중앙",
+    center: "정중앙",
+    right_middle: "우측 중앙",
+    bottom_left: "좌하단",
+    bottom_middle: "하단 중앙",
+    bottom_right: "우하단",
+};
+
+const FONT_SIZE_LABELS: Record<HudFontSize, string> = {
+    small: "작게",
+    normal: "보통",
+    large: "크게",
+    extra_large: "매우 크게",
+};
+
+const CLIP_DIRECTION_LABELS: Record<(typeof CLIP_DIRECTIONS)[number], string> = {
+    left: "왼쪽",
+    right: "오른쪽",
+    up: "위쪽",
+    down: "아래쪽",
+};
+
+function backgroundLabel(value: "vanilla" | "solid" | "none"): string {
+    switch (value) {
+        case "vanilla":
+            return "바닐라";
+        case "solid":
+            return "단색";
+        case "none":
+            return "없음";
+    }
+}
+
+function animationLabel(value: "none" | "fade_out" | "fade_hold_fade"): string {
+    switch (value) {
+        case "none":
+            return "없음";
+        case "fade_out":
+            return "페이드 아웃";
+        case "fade_hold_fade":
+            return "페이드 인/유지/아웃";
+    }
+}
+
 function isProgressBarElement(element: HudElement | HudProgressBar): element is HudProgressBar {
     return "sourceChannel" in element;
 }
@@ -104,34 +152,34 @@ function CommonInspector({ element }: { element: HudElement | HudProgressBar }) 
         <div className="hudEditorInspectorCard">
             <div className="hudEditorInspectorTitle">{element.label}</div>
             <div className="hudEditorInspectorBody">
-                {fieldRow("Enabled", <input type="checkbox" checked={element.enabled} onChange={onChange("enabled")} />)}
-                {fieldRow("Ignored", <input type="checkbox" checked={element.ignored} onChange={onChange("ignored")} />)}
-                {fieldRow("Anchor", (
+                {fieldRow("활성화", <input type="checkbox" checked={element.enabled} onChange={onChange("enabled")} />)}
+                {fieldRow("무시", <input type="checkbox" checked={element.ignored} onChange={onChange("ignored")} />)}
+                {fieldRow("앵커", (
                     <select value={element.anchor} onChange={onChange("anchor")}>
-                        {ANCHORS.map((anchor) => <option key={anchor} value={anchor}>{anchor}</option>)}
+                        {ANCHORS.map((anchor) => <option key={anchor} value={anchor}>{ANCHOR_LABELS[anchor]}</option>)}
                     </select>
                 ))}
                 {fieldRow("X", <input type="number" value={element.x} onChange={onChange("x")} />)}
                 {fieldRow("Y", <input type="number" value={element.y} onChange={onChange("y")} />)}
-                {fieldRow("Width", <input type="number" value={element.width} onChange={onChange("width")} />)}
-                {fieldRow("Height", <input type="number" value={element.height} onChange={onChange("height")} />)}
-                {fieldRow("Layer", <input type="number" value={element.layer} onChange={onChange("layer")} />)}
-                {fieldRow("Font", (
+                {fieldRow("너비", <input type="number" value={element.width} onChange={onChange("width")} />)}
+                {fieldRow("높이", <input type="number" value={element.height} onChange={onChange("height")} />)}
+                {fieldRow("레이어", <input type="number" value={element.layer} onChange={onChange("layer")} />)}
+                {fieldRow("폰트", (
                     <select value={element.fontSize} onChange={onChange("fontSize")}>
-                        {FONT_SIZES.map((font) => <option key={font} value={font}>{font}</option>)}
+                        {FONT_SIZES.map((font) => <option key={font} value={font}>{FONT_SIZE_LABELS[font]}</option>)}
                     </select>
                 ))}
-                {fieldRow("Text Color", <input type="color" value={element.textColor} onChange={onChange("textColor")} />)}
-                {fieldRow("Shadow", <input type="checkbox" checked={element.shadow} onChange={onChange("shadow")} />)}
-                {fieldRow("Background", (
+                {fieldRow("글자 색상", <input type="color" value={element.textColor} onChange={onChange("textColor")} />)}
+                {fieldRow("그림자", <input type="checkbox" checked={element.shadow} onChange={onChange("shadow")} />)}
+                {fieldRow("배경", (
                     <select value={element.background} onChange={onChange("background")}>
-                        <option value="vanilla">vanilla</option>
-                        <option value="solid">solid</option>
-                        <option value="none">none</option>
+                        <option value="vanilla">{backgroundLabel("vanilla")}</option>
+                        <option value="solid">{backgroundLabel("solid")}</option>
+                        <option value="none">{backgroundLabel("none")}</option>
                     </select>
                 ))}
-                {fieldRow("Background Alpha", <input type="number" min="0" max="1" step="0.05" value={element.backgroundAlpha} onChange={onChange("backgroundAlpha")} />)}
-                {fieldRow("Background Color", <input type="color" value={element.backgroundColor} onChange={onChange("backgroundColor")} disabled={element.background !== "solid"} />)}
+                {fieldRow("배경 알파", <input type="number" min="0" max="1" step="0.05" value={element.backgroundAlpha} onChange={onChange("backgroundAlpha")} />)}
+                {fieldRow("배경 색상", <input type="color" value={element.backgroundColor} onChange={onChange("backgroundColor")} disabled={element.background !== "solid"} />)}
             </div>
         </div>
     );
@@ -148,75 +196,75 @@ function ChannelInspector({ element }: { element: HudElement }) {
         <>
             <CommonInspector element={element} />
             <div className="hudEditorInspectorCard">
-                <div className="hudEditorInspectorTitle">Channel Settings</div>
+                <div className="hudEditorInspectorTitle">채널 설정</div>
                 <div className="hudEditorInspectorBody">
-                    {fieldRow("Sample Text", <input type="text" value={element.sampleText} onChange={onChange("sampleText")} />)}
-                    {fieldRow("Prefix", <input type="text" value={element.prefix} onChange={onChange("prefix")} />)}
-                    {fieldRow("Strip Prefix", <input type="checkbox" checked={element.stripPrefix} onChange={onChange("stripPrefix")} />)}
-                    {fieldRow("Hide Vanilla", <input type="checkbox" checked={element.hideVanilla} onChange={onChange("hideVanilla")} />)}
-                    {element.id === "actionbar" ? fieldRow("Preserve", <input type="checkbox" checked={element.preserve} onChange={onChange("preserve")} />) : null}
-                    {element.id !== "actionbar" ? fieldRow("Display", (
+                    {fieldRow("샘플 텍스트", <input type="text" value={element.sampleText} onChange={onChange("sampleText")} />)}
+                    {fieldRow("접두사", <input type="text" value={element.prefix} onChange={onChange("prefix")} />)}
+                    {fieldRow("접두사 제거", <input type="checkbox" checked={element.stripPrefix} onChange={onChange("stripPrefix")} />)}
+                    {fieldRow("바닐라 숨김", <input type="checkbox" checked={element.hideVanilla} onChange={onChange("hideVanilla")} />)}
+                    {element.id === "actionbar" ? fieldRow("보존 표시", <input type="checkbox" checked={element.preserve} onChange={onChange("preserve")} />) : null}
+                    {element.id !== "actionbar" ? fieldRow("표시 방식", (
                         <select value={element.displayMode} onChange={onChange("displayMode")} disabled={sliceMode}>
-                            <option value="text">text</option>
-                            <option value="progress">progress</option>
+                            <option value="text">텍스트</option>
+                            <option value="progress">진행 바</option>
                         </select>
                     )) : null}
                     {element.id !== "actionbar" && element.displayMode === "progress" ? (
                         <>
-                            {fieldRow("Max Value", <input type="number" value={element.maxValue} onChange={onChange("maxValue")} disabled={sliceMode} />)}
-                            {fieldRow("Fill Color", <input type="color" value={element.fillColor} onChange={onChange("fillColor")} disabled={sliceMode} />)}
-                            {fieldRow("Clip Direction", (
+                            {fieldRow("최대값", <input type="number" value={element.maxValue} onChange={onChange("maxValue")} disabled={sliceMode} />)}
+                            {fieldRow("채우기 색상", <input type="color" value={element.fillColor} onChange={onChange("fillColor")} disabled={sliceMode} />)}
+                            {fieldRow("클립 방향", (
                                 <select value={element.clipDirection} onChange={onChange("clipDirection")} disabled={sliceMode}>
-                                    {CLIP_DIRECTIONS.map((direction) => <option key={direction} value={direction}>{direction}</option>)}
+                                    {CLIP_DIRECTIONS.map((direction) => <option key={direction} value={direction}>{CLIP_DIRECTION_LABELS[direction]}</option>)}
                                 </select>
                             ))}
                         </>
                     ) : null}
-                    {fieldRow("Animation", (
+                    {fieldRow("애니메이션", (
                         <select value={element.animationPreset} onChange={onChange("animationPreset")}>
-                            <option value="none">none</option>
-                            <option value="fade_out">fade_out</option>
-                            <option value="fade_hold_fade">fade_hold_fade</option>
+                            <option value="none">{animationLabel("none")}</option>
+                            <option value="fade_out">{animationLabel("fade_out")}</option>
+                            <option value="fade_hold_fade">{animationLabel("fade_hold_fade")}</option>
                         </select>
                     ))}
-                    {fieldRow("Anim In", <input type="number" min="0" step="0.05" value={element.animInDuration} onChange={onChange("animInDuration")} />)}
-                    {fieldRow("Anim Hold", <input type="number" min="0" step="0.05" value={element.animHoldDuration} onChange={onChange("animHoldDuration")} />)}
-                    {fieldRow("Anim Out", <input type="number" min="0" step="0.05" value={element.animOutDuration} onChange={onChange("animOutDuration")} />)}
-                    {element.id === "title" ? fieldRow("Title Mode", (
+                    {fieldRow("시작 시간", <input type="number" min="0" step="0.05" value={element.animInDuration} onChange={onChange("animInDuration")} />)}
+                    {fieldRow("유지 시간", <input type="number" min="0" step="0.05" value={element.animHoldDuration} onChange={onChange("animHoldDuration")} />)}
+                    {fieldRow("종료 시간", <input type="number" min="0" step="0.05" value={element.animOutDuration} onChange={onChange("animOutDuration")} />)}
+                    {element.id === "title" ? fieldRow("타이틀 모드", (
                         <select value={element.titleMode ?? "single"} onChange={onChange("titleMode")}>
-                            <option value="single">single</option>
-                            <option value="slice">slice</option>
+                            <option value="single">단일</option>
+                            <option value="slice">슬라이싱</option>
                         </select>
                     )) : null}
-                    {element.id === "subtitle" ? fieldRow("Subtitle Mode", (
+                    {element.id === "subtitle" ? fieldRow("서브타이틀 모드", (
                         <select value={element.subtitleMode ?? "single"} onChange={onChange("subtitleMode")}>
-                            <option value="single">single</option>
-                            <option value="slice">slice</option>
+                            <option value="single">단일</option>
+                            <option value="slice">슬라이싱</option>
                         </select>
                     )) : null}
                 </div>
             </div>
             {sliceMode ? (
                 <div className="hudEditorInspectorCard">
-                    <div className="hudEditorInspectorTitle">Slice Slots</div>
+                    <div className="hudEditorInspectorTitle">슬롯 설정</div>
                     <div className="hudEditorInspectorBody">
-                        {fieldRow("Slot Size", <input type="number" value={element.sliceSlotSize ?? 20} onChange={onChange("sliceSlotSize")} />)}
-                        {fieldRow("Columns", <input type="number" value={element.sliceColumns ?? 2} onChange={onChange("sliceColumns")} />)}
-                        {fieldRow("Gap X", <input type="number" value={element.sliceGapX ?? 8} onChange={onChange("sliceGapX")} />)}
-                        {fieldRow("Gap Y", <input type="number" value={element.sliceGapY ?? 8} onChange={onChange("sliceGapY")} />)}
+                        {fieldRow("슬롯 크기", <input type="number" value={element.sliceSlotSize ?? 20} onChange={onChange("sliceSlotSize")} />)}
+                        {fieldRow("열 수", <input type="number" value={element.sliceColumns ?? 2} onChange={onChange("sliceColumns")} />)}
+                        {fieldRow("가로 간격", <input type="number" value={element.sliceGapX ?? 8} onChange={onChange("sliceGapX")} />)}
+                        {fieldRow("세로 간격", <input type="number" value={element.sliceGapY ?? 8} onChange={onChange("sliceGapY")} />)}
                         <div className="hudEditorSidebarActions">
-                            <button type="button" className="propertyInputButton" onClick={() => addHudEditorSliceSlot(element.id)}>Add Slot</button>
-                            <button type="button" className="propertyInputButton" onClick={() => removeHudEditorSliceSlot(element.id)}>Remove Slot</button>
+                            <button type="button" className="propertyInputButton" onClick={() => addHudEditorSliceSlot(element.id)}>슬롯 추가</button>
+                            <button type="button" className="propertyInputButton" onClick={() => removeHudEditorSliceSlot(element.id)}>슬롯 제거</button>
                         </div>
                         {slots.map((slot, index) => (
                             <div key={`${element.id}-${index}`}>
-                                {fieldRow(`Slot ${index + 1} Anchor`, (
+                                {fieldRow(`슬롯 ${index + 1} 앵커`, (
                                     <select value={slot.anchor} onChange={(event) => updateHudEditorSliceSlot(index, "anchor", event.target.value as HudAnchor)}>
-                                        {ANCHORS.map((anchor) => <option key={anchor} value={anchor}>{anchor}</option>)}
+                                        {ANCHORS.map((anchor) => <option key={anchor} value={anchor}>{ANCHOR_LABELS[anchor]}</option>)}
                                     </select>
                                 ))}
-                                {fieldRow(`Slot ${index + 1} X`, <input type="number" value={slot.x} onChange={(event) => updateHudEditorSliceSlot(index, "x", Number.parseInt(event.target.value, 10) || 0)} />)}
-                                {fieldRow(`Slot ${index + 1} Y`, <input type="number" value={slot.y} onChange={(event) => updateHudEditorSliceSlot(index, "y", Number.parseInt(event.target.value, 10) || 0)} />)}
+                                {fieldRow(`슬롯 ${index + 1} X`, <input type="number" value={slot.x} onChange={(event) => updateHudEditorSliceSlot(index, "x", Number.parseInt(event.target.value, 10) || 0)} />)}
+                                {fieldRow(`슬롯 ${index + 1} Y`, <input type="number" value={slot.y} onChange={(event) => updateHudEditorSliceSlot(index, "y", Number.parseInt(event.target.value, 10) || 0)} />)}
                             </div>
                         ))}
                     </div>
@@ -235,50 +283,50 @@ function ProgressInspector({ element }: { element: HudProgressBar }) {
         <>
             <CommonInspector element={element} />
             <div className="hudEditorInspectorCard">
-                <div className="hudEditorInspectorTitle">Progress Settings</div>
+                <div className="hudEditorInspectorTitle">진행 바 설정</div>
                 <div className="hudEditorInspectorBody">
-                    {fieldRow("Label", <input type="text" value={element.label} onChange={onChange("label")} />)}
-                    {fieldRow("Source Channel", (
+                    {fieldRow("이름", <input type="text" value={element.label} onChange={onChange("label")} />)}
+                    {fieldRow("소스 채널", (
                         <select value={element.sourceChannel} onChange={onChange("sourceChannel")}>
-                            <option value="title">title</option>
-                            <option value="subtitle">subtitle</option>
-                            <option value="actionbar">actionbar</option>
+                            <option value="title">타이틀</option>
+                            <option value="subtitle">서브타이틀</option>
+                            <option value="actionbar">액션바</option>
                         </select>
                     ))}
-                    {fieldRow("Sample Text", <input type="text" value={element.sampleText} onChange={onChange("sampleText")} />)}
-                    {fieldRow("Prefix", <input type="text" value={element.prefix} onChange={onChange("prefix")} />)}
-                    {fieldRow("Hide Vanilla", <input type="checkbox" checked={element.hideVanilla} onChange={onChange("hideVanilla")} />)}
-                    {fieldRow("Max Mode", (
+                    {fieldRow("샘플 텍스트", <input type="text" value={element.sampleText} onChange={onChange("sampleText")} />)}
+                    {fieldRow("접두사", <input type="text" value={element.prefix} onChange={onChange("prefix")} />)}
+                    {fieldRow("바닐라 숨김", <input type="checkbox" checked={element.hideVanilla} onChange={onChange("hideVanilla")} />)}
+                    {fieldRow("최대값 모드", (
                         <select value={element.maxMode} onChange={onChange("maxMode")}>
-                            <option value="fixed">fixed</option>
-                            <option value="dynamic">dynamic</option>
+                            <option value="fixed">고정</option>
+                            <option value="dynamic">동적</option>
                         </select>
                     ))}
-                    {fieldRow("Max Value", <input type="number" value={element.maxValue} onChange={onChange("maxValue")} />)}
-                    {fieldRow("Fill Color", <input type="color" value={element.fillColor} onChange={onChange("fillColor")} />)}
-                    {fieldRow("Clip Direction", (
+                    {fieldRow("최대값", <input type="number" value={element.maxValue} onChange={onChange("maxValue")} />)}
+                    {fieldRow("채우기 색상", <input type="color" value={element.fillColor} onChange={onChange("fillColor")} />)}
+                    {fieldRow("클립 방향", (
                         <select value={element.clipDirection} onChange={onChange("clipDirection")}>
-                            {CLIP_DIRECTIONS.map((direction) => <option key={direction} value={direction}>{direction}</option>)}
+                            {CLIP_DIRECTIONS.map((direction) => <option key={direction} value={direction}>{CLIP_DIRECTION_LABELS[direction]}</option>)}
                         </select>
                     ))}
-                    {fieldRow("Background Texture", <input type="text" value={element.backgroundTexture} onChange={onChange("backgroundTexture")} />)}
-                    {fieldRow("Bar Texture", <input type="text" value={element.barTexture} onChange={onChange("barTexture")} />)}
-                    {fieldRow("Trail Texture", <input type="text" value={element.trailTexture} onChange={onChange("trailTexture")} />)}
-                    {fieldRow("Texture Type", (
+                    {fieldRow("배경 텍스처", <input type="text" value={element.backgroundTexture} onChange={onChange("backgroundTexture")} />)}
+                    {fieldRow("바 텍스처", <input type="text" value={element.barTexture} onChange={onChange("barTexture")} />)}
+                    {fieldRow("트레일 텍스처", <input type="text" value={element.trailTexture} onChange={onChange("trailTexture")} />)}
+                    {fieldRow("텍스처 타입", (
                         <select value={element.textureType} onChange={onChange("textureType")}>
-                            <option value="">default</option>
-                            <option value="fixed">fixed</option>
+                            <option value="">기본</option>
+                            <option value="fixed">고정</option>
                         </select>
                     ))}
-                    {fieldRow("Bar Alpha", <input type="number" min="0" max="1" step="0.05" value={element.barAlpha} onChange={onChange("barAlpha")} />)}
-                    {fieldRow("Trail Alpha", <input type="number" min="0" max="1" step="0.05" value={element.trailAlpha} onChange={onChange("trailAlpha")} />)}
-                    {fieldRow("Duration", <input type="number" min="0" step="0.05" value={element.duration} onChange={onChange("duration")} />)}
-                    {fieldRow("Trail Delay", <input type="number" min="0" step="0.05" value={element.trailDelay} onChange={onChange("trailDelay")} />)}
-                    {fieldRow("Bar Inset X", <input type="number" value={element.barInsetX} onChange={onChange("barInsetX")} />)}
-                    {fieldRow("Bar Inset Y", <input type="number" value={element.barInsetY} onChange={onChange("barInsetY")} />)}
-                    {fieldRow("Show Text", <input type="checkbox" checked={element.showText} onChange={onChange("showText")} />)}
+                    {fieldRow("바 알파", <input type="number" min="0" max="1" step="0.05" value={element.barAlpha} onChange={onChange("barAlpha")} />)}
+                    {fieldRow("트레일 알파", <input type="number" min="0" max="1" step="0.05" value={element.trailAlpha} onChange={onChange("trailAlpha")} />)}
+                    {fieldRow("지속 시간", <input type="number" min="0" step="0.05" value={element.duration} onChange={onChange("duration")} />)}
+                    {fieldRow("트레일 지연", <input type="number" min="0" step="0.05" value={element.trailDelay} onChange={onChange("trailDelay")} />)}
+                    {fieldRow("바 여백 X", <input type="number" value={element.barInsetX} onChange={onChange("barInsetX")} />)}
+                    {fieldRow("바 여백 Y", <input type="number" value={element.barInsetY} onChange={onChange("barInsetY")} />)}
+                    {fieldRow("텍스트 표시", <input type="checkbox" checked={element.showText} onChange={onChange("showText")} />)}
                     <div className="hudEditorSidebarActions">
-                        <button type="button" className="propertyInputButton" onClick={() => deleteHudEditorProgressBar(element.id)}>Delete Progress Bar</button>
+                        <button type="button" className="propertyInputButton" onClick={() => deleteHudEditorProgressBar(element.id)}>진행 바 삭제</button>
                     </div>
                 </div>
             </div>
@@ -299,41 +347,41 @@ export function HudEditorWorkspace() {
         <div className="hudEditorLayout">
             <div className="hudEditorSidebar">
                 <div className="hudEditorSidebarCard">
-                    <div className="hudEditorSidebarTitle">HUD Items</div>
+                    <div className="hudEditorSidebarTitle">HUD 항목</div>
                     <div className="hudEditorSidebarList">
                         {Object.values(snapshot.state.elements).map((element) => (
                             <button key={element.id} type="button" className={`hudEditorChannelButton${element.id === snapshot.state.selectedId ? " hudEditorChannelButtonActive" : ""}`} onClick={() => selectHudEditorItem(element.id)}>
                                 <span>{element.label}</span>
-                                <span>{element.enabled ? "ON" : "OFF"}</span>
+                                <span>{element.enabled ? "사용" : "끔"}</span>
                             </button>
                         ))}
-                        <div className="hudEditorSidebarTitle" style={{ marginTop: 12 }}>Progress Bars</div>
+                        <div className="hudEditorSidebarTitle" style={{ marginTop: 12 }}>진행 바</div>
                         <div className="hudEditorSidebarActions">
-                            <button type="button" className="propertyInputButton" onClick={() => addHudEditorProgressBar()}>Add</button>
+                            <button type="button" className="propertyInputButton" onClick={() => addHudEditorProgressBar()}>추가</button>
                         </div>
                         {snapshot.state.progressBars.map((bar) => (
                             <button key={bar.id} type="button" className={`hudEditorChannelButton${bar.id === snapshot.state.selectedId ? " hudEditorChannelButtonActive" : ""}`} onClick={() => selectHudEditorItem(bar.id)}>
                                 <span>{bar.label}</span>
-                                <span>{bar.enabled ? "ON" : "OFF"}</span>
+                                <span>{bar.enabled ? "사용" : "끔"}</span>
                             </button>
                         ))}
                     </div>
                     <div className="hudEditorSidebarActions">
-                        <button type="button" className="propertyInputButton" onClick={() => resetHudEditorState()}>Reset</button>
+                        <button type="button" className="propertyInputButton" onClick={() => resetHudEditorState()}>초기화</button>
                     </div>
                 </div>
             </div>
             <div className="hudEditorCenter">
                 <div className="hudEditorSidebarCard hudEditorPreviewToolbar">
                     <div className="hudEditorPreviewToolbarLeft">
-                        <button type="button" className={`propertyInputButton ${snapshot.state.autoFitPreview ? "hudEditorZoomActive" : ""}`} onClick={() => setHudEditorAutoFitPreview(true)}>Fit</button>
+                        <button type="button" className={`propertyInputButton ${snapshot.state.autoFitPreview ? "hudEditorZoomActive" : ""}`} onClick={() => setHudEditorAutoFitPreview(true)}>맞춤</button>
                         {[0.75, 1, 1.25].map((zoom) => (
                             <button key={zoom} type="button" className={`propertyInputButton ${!snapshot.state.autoFitPreview && snapshot.state.previewZoom === zoom ? "hudEditorZoomActive" : ""}`} onClick={() => setHudEditorPreviewZoom(zoom)}>{Math.round(zoom * 100)}%</button>
                         ))}
-                        <button type="button" className={`propertyInputButton ${snapshot.state.showAnchorGuides ? "hudEditorZoomActive" : ""}`} onClick={() => toggleHudEditorGuides()}>Guides</button>
-                        <button type="button" className={`propertyInputButton ${snapshot.state.autoAnchorSnap ? "hudEditorZoomActive" : ""}`} onClick={() => toggleHudEditorAutoAnchorSnap()}>Snap</button>
+                        <button type="button" className={`propertyInputButton ${snapshot.state.showAnchorGuides ? "hudEditorZoomActive" : ""}`} onClick={() => toggleHudEditorGuides()}>가이드</button>
+                        <button type="button" className={`propertyInputButton ${snapshot.state.autoAnchorSnap ? "hudEditorZoomActive" : ""}`} onClick={() => toggleHudEditorAutoAnchorSnap()}>자동 앵커</button>
                     </div>
-                    <div className="hudEditorPreviewToolbarRight">Scale {scale}%</div>
+                    <div className="hudEditorPreviewToolbarRight">배율 {scale}%</div>
                 </div>
                 <div className="hudEditorCanvasWrap">
                     <div className="hudEditorCanvasScale" style={{ width: `${PREVIEW_WIDTH * snapshot.previewScale}px`, height: `${PREVIEW_HEIGHT * snapshot.previewScale}px` }}>
@@ -377,8 +425,8 @@ export function HudEditorWorkspace() {
                     <div className="hudEditorSidebarTitle">hud_screen.json</div>
                     <textarea className="hudEditorOutput" spellCheck={false} readOnly value={snapshot.hudJson}></textarea>
                     <div className="hudEditorSidebarActions">
-                        <button type="button" className="propertyInputButton" onClick={() => void copyHudEditorText(snapshot.hudJson, "Copied hud_screen.json")}>Copy</button>
-                        <button type="button" className="propertyInputButton" onClick={() => downloadHudEditorJsonFile("hud_screen.json", snapshot.hudJson)}>Download</button>
+                        <button type="button" className="propertyInputButton" onClick={() => void copyHudEditorText(snapshot.hudJson, "hud_screen.json 복사됨")}>복사</button>
+                        <button type="button" className="propertyInputButton" onClick={() => downloadHudEditorJsonFile("hud_screen.json", snapshot.hudJson)}>다운로드</button>
                     </div>
                 </div>
                 {snapshot.hasEnabledProgressBars ? (
@@ -387,16 +435,16 @@ export function HudEditorWorkspace() {
                             <div className="hudEditorSidebarTitle">animated_bar.json</div>
                             <textarea className="hudEditorOutput" spellCheck={false} readOnly value={snapshot.animatedBarJson}></textarea>
                             <div className="hudEditorSidebarActions">
-                                <button type="button" className="propertyInputButton" onClick={() => void copyHudEditorText(snapshot.animatedBarJson, "Copied animated_bar.json")}>Copy</button>
-                                <button type="button" className="propertyInputButton" onClick={() => downloadHudEditorJsonFile("animated_bar.json", snapshot.animatedBarJson)}>Download</button>
+                                <button type="button" className="propertyInputButton" onClick={() => void copyHudEditorText(snapshot.animatedBarJson, "animated_bar.json 복사됨")}>복사</button>
+                                <button type="button" className="propertyInputButton" onClick={() => downloadHudEditorJsonFile("animated_bar.json", snapshot.animatedBarJson)}>다운로드</button>
                             </div>
                         </div>
                         <div className="hudEditorJsonCard">
                             <div className="hudEditorSidebarTitle">_ui_defs.json</div>
                             <textarea className="hudEditorOutput" spellCheck={false} readOnly value={snapshot.uiDefsJson}></textarea>
                             <div className="hudEditorSidebarActions">
-                                <button type="button" className="propertyInputButton" onClick={() => void copyHudEditorText(snapshot.uiDefsJson, "Copied _ui_defs.json")}>Copy</button>
-                                <button type="button" className="propertyInputButton" onClick={() => downloadHudEditorJsonFile("_ui_defs.json", snapshot.uiDefsJson)}>Download</button>
+                                <button type="button" className="propertyInputButton" onClick={() => void copyHudEditorText(snapshot.uiDefsJson, "_ui_defs.json 복사됨")}>복사</button>
+                                <button type="button" className="propertyInputButton" onClick={() => downloadHudEditorJsonFile("_ui_defs.json", snapshot.uiDefsJson)}>다운로드</button>
                             </div>
                         </div>
                     </>
@@ -408,7 +456,7 @@ export function HudEditorWorkspace() {
                                 <div className="hudEditorSidebarTitle">{helper.title}</div>
                                 <textarea className="hudEditorOutput hudEditorScriptOutput" spellCheck={false} readOnly value={helper.content}></textarea>
                                 <div className="hudEditorSidebarActions">
-                                    <button type="button" className="propertyInputButton" onClick={() => void copyHudEditorText(helper.copyText, helper.notice)}>Copy Script</button>
+                                    <button type="button" className="propertyInputButton" onClick={() => void copyHudEditorText(helper.copyText, helper.notice)}>스크립트 복사</button>
                                 </div>
                             </div>
                         ))}

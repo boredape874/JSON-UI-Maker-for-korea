@@ -36,7 +36,7 @@ export function HudEditorModalHost() {
     return (
         <div ref={modalRef} id="hudEditorScreen" className="hudEditorScreen" style={{ display: open ? "flex" : "none" }}>
             <div className="hudEditorScreenHeader">
-                <div className="hudEditorScreenTitle">HUD Editor</div>
+                <div className="hudEditorScreenTitle">HUD 에디터</div>
                 <button
                     ref={closeButtonRef}
                     type="button"
@@ -44,7 +44,7 @@ export function HudEditorModalHost() {
                     className="propertyInputButton hudEditorScreenClose"
                     onClick={() => closeHudEditorBridge()}
                 >
-                    Close HUD Editor
+                    HUD 에디터 닫기
                 </button>
             </div>
             <div ref={formRef} className="hudEditorScreenBody modalHudEditorForm">
