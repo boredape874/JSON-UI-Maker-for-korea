@@ -3,7 +3,7 @@ import { config } from "../CONFIG.js";
 import { MinecraftSlider } from "../ui/sliders/addMinecraftSlider.js";
 import { ElementSharedFuncs } from "./sharedElement.js";
 import { GeneralUtil } from "../util/generalUtil.js";
-import { ExplorerController } from "../ui/explorer/explorerController.js";
+import { emitUiBridge } from "../ui/reactUiBridge.js";
 
 export class DraggableScrollingPanel {
     // Core elements
@@ -78,7 +78,7 @@ export class DraggableScrollingPanel {
 
         this.initEvents();
         setTimeout(() => {
-            ExplorerController.updateExplorer();
+            emitUiBridge("explorer-changed");
         }, 0);
     }
 

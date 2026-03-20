@@ -2,7 +2,7 @@ import { getPanelContainer } from "../runtime/editorCanvasRuntime.js";
 import { config } from "../CONFIG.js";
 import { ElementSharedFuncs } from "./sharedElement.js";
 import { GeneralUtil } from "../util/generalUtil.js";
-import { ExplorerController } from "../ui/explorer/explorerController.js";
+import { emitUiBridge } from "../ui/reactUiBridge.js";
 
 interface StackPanelOptions {
     orientation?: "vertical" | "horizontal";
@@ -82,7 +82,7 @@ export class DraggableStackPanel {
         ElementSharedFuncs.updateCenterCirclePosition(this);
 
         setTimeout(() => {
-            ExplorerController.updateExplorer();
+            emitUiBridge("explorer-changed");
         }, 0);
     }
 

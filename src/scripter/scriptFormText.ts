@@ -1,5 +1,5 @@
 import { config } from "../CONFIG.js";
-import { FormButtonData } from "./generator.js";
+import { FormButtonData } from "./formButtonData.js";
 
 /**
  * Generates a script in JavaScript that creates a custom form in Minecraft Bedrock server.

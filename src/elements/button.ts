@@ -9,7 +9,7 @@ import { StringUtil } from "../util/stringUtil.js";
 import { DraggableLabel } from "./label.js";
 import { ElementSharedFuncs } from "./sharedElement.js";
 import { GeneralUtil } from "../util/generalUtil.js";
-import { ExplorerController } from "../ui/explorer/explorerController.js";
+import { emitUiBridge } from "../ui/reactUiBridge.js";
 
 export interface ButtonOptions {
     collectionIndex?: string;
@@ -156,7 +156,7 @@ export class DraggableButton {
 
         ElementSharedFuncs.updateCenterCirclePosition(this);
         setTimeout(() => {
-            ExplorerController.updateExplorer();
+            emitUiBridge("explorer-changed");
         }, 0);
     }
 

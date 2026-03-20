@@ -1,25 +1,9 @@
 import { config } from "./CONFIG.js";
-import { classToJsonUI, classToTagName, JsonUISimpleElement } from "./converterTypes/HTMLClassToJonUITypes.js";
+import { classToJsonUI, classToTagName } from "./converterTypes/HTMLClassToJonUITypes.js";
+import { JsonUISimpleElement, TreeData } from "./converterTypes/treeData.js";
 import { JSON_TYPES } from "./converterTypes/jsonUITypes.js";
 import { Notification } from "./ui/notifs/noficationMaker.js";
 import { StringUtil } from "./util/stringUtil.js";
-
-export interface TreeInstructions {
-    ContinuePath: boolean;
-    CommonElementLink?: string;
-    NewTree?: {
-        link: string;
-        startingNode: string;
-    };
-    Warning?: {
-        message: string;
-    };
-}
-
-export interface TreeData {
-    element?: JsonUISimpleElement;
-    instructions?: TreeInstructions;
-}
 
 export interface StringObjectMap {
     [key: string]: object | string | [] | boolean | number;

@@ -3,11 +3,16 @@ import { FileUploader } from "../../files/openFiles.js";
 import { images } from "../../runtime/imageStore.js";
 import { GLOBAL_ELEMENT_MAP } from "../../runtime/editorStore.js";
 import { StringUtil } from "../../util/stringUtil.js";
-import { DraggableScrollingPanel } from "../../elements/scrollingPanel.js";
+
+interface ScrollingPanelLike {
+    basePanel: HTMLElement;
+    panel: HTMLElement;
+    resizeHandle: HTMLElement;
+}
 
 export class MinecraftSlider {
     public backgroundBar: HTMLElement;
-    public scrollingPanel: DraggableScrollingPanel;
+    public scrollingPanel: ScrollingPanelLike;
     public scrollBarWidth: number;
     public backgroundBarWidth: number;
 
@@ -19,7 +24,7 @@ export class MinecraftSlider {
 
     private handleCanvas: DraggableCanvas | undefined;
 
-    constructor(scrollingPanel: DraggableScrollingPanel) {
+    constructor(scrollingPanel: ScrollingPanelLike) {
         this.scrollBarWidth = 14;
         this.backgroundBarWidth = 10;
 

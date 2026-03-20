@@ -1,8 +1,8 @@
-import { DraggableLabel } from "../elements/label.js";
 import { getBuilderRuntime } from "../runtime/builderRuntime.js";
 import { GLOBAL_ELEMENT_MAP } from "../runtime/editorStore.js";
 import { setUndoRedoRuntime } from "../runtime/undoRedoRuntime.js";
 import { Notification } from "../ui/notifs/noficationMaker.js";
+import { emitUiBridge } from "../ui/reactUiBridge.js";
 import { StringUtil } from "../util/stringUtil.js";
 
 export interface ElementState {
@@ -104,7 +104,7 @@ export class UndoRedoManager {
                         element.delete();
                         GLOBAL_ELEMENT_MAP.delete(operation.elementId);
                         getBuilderRuntime().updateExplorer();
-                        import("../ui/propertiesArea.js").then(module => module.updatePropertiesArea());
+                        emitUiBridge("properties-changed");
                     }
                 }
                 break;
@@ -184,11 +184,19 @@ export class UndoRedoManager {
         getBuilderRuntime().updateExplorer();
 
         // Update properties area to reflect changes
-        import("../ui/propertiesArea.js").then(module => module.updatePropertiesArea());
+        emitUiBridge("properties-changed");
     }
 
     private applyLabelProperty(labelElement: HTMLElement, propertyKey: string, value: any): void {
-        const labelClass = GLOBAL_ELEMENT_MAP.get(labelElement.dataset.id!) as DraggableLabel;
+        const labelClass = GLOBAL_ELEMENT_MAP.get(labelElement.dataset.id!) as {
+            label?: HTMLTextAreaElement;
+            mirror?: HTMLElement;
+            shadowLabel?: HTMLElement;
+            hasShadow?: boolean;
+            lastAttemptedScaleFactor?: string;
+            updateSize: (updateProperties?: boolean) => void;
+            shadow: (enabled: boolean) => void;
+        } | undefined;
         if (!labelClass || !labelClass.label) return;
 
         const label = labelClass.label;

@@ -1,12 +1,8 @@
 import { buttonDataToJavaScript, buttonDataToTypeScript } from "./scriptFormText.js";
+import { FormButtonData } from "./formButtonData.js";
 import { DraggableButton } from "../elements/button.js";
 import { GeneralUtil } from "../util/generalUtil.js";
 import { Notification } from "../ui/notifs/noficationMaker.js";
-
-export interface FormButtonData {
-    texture: string;
-    text: string;
-}
 
 export class ScriptGenerator {
     public static init(): void {

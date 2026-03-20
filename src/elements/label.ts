@@ -5,7 +5,6 @@ import { TextPrompt } from "../ui/textPrompt.js";
 import { collectSourcePropertyNames } from "../scripter/bindings/source_property_name.js";
 import { GeneralUtil } from "../util/generalUtil.js";
 import { ElementSharedFuncs } from "./sharedElement.js";
-import { ExplorerController } from "../ui/explorer/explorerController.js";
 import { getUndoRedoRuntime } from "../runtime/undoRedoRuntime.js";
 import { emitUiBridge } from "../ui/reactUiBridge.js";
 
@@ -138,7 +137,7 @@ export class DraggableLabel {
 
         this.initEvents();
         setTimeout(() => {
-            ExplorerController.updateExplorer();
+            emitUiBridge("explorer-changed");
         }, 0);
     }
 

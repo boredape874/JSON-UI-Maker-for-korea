@@ -1,5 +1,5 @@
 import { config } from "../CONFIG.js";
-import { TreeData, TreeInstructions } from "../converter.js";
+import { TreeData, TreeInstructions, JsonUISimpleElement } from "./treeData.js";
 import { DraggableButton } from "../elements/button.js";
 import { DraggableCanvas } from "../elements/canvas.js";
 import { DraggableCollectionPanel } from "../elements/collectionPanel.js";
@@ -8,11 +8,6 @@ import { DraggablePanel } from "../elements/panel.js";
 import { DraggableScrollingPanel } from "../elements/scrollingPanel.js";
 import { GeneralUtil } from "../util/generalUtil.js";
 import { StringUtil } from "../util/stringUtil.js";
-
-export interface JsonUISimpleElement {
-    [key: string]: any;
-    controls?: object[];
-}
 
 function toExportTexturePath(imagePath: string | undefined): string {
     const normalized = (imagePath ?? "").replace(/\\/g, "/");
