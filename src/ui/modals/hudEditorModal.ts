@@ -1,12 +1,15 @@
 ﻿import { Notification } from "../notifs/noficationMaker.js";
 
 type HudChannel = "title" | "subtitle" | "actionbar";
+type HudSourceChannel = HudChannel;
 type HudBackground = "vanilla" | "solid" | "none";
 type HudFontSize = "small" | "normal" | "large" | "extra_large";
 type HudTextSliceMode = "single" | "slice";
 type HudDisplayMode = "text" | "progress";
 type HudClipDirection = "left" | "right" | "up" | "down";
 type HudAnimationPreset = "none" | "fade_out" | "fade_hold_fade";
+type HudProgressMaxMode = "fixed" | "dynamic";
+type HudTextureType = "" | "fixed";
 type HudSliceSlot = {
     anchor: HudAnchor;
     x: number;
@@ -63,15 +66,70 @@ type HudElement = {
     sliceSlots?: HudSliceSlot[];
 };
 
+type HudProgressBar = {
+    id: string;
+    label: string;
+    enabled: boolean;
+    ignored: boolean;
+    sourceChannel: HudSourceChannel;
+    sampleText: string;
+    prefix: string;
+    hideVanilla: boolean;
+    anchor: HudAnchor;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    layer: number;
+    fillColor: string;
+    clipDirection: HudClipDirection;
+    background: HudBackground;
+    backgroundAlpha: number;
+    backgroundColor: string;
+    backgroundTexture: string;
+    barTexture: string;
+    trailTexture: string;
+    textureType: HudTextureType;
+    textColor: string;
+    fontSize: HudFontSize;
+    shadow: boolean;
+    showText: boolean;
+    maxMode: HudProgressMaxMode;
+    maxValue: number;
+    barInsetX: number;
+    barInsetY: number;
+    barAlpha: number;
+    trailAlpha: number;
+    duration: number;
+    trailDelay: number;
+    ignoreTrail: boolean;
+};
+
+type HudCanvasItem = {
+    id: string;
+    kind: "channel" | "progressBar";
+    label: string;
+    enabled: boolean;
+    ignored: boolean;
+    anchor: HudAnchor;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    layer: number;
+};
+
 type HudEditorState = {
-    selectedId: HudChannel;
+    selectedId: string;
     autoFitPreview: boolean;
     previewZoom: number;
     autoAnchorSnap: boolean;
     showAnchorGuides: boolean;
     elements: Record<HudChannel, HudElement>;
+    progressBars: HudProgressBar[];
+    nextProgressBarId: number;
     drag: null | {
-        id: HudChannel;
+        id: string;
         startMouseX: number;
         startMouseY: number;
         startX: number;
@@ -197,6 +255,8 @@ const state: HudEditorState = {
             animOutDuration: 3,
         },
     },
+    progressBars: [],
+    nextProgressBarId: 1,
     drag: null,
 };
 
@@ -241,8 +301,112 @@ function hexToRgb(color: string): [number, number, number] {
     ];
 }
 
-function getSelectedElement(): HudElement {
-    return state.elements[state.selectedId];
+function createDefaultProgressBar(id: string, label: string): HudProgressBar {
+    return {
+        id,
+        label,
+        enabled: true,
+        ignored: false,
+        sourceChannel: "title",
+        sampleText: "bar:35,50",
+        prefix: "bar:",
+        hideVanilla: true,
+        anchor: "top_right",
+        x: -10,
+        y: 20,
+        width: 120,
+        height: 10,
+        layer: 40,
+        fillColor: "#ff6b6b",
+        clipDirection: "left",
+        background: "none",
+        backgroundAlpha: 1,
+        backgroundColor: "#1f2432",
+        backgroundTexture: "textures/ui/bar_bg",
+        barTexture: "textures/ui/bar",
+        trailTexture: "textures/ui/white_background",
+        textureType: "",
+        textColor: "#ffffff",
+        fontSize: "normal",
+        shadow: true,
+        showText: true,
+        maxMode: "dynamic",
+        maxValue: 50,
+        barInsetX: 1,
+        barInsetY: 1,
+        barAlpha: 1,
+        trailAlpha: 0.6,
+        duration: 0.2,
+        trailDelay: 0.2,
+        ignoreTrail: false,
+    };
+}
+
+function getSelectedElement(): HudElement | HudProgressBar {
+    return state.elements[state.selectedId as HudChannel] ?? state.progressBars.find((bar) => bar.id === state.selectedId) ?? state.elements.title;
+}
+
+function isProgressBarElement(element: HudElement | HudProgressBar): element is HudProgressBar {
+    return "sourceChannel" in element;
+}
+
+function getCanvasItems(): HudCanvasItem[] {
+    const channelItems = Object.values(state.elements).map((element) => ({
+        id: element.id,
+        kind: "channel" as const,
+        label: element.label,
+        enabled: element.enabled,
+        ignored: element.ignored,
+        anchor: element.anchor,
+        x: element.x,
+        y: element.y,
+        width: element.width,
+        height: element.height,
+        layer: element.layer,
+    }));
+    const progressItems = state.progressBars.map((bar) => ({
+        id: bar.id,
+        kind: "progressBar" as const,
+        label: bar.label,
+        enabled: bar.enabled,
+        ignored: bar.ignored,
+        anchor: bar.anchor,
+        x: bar.x,
+        y: bar.y,
+        width: bar.width,
+        height: bar.height,
+        layer: bar.layer,
+    }));
+    return [...channelItems, ...progressItems];
+}
+
+function getProgressBarById(id: string): HudProgressBar | undefined {
+    return state.progressBars.find((bar) => bar.id === id);
+}
+
+function getBindingNameForChannel(channel: HudSourceChannel): string {
+    switch (channel) {
+        case "title":
+            return "#hud_title_text_string";
+        case "subtitle":
+            return "#hud_subtitle_text_string";
+        case "actionbar":
+            return "#hud_actionbar_text_string";
+    }
+}
+
+function getProgressBarDataControlName(bar: HudProgressBar): string {
+    return `progress_bar_data_${bar.id.replace(/[^a-zA-Z0-9_]/g, "_")}`;
+}
+
+function getProgressBarInsertName(bar: HudProgressBar): string {
+    return `progress_bar_${bar.id.replace(/[^a-zA-Z0-9_]/g, "_")}`;
+}
+
+function getProgressBarPrefixMatchExpression(bar: HudProgressBar, sourceName: string): string {
+    return bar.prefix
+        ? `(not ((${sourceName} - ${quoteString(bar.prefix)}) = ${sourceName}))`
+        : `(not (${sourceName} = ''))`;
 }
 
 function getCanvasBackgroundHtml(): string {
@@ -277,10 +441,15 @@ function getDefaultSliceSlotLayout(element: HudElement, rawIndex: number): HudSl
     const gapY = element.sliceGapY ?? 8;
     const column = rawIndex % columns;
     const row = Math.floor(rawIndex / columns);
+    const rowWidth = columns * element.width + (columns - 1) * gapX;
+    const totalRows = Math.ceil(clamp(element.sliceSlotCount ?? 1, 1, 30) / columns);
+    const totalHeight = totalRows * element.height + Math.max(0, totalRows - 1) * gapY;
+    const startX = element.x - Math.round(rowWidth / 2) + Math.round(element.width / 2);
+    const startY = element.y - Math.round(totalHeight / 2) + Math.round(element.height / 2);
     return {
         anchor: element.anchor,
-        x: element.x + column * (element.width + gapX),
-        y: element.y + row * (element.height + gapY),
+        x: startX + column * (element.width + gapX),
+        y: startY + row * (element.height + gapY),
     };
 }
 
@@ -933,12 +1102,426 @@ function buildAnimationDefinitions(
     };
 }
 
+function buildAnimatedProgressBarTemplate(): Record<string, unknown> {
+    return {
+        animated_progress_bar: {
+            "$duration|default": 0.2,
+            "$trail_delay|default": 0.2,
+            "$increase_easing|default": "out_expo",
+            "$decrease_easing|default": "in_expo",
+            "$texture_type|default": "",
+            "$fill_from|default": "left",
+            "$background_size|default": [100, 10],
+            "$background_texture|default": "textures/ui/bar_bg",
+            "$background_alpha|default": 1,
+            "$background_color|default": [1, 1, 1],
+            "$bar_size|default": ["100% - 2px", "100% - 2px"],
+            "$bar_texture|default": "textures/ui/bar",
+            "$bar_offset|default": [1, 1],
+            "$bar_alpha|default": 1,
+            "$ignore_trail|default": false,
+            "$trail_texture|default": "textures/ui/white_background",
+            "$trail_alpha|default": 0.6,
+            "$multiplier|default": 0.05,
+            "$data_source|default": "<progress_bar_data>",
+            "$max_value_binding|default": "",
+            "$progress_binding|default": "#progress",
+            "$ignore_text|default": false,
+            "$text_color|default": [1, 1, 1],
+            "$text_font_scale_factor|default": 1,
+            "$text_shadow|default": true,
+            "$text_offset|default": [0, -12],
+            "$text_anchor|default": "center",
+            "$text_size|default": ["default", "default"],
+            "$text_format|default": "($progress_binding + '/100')",
+            type: "panel",
+            size: "$background_size",
+            "$one": 1.0,
+            "$_fixed|default": "",
+            "$_direction|default": "",
+            "$_anchor|default": "top_left",
+            "$_size_binding|default": "#size_binding_x",
+            variables: [
+                {
+                    requires: "($texture_type = 'fixed')",
+                    "$_fixed": "__fixed",
+                },
+                {
+                    requires: "($fill_from = 'right')",
+                    "$_anchor": "top_right",
+                },
+                {
+                    requires: "($fill_from = 'up')",
+                    "$_size_binding": "#size_binding_y",
+                    "$_direction": "__vertical",
+                },
+                {
+                    requires: "($fill_from = 'down')",
+                    "$_size_binding": "#size_binding_y",
+                    "$_direction": "__vertical",
+                    "$_anchor": "bottom_left",
+                },
+            ],
+            controls: [
+                {
+                    progress_bar_text_cx0: {
+                        ignored: "$ignore_text",
+                        type: "label",
+                        text: "#text",
+                        layer: 2,
+                        anchor_from: "$text_anchor",
+                        anchor_to: "$text_anchor",
+                        color: "$text_color",
+                        font_scale_factor: "$text_font_scale_factor",
+                        shadow: "$text_shadow",
+                        offset: "$text_offset",
+                        size: "$text_size",
+                        bindings: [
+                            {
+                                binding_type: "view",
+                                source_control_name: "$data_source",
+                                source_property_name: "$text_format",
+                                target_property_name: "#text",
+                            },
+                        ],
+                    },
+                },
+                {
+                    bar_parent_panel_cx0: {
+                        type: "panel",
+                        layer: 1,
+                        anchor_from: "top_left",
+                        anchor_to: "top_left",
+                        offset: "$bar_offset",
+                        size: "$bar_size",
+                        controls: [
+                            {
+                                animated_bar_panel_cx1: {
+                                    type: "panel",
+                                    anchor_from: "$_anchor",
+                                    anchor_to: "$_anchor",
+                                    size: ["100%", "100%"],
+                                    "$control_name": "('hud.animated_bar_image' + $_fixed)",
+                                    property_bag: {
+                                        "#prev_value": 0,
+                                        "#multiplier": "$multiplier",
+                                    },
+                                    bindings: [
+                                        {
+                                            ignored: "($max_value_binding = '')",
+                                            binding_type: "view",
+                                            source_control_name: "$data_source",
+                                            source_property_name: "$max_value_binding",
+                                            target_property_name: "#max_bind",
+                                        },
+                                        {
+                                            binding_type: "view",
+                                            source_control_name: "$data_source",
+                                            source_property_name: "#visible",
+                                            target_property_name: "#key",
+                                        },
+                                        {
+                                            binding_type: "view",
+                                            source_control_name: "$data_source",
+                                            source_property_name: "$progress_binding",
+                                            target_property_name: "#changed_value",
+                                        },
+                                        {
+                                            ignored: "($max_value_binding = '')",
+                                            binding_type: "view",
+                                            source_property_name: "($one / #max_bind)",
+                                            target_property_name: "#multiplier",
+                                        },
+                                        {
+                                            binding_type: "view",
+                                            source_property_name: "(#prev_value * (1 - #key) + #changed_value * #key)",
+                                            target_property_name: "#prev_value",
+                                        },
+                                        {
+                                            binding_type: "view",
+                                            source_property_name: "(#changed_value + (#prev_value - #changed_value) * ((#prev_value - #changed_value) < 0))",
+                                            target_property_name: "#min",
+                                        },
+                                        {
+                                            binding_type: "view",
+                                            source_property_name: "((#changed_value + #prev_value - #min) * #multiplier)",
+                                            target_property_name: "$_size_binding",
+                                        },
+                                    ],
+                                    controls: [
+                                        {
+                                            anim_increase_cx2: {
+                                                type: "collection_panel",
+                                                "$size_anim": "('@hud.increase_anim' + $_direction + $_fixed)",
+                                                "$ignore_trail": true,
+                                                factory: {
+                                                    name: "anim_increase",
+                                                    control_name: "$control_name",
+                                                },
+                                                bindings: [
+                                                    {
+                                                        binding_type: "view",
+                                                        source_control_name: "animated_bar_panel_cx1",
+                                                        resolve_sibling_scope: true,
+                                                        source_property_name: "((#changed_value > #prev_value) * 1)",
+                                                        target_property_name: "#collection_length",
+                                                    },
+                                                    {
+                                                        binding_type: "view",
+                                                        source_property_name: "(#collection_length * 0 = 0)",
+                                                        target_property_name: "#visible",
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                        {
+                                            anim_decrease_cx2: {
+                                                type: "collection_panel",
+                                                "$size_anim": "('@hud.decrease_anim' + $_direction + $_fixed)",
+                                                factory: {
+                                                    name: "anim_decrease",
+                                                    control_name: "$control_name",
+                                                },
+                                                bindings: [
+                                                    {
+                                                        binding_type: "view",
+                                                        source_control_name: "animated_bar_panel_cx1",
+                                                        resolve_sibling_scope: true,
+                                                        source_property_name: "((#prev_value > #changed_value) * 1)",
+                                                        target_property_name: "#collection_length",
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                            {
+                                bar_panel_cx1: {
+                                    type: "image",
+                                    alpha: "$bar_alpha",
+                                    texture: "$bar_texture",
+                                    anchor_from: "$_anchor",
+                                    anchor_to: "$_anchor",
+                                    size: ["100%", "100%"],
+                                    clip_direction: "$fill_from",
+                                    clip_pixelperfect: false,
+                                    bindings: [
+                                        {
+                                            binding_type: "view",
+                                            source_control_name: "animated_bar_panel_cx1",
+                                            resolve_sibling_scope: true,
+                                            source_property_name: "($one - #min * #multiplier)",
+                                            target_property_name: "#clip_ratio",
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                    },
+                },
+                {
+                    bar_bg_cx0: {
+                        type: "image",
+                        alpha: "$background_alpha",
+                        layer: 0,
+                        texture: "$background_texture",
+                        color: "$background_color",
+                    },
+                },
+            ],
+        },
+        increase_anim: { anim_type: "size", from: [0, "100%"], to: ["100%", "100%"], duration: "$duration", easing: "$increase_easing" },
+        increase_anim__fixed: { anim_type: "size", from: [0, "200%"], to: ["100%", "200%"], duration: "$duration", easing: "$increase_easing" },
+        increase_anim__vertical: { anim_type: "size", from: ["100%", 0], to: ["100%", "100%"], duration: "$duration", easing: "$increase_easing" },
+        increase_anim__vertical__fixed: { anim_type: "size", from: ["200%", 0], to: ["200%", "100%"], duration: "$duration", easing: "$increase_easing" },
+        decrease_anim: { anim_type: "size", from: ["100%", "100%"], to: [0, "100%"], duration: "$duration", easing: "$decrease_easing" },
+        decrease_anim__fixed: { anim_type: "size", from: ["100%", "200%"], to: [0, "200%"], duration: "$duration", easing: "$decrease_easing" },
+        decrease_anim__vertical: { anim_type: "size", from: ["100%", "100%"], to: ["100%", 0], duration: "$duration", easing: "$decrease_easing" },
+        decrease_anim__vertical__fixed: { anim_type: "size", from: ["200%", "100%"], to: ["200%", 0], duration: "$duration", easing: "$decrease_easing" },
+        trail_anim: { anim_type: "wait", duration: "$trail_delay", next: "('@hud.decrease_anim' + $_direction)" },
+        animated_bar_image: {
+            type: "panel",
+            size: ["100%", "100%"],
+            controls: [
+                {
+                    bar_image_cx0: {
+                        type: "image",
+                        alpha: "$bar_alpha",
+                        texture: "$bar_texture",
+                        size: "$size_anim",
+                        layer: 1,
+                        anchor_from: "$_anchor",
+                        anchor_to: "$_anchor",
+                    },
+                },
+                {
+                    trail_image_cx0: {
+                        ignored: "$ignore_trail",
+                        type: "image",
+                        layer: 0,
+                        size: "@hud.trail_anim",
+                        alpha: "$trail_alpha",
+                        anchor_from: "$_anchor",
+                        anchor_to: "$_anchor",
+                        texture: "$trail_texture",
+                    },
+                },
+            ],
+        },
+        animated_bar_image__fixed: {
+            type: "panel",
+            size: ["100%", "100%"],
+            controls: [
+                {
+                    bar_image_cx0: {
+                        type: "panel",
+                        size: "$size_anim",
+                        layer: 1,
+                        anchor_from: "$_anchor",
+                        anchor_to: "$_anchor",
+                        clips_children: true,
+                        controls: [
+                            {
+                                image_cx1: {
+                                    type: "image",
+                                    size: "$bar_size",
+                                    alpha: "$bar_alpha",
+                                    anchor_from: "$_anchor",
+                                    anchor_to: "$_anchor",
+                                    texture: "$bar_texture",
+                                },
+                            },
+                        ],
+                    },
+                },
+                {
+                    trail_image_cx0: {
+                        ignored: "$ignore_trail",
+                        type: "image",
+                        layer: 0,
+                        size: "@hud.trail_anim",
+                        alpha: "$trail_alpha",
+                        anchor_from: "$_anchor",
+                        anchor_to: "$_anchor",
+                        texture: "$trail_texture",
+                    },
+                },
+            ],
+        },
+    };
+}
+
+function buildProgressBarData(bar: HudProgressBar): Record<string, unknown> {
+    const sourceBinding = getBindingNameForChannel(bar.sourceChannel);
+    return withIgnored({
+        type: "panel",
+        size: [0, 0],
+        "$update_string": bar.prefix,
+        bindings: [
+            { binding_name: sourceBinding, binding_type: "global" },
+            {
+                binding_name: sourceBinding,
+                binding_name_override: "#preserved_text",
+                binding_condition: "visibility_changed",
+                binding_type: "global",
+            },
+            {
+                binding_type: "view",
+                source_property_name: `(not (${sourceBinding} = #preserved_text) and ${getProgressBarPrefixMatchExpression(bar, sourceBinding)})`,
+                target_property_name: "#visible",
+            },
+            {
+                binding_type: "view",
+                source_property_name: "((#preserved_text - $update_string) + 0)",
+                target_property_name: "#progress",
+            },
+            {
+                binding_type: "view",
+                source_property_name: "((#preserved_text - ($update_string + #progress + ',')) + 0)",
+                target_property_name: "#max_value",
+            },
+        ],
+    }, bar.ignored);
+}
+
+function buildProgressBarInstance(bar: HudProgressBar): Record<string, unknown> {
+    const barWidth = Math.max(1, bar.width - bar.barInsetX * 2);
+    const barHeight = Math.max(1, bar.height - bar.barInsetY * 2);
+    const textScale = bar.fontSize === "small" ? 0.7 : bar.fontSize === "normal" ? 1 : bar.fontSize === "large" ? 1.15 : 1.3;
+    return withIgnored({
+        anchor_from: bar.anchor,
+        anchor_to: bar.anchor,
+        offset: [bar.x, bar.y],
+        layer: bar.layer,
+        "$background_size": [bar.width, bar.height],
+        "$bar_size": [barWidth, barHeight],
+        "$bar_offset": [bar.barInsetX, bar.barInsetY],
+        "$fill_from": bar.clipDirection,
+        "$texture_type": bar.textureType,
+        "$background_texture": bar.background === "vanilla"
+            ? "textures/ui/hud_tip_text_background"
+            : bar.background === "solid"
+                ? "textures/ui/white_background"
+                : bar.backgroundTexture,
+        "$background_alpha": bar.background === "none" ? 0 : bar.backgroundAlpha,
+        "$background_color": hexToRgb(bar.backgroundColor),
+        "$bar_texture": bar.barTexture,
+        "$trail_texture": bar.trailTexture,
+        "$bar_alpha": bar.barAlpha,
+        "$trail_alpha": bar.trailAlpha,
+        "$ignore_trail": bar.ignoreTrail,
+        "$duration": bar.duration,
+        "$trail_delay": bar.trailDelay,
+        "$data_source": getProgressBarDataControlName(bar),
+        "$progress_binding": "#progress",
+        ...(bar.maxMode === "dynamic"
+            ? { "$max_value_binding": "#max_value" }
+            : { "$multiplier": 1 / Math.max(1, bar.maxValue) }),
+        "$ignore_text": !bar.showText,
+        "$text_color": hexToRgb(bar.textColor),
+        "$text_shadow": bar.shadow,
+        "$text_font_scale_factor": textScale,
+        "$text_offset": [0, -12],
+        "$text_anchor": "center",
+        "$text_size": ["default", "default"],
+        "$text_format": bar.maxMode === "dynamic"
+            ? "($progress_binding + '/' + $max_value_binding)"
+            : `($progress_binding + '/${Math.max(1, bar.maxValue)}')`,
+    }, bar.ignored);
+}
+
+function mergeVanillaHidePatch(existing: unknown, channel: HudSourceChannel, prefix: string): Record<string, unknown> {
+    if (channel === "actionbar") {
+        return {
+            $atext: "$actionbar_text",
+            visible: prefix ? `(($atext - ${quoteString(prefix)}) = $atext)` : "false",
+        };
+    }
+    const sourceControlName = channel === "title" ? "title" : "subtitle";
+    const nextBinding = {
+        binding_type: "view",
+        source_control_name: sourceControlName,
+        source_property_name: prefix ? `((#text - ${quoteString(prefix)}) = #text)` : "false",
+        target_property_name: "#visible",
+    };
+    const existingBindings = (existing as { bindings?: unknown[] } | undefined)?.bindings;
+    return {
+        bindings: Array.isArray(existingBindings) ? [...existingBindings, nextBinding] : [nextBinding],
+    };
+}
+
 function buildHudJson(): string {
     const json: Record<string, unknown> = {
         namespace: "hud",
     };
 
     const rootInsert: Record<string, unknown>[] = [];
+    const vanillaHideConditions: Record<HudSourceChannel, string[]> = {
+        title: [],
+        subtitle: [],
+        actionbar: [],
+    };
 
     const title = state.elements.title;
     if (title.enabled) {
@@ -976,16 +1559,7 @@ function buildHudJson(): string {
         }
 
         if (title.hideVanilla) {
-            json["hud_title_text/title_frame"] = {
-                bindings: [
-                    {
-                        binding_type: "view",
-                        source_control_name: "title",
-                        source_property_name: title.prefix ? `((#text - ${quoteString(title.prefix)}) = #text)` : "false",
-                        target_property_name: "#visible",
-                    },
-                ],
-            };
+            vanillaHideConditions.title.push(title.prefix ? `((#text - ${quoteString(title.prefix)}) = #text)` : "false");
         }
     }
 
@@ -1025,18 +1599,7 @@ function buildHudJson(): string {
         }
 
         if (subtitle.hideVanilla) {
-            json["hud_title_text/subtitle_frame"] = subtitle.prefix
-                ? {
-                    bindings: [
-                        {
-                            binding_type: "view",
-                            source_control_name: "subtitle",
-                            source_property_name: `((#text - ${quoteString(subtitle.prefix)}) = #text)`,
-                            target_property_name: "#visible",
-                        },
-                    ],
-                }
-                : { visible: false };
+            vanillaHideConditions.subtitle.push(subtitle.prefix ? `((#text - ${quoteString(subtitle.prefix)}) = #text)` : "false");
         }
     }
 
@@ -1076,11 +1639,62 @@ function buildHudJson(): string {
         }
 
         if (actionbar.hideVanilla) {
-            json["hud_actionbar_text"] = {
-                $atext: "$actionbar_text",
-                visible: actionbar.prefix ? `(($atext - ${quoteString(actionbar.prefix)}) = $atext)` : "false",
-            };
+            vanillaHideConditions.actionbar.push(actionbar.prefix ? `(($atext - ${quoteString(actionbar.prefix)}) = $atext)` : "false");
         }
+    }
+
+    const progressBars = state.progressBars.filter((bar) => bar.enabled);
+    if (progressBars.length > 0) {
+        Object.assign(json, buildAnimatedProgressBarTemplate());
+        for (const bar of progressBars) {
+            const dataKey = getProgressBarDataControlName(bar);
+            const insertKey = getProgressBarInsertName(bar);
+            json[dataKey] = buildProgressBarData(bar);
+            rootInsert.push({ [`${dataKey}@hud.${dataKey}`]: {} });
+            rootInsert.push({
+                [`${insertKey}@hud.animated_progress_bar`]: buildProgressBarInstance(bar),
+            });
+            if (bar.hideVanilla) {
+                if (bar.sourceChannel === "actionbar") {
+                    vanillaHideConditions.actionbar.push(bar.prefix ? `(($atext - ${quoteString(bar.prefix)}) = $atext)` : "false");
+                } else {
+                    vanillaHideConditions[bar.sourceChannel].push(bar.prefix ? `((#text - ${quoteString(bar.prefix)}) = #text)` : "false");
+                }
+            }
+        }
+    }
+
+    if (vanillaHideConditions.title.length > 0) {
+        json["hud_title_text/title_frame"] = {
+            bindings: [
+                {
+                    binding_type: "view",
+                    source_control_name: "title",
+                    source_property_name: vanillaHideConditions.title.map((expression) => `(${expression})`).join(" and "),
+                    target_property_name: "#visible",
+                },
+            ],
+        };
+    }
+
+    if (vanillaHideConditions.subtitle.length > 0) {
+        json["hud_title_text/subtitle_frame"] = {
+            bindings: [
+                {
+                    binding_type: "view",
+                    source_control_name: "subtitle",
+                    source_property_name: vanillaHideConditions.subtitle.map((expression) => `(${expression})`).join(" and "),
+                    target_property_name: "#visible",
+                },
+            ],
+        };
+    }
+
+    if (vanillaHideConditions.actionbar.length > 0) {
+        json["hud_actionbar_text"] = {
+            $atext: "$actionbar_text",
+            visible: vanillaHideConditions.actionbar.map((expression) => `(${expression})`).join(" and "),
+        };
     }
 
     if (rootInsert.length > 0) {
@@ -1138,7 +1752,7 @@ function getOffsetFromTopLeft(anchor: HudAnchor, left: number, top: number, widt
     };
 }
 
-function snapElementAnchor(element: HudElement): void {
+function snapElementAnchor(element: HudElement | HudProgressBar): void {
     const rect = computePreviewRect(element);
     const centerX = rect.left + element.width / 2;
     const centerY = rect.top + element.height / 2;
@@ -1168,7 +1782,7 @@ function snapSliceSlotAnchor(element: HudElement, slotIndex: number): void {
     slot.y = nextOffset.y;
 }
 
-function computePreviewRect(element: HudElement): { left: number; top: number } {
+function computePreviewRect(element: HudCanvasItem | HudElement | HudProgressBar): { left: number; top: number } {
     const base = getAnchorReference(element.anchor);
     let left = base.x + element.x;
     let top = base.y + element.y;
@@ -1225,6 +1839,17 @@ function previewNumericValue(element: HudElement): number {
     return Number.isFinite(value) ? value : 0;
 }
 
+function previewProgressBarValues(bar: HudProgressBar): { current: number; max: number } {
+    const source = bar.sampleText.startsWith(bar.prefix) ? bar.sampleText.slice(bar.prefix.length) : bar.sampleText;
+    const [currentRaw, maxRaw] = source.split(",", 2);
+    const current = Number.parseFloat((currentRaw ?? "").trim());
+    const dynamicMax = Number.parseFloat((maxRaw ?? "").trim());
+    return {
+        current: Number.isFinite(current) ? current : 0,
+        max: bar.maxMode === "dynamic" && Number.isFinite(dynamicMax) ? dynamicMax : Math.max(1, bar.maxValue),
+    };
+}
+
 function buildSubtitleSliceScriptHelper(element: HudElement): string {
     const slotSize = clamp(element.sliceSlotSize ?? 20, 1, 200);
                 const slotCount = clamp(element.sliceSlotCount ?? 1, 1, 30);
@@ -1248,6 +1873,7 @@ function buildTitleSliceScriptHelper(element: HudElement): string {
     const slotCount = clamp(element.sliceSlotCount ?? 1, 1, 30);
     const args = Array.from({ length: slotCount }, (_, index) => `slot${index + 1}`).join(", ");
     const slotArray = Array.from({ length: slotCount }, (_, index) => `slot${index + 1}`).join(", ");
+    const prefix = element.prefix ? JSON.stringify(element.prefix) : '""';
 
     return `function pad(text, size = ${slotSize}) {
   const safe = String(text ?? "");
@@ -1255,8 +1881,17 @@ function buildTitleSliceScriptHelper(element: HudElement): string {
 }
 
 function sendTitleSlots(player, ${args}) {
-  const data = [${slotArray}].map((slot) => pad(slot, ${slotSize})).join("");
+  const data = ${prefix} + [${slotArray}].map((slot) => pad(slot, ${slotSize})).join("");
   player.runCommand(\`titleraw @s title {"rawtext":[{"text":"\${data}"}]}\`);
+}`;
+}
+
+function buildProgressBarScriptHelper(bar: HudProgressBar): string {
+    const fixedTail = bar.maxMode === "dynamic" ? ", maxValue" : "";
+    const maxExpression = bar.maxMode === "dynamic" ? ",${maxValue}" : "";
+    return `function send${bar.id.replace(/[^a-zA-Z0-9]/g, "")}Bar(player, currentValue${fixedTail}) {
+  const value = ${quoteString(bar.prefix)} + currentValue${maxExpression};
+  player.runCommand(\`titleraw @s ${bar.sourceChannel} {"rawtext":[{"text":"\${value}"}]}\`);
 }`;
 }
 
@@ -1264,18 +1899,39 @@ function renderSidebar(): void {
     const container = getForm().querySelector(".hudEditorSidebarList") as HTMLDivElement | null;
     if (!container) return;
 
-    container.innerHTML = Object.values(state.elements).map((element) => `
+    container.innerHTML = `
+        ${Object.values(state.elements).map((element) => `
         <button type="button" class="hudEditorChannelButton${element.id === state.selectedId ? " hudEditorChannelButtonActive" : ""}" data-channel="${element.id}">
             <span>${element.label}</span>
             <span>${element.enabled ? "ON" : "OFF"}</span>
         </button>
-    `).join("");
+        `).join("")}
+        <div class="hudEditorSidebarTitle" style="margin-top:12px;">Progress Bars</div>
+        <div class="hudEditorSidebarActions">
+            <button type="button" class="propertyInputButton hudEditorAddProgressBar">추가</button>
+        </div>
+        ${state.progressBars.length === 0 ? `<div class="hudEditorHelp">아직 progress bar가 없습니다.</div>` : state.progressBars.map((bar) => `
+        <button type="button" class="hudEditorChannelButton${bar.id === state.selectedId ? " hudEditorChannelButtonActive" : ""}" data-progress-bar-id="${bar.id}">
+            <span>${escapeHtml(bar.label)}</span>
+            <span>${bar.enabled ? "ON" : "OFF"}</span>
+        </button>
+        `).join("")}
+    `;
 
     container.querySelectorAll<HTMLButtonElement>(".hudEditorChannelButton").forEach((button) => {
         button.addEventListener("click", () => {
-            state.selectedId = button.dataset.channel as HudChannel;
+            state.selectedId = button.dataset.channel || button.dataset.progressBarId || "title";
             renderAll();
         });
+    });
+
+    container.querySelector<HTMLButtonElement>(".hudEditorAddProgressBar")?.addEventListener("click", () => {
+        const id = `progress_bar_${state.nextProgressBarId}`;
+        state.nextProgressBarId += 1;
+        const bar = createDefaultProgressBar(id, `Progress ${state.progressBars.length + 1}`);
+        state.progressBars.push(bar);
+        state.selectedId = bar.id;
+        renderAll();
     });
 }
 
@@ -1338,7 +1994,7 @@ function renderCanvas(): void {
     const actionbarGuide = computePreviewRect({ ...state.elements.actionbar, x: 0, y: -96, width: 340, height: 38, anchor: "bottom_middle" });
     const selectedElement = getSelectedElement();
     const activeGuideAnchor = (() => {
-        if (isSliceMode(selectedElement) && typeof state.drag?.slotIndex === "number" && state.drag.id === selectedElement.id) {
+        if (!isProgressBarElement(selectedElement) && isSliceMode(selectedElement) && typeof state.drag?.slotIndex === "number" && state.drag.id === selectedElement.id) {
             return ensureSliceSlots(selectedElement)[state.drag.slotIndex]?.anchor ?? selectedElement.anchor;
         }
         return selectedElement.anchor;
@@ -1367,13 +2023,16 @@ function renderCanvas(): void {
         <div class="hudEditorGuideLabel" style="left:${titleGuide.left}px;top:${titleGuide.top}px;width:440px;height:56px;">\uBC14\uB2D0\uB77C \uD0C0\uC774\uD2C0</div>
         <div class="hudEditorGuideLabel" style="left:${subtitleGuide.left}px;top:${subtitleGuide.top}px;width:380px;height:42px;">\uBC14\uB2D0\uB77C \uC11C\uBE0C\uD0C0\uC774\uD2C0</div>
         <div class="hudEditorGuideLabel" style="left:${actionbarGuide.left}px;top:${actionbarGuide.top}px;width:340px;height:38px;">\uBC14\uB2D0\uB77C \uC561\uC158\uBC14</div>
-        ${Object.values(state.elements).filter((element) => element.enabled).map((element) => {
+        ${[
+            ...Object.values(state.elements),
+            ...state.progressBars,
+        ].filter((element) => element.enabled).map((element) => {
             const selectedClass = element.id === state.selectedId ? " hudEditorPreviewItemSelected" : "";
             const withBg = element.background === "none" ? "" : " hudEditorPreviewItemWithBg";
             const ignoredStyle = element.ignored ? "opacity:0.35;" : "";
             const bgStyle = `${element.background === "solid" ? `background:${element.backgroundColor};opacity:${element.backgroundAlpha};` : ""}${ignoredStyle}`;
 
-            if ((element.id === "title" && element.titleMode === "slice") || (element.id === "subtitle" && element.subtitleMode === "slice")) {
+            if (!isProgressBarElement(element) && ((element.id === "title" && element.titleMode === "slice") || (element.id === "subtitle" && element.subtitleMode === "slice"))) {
     const slotCount = clamp(element.sliceSlotCount ?? 1, 1, 30);
                 const slotTexts = previewSliceSlotTexts(element);
 
@@ -1395,7 +2054,10 @@ function renderCanvas(): void {
             }
 
             const rect = computePreviewRect(element);
-            const fillRatio = clamp(previewNumericValue(element) / Math.max(1, element.maxValue || 1), 0, 1);
+            const progressValues = isProgressBarElement(element)
+                ? previewProgressBarValues(element)
+                : { current: previewNumericValue(element), max: Math.max(1, element.maxValue || 1) };
+            const fillRatio = clamp(progressValues.current / Math.max(1, progressValues.max), 0, 1);
             const fillWidth = element.clipDirection === "up" || element.clipDirection === "down"
                 ? "100%"
                 : `${fillRatio * 100}%`;
@@ -1407,9 +2069,11 @@ function renderCanvas(): void {
             return `
                 <div class="hudEditorPreviewItem${selectedClass}${withBg}" data-element-id="${element.id}" style="left:${rect.left}px;top:${rect.top}px;width:${element.width}px;height:${element.height}px;z-index:${element.layer};${ignoredStyle}">
                     <div class="hudEditorPreviewItemBg ${element.background === "vanilla" ? "hudEditorPreviewItemBgVanilla" : ""}" style="${bgStyle}"></div>
-                    ${element.animationPreset !== "none" ? `<div style="position:absolute;left:8px;top:6px;padding:2px 6px;border-radius:999px;background:rgba(8,12,20,0.72);border:1px solid rgba(255,255,255,0.12);color:#d7e4f6;font-size:10px;line-height:1;z-index:2;">${element.animationPreset}</div>` : ""}
-                    ${element.displayMode === "progress" && element.id !== "actionbar" ? `<div style="position:absolute;left:${fillLeft};top:${fillTop};width:${fillWidth};height:${fillHeight};background:${element.fillColor};opacity:0.9;"></div>` : ""}
-                    <div class="hudEditorPreviewText hudEditorFont-${element.fontSize}" style="color:${element.textColor};${element.shadow ? "text-shadow:0 2px 3px rgba(0,0,0,0.85);" : ""}">${escapeHtml(element.displayMode === "progress" && element.id !== "actionbar" ? `${previewNumericValue(element)} / ${element.maxValue}` : previewElementText(element))}</div>
+                    ${!isProgressBarElement(element) && element.animationPreset !== "none" ? `<div style="position:absolute;left:8px;top:6px;padding:2px 6px;border-radius:999px;background:rgba(8,12,20,0.72);border:1px solid rgba(255,255,255,0.12);color:#d7e4f6;font-size:10px;line-height:1;z-index:2;">${element.animationPreset}</div>` : ""}
+                    ${((isProgressBarElement(element)) || (element.displayMode === "progress" && element.id !== "actionbar")) ? `<div style="position:absolute;left:${fillLeft};top:${fillTop};width:${fillWidth};height:${fillHeight};background:${element.fillColor};opacity:0.9;"></div>` : ""}
+                    <div class="hudEditorPreviewText hudEditorFont-${element.fontSize}" style="color:${element.textColor};${element.shadow ? "text-shadow:0 2px 3px rgba(0,0,0,0.85);" : ""}">${escapeHtml(isProgressBarElement(element)
+                        ? (element.showText ? `${progressValues.current} / ${progressValues.max}` : element.label)
+                        : (element.displayMode === "progress" && element.id !== "actionbar" ? `${progressValues.current} / ${progressValues.max}` : previewElementText(element)))}</div>
                 </div>
             `;
         }).join("")}
@@ -1417,11 +2081,12 @@ function renderCanvas(): void {
 
     preview.querySelectorAll<HTMLElement>(".hudEditorPreviewItem").forEach((item) => {
         item.addEventListener("mousedown", (event) => {
-            const id = item.dataset.elementId as HudChannel;
-            const element = state.elements[id];
+            const id = item.dataset.elementId || "title";
+            const element = state.elements[id as HudChannel] ?? getProgressBarById(id);
+            if (!element) return;
             const rawSlotIndex = item.dataset.slotIndex;
             const slotIndex = rawSlotIndex != null ? Number.parseInt(rawSlotIndex, 10) : undefined;
-            if (isSliceMode(element) && !Number.isFinite(slotIndex as number)) {
+            if (!isProgressBarElement(element) && isSliceMode(element) && !Number.isFinite(slotIndex as number)) {
                 return;
             }
             state.selectedId = id;
@@ -1432,13 +2097,13 @@ function renderCanvas(): void {
                 startX: element.x,
                 startY: element.y,
                 slotIndex: Number.isFinite(slotIndex as number) ? slotIndex : undefined,
-                startSliceSlots: isSliceMode(element) ? ensureSliceSlots(element).map((slot) => ({ ...slot })) : undefined,
+                startSliceSlots: !isProgressBarElement(element) && isSliceMode(element) ? ensureSliceSlots(element).map((slot) => ({ ...slot })) : undefined,
             };
             renderAll();
         });
 
         item.addEventListener("click", () => {
-            state.selectedId = item.dataset.elementId as HudChannel;
+            state.selectedId = item.dataset.elementId || "title";
             renderAll();
         });
     });
@@ -1446,11 +2111,124 @@ function renderCanvas(): void {
 
 function renderInspector(): void {
     const element = getSelectedElement();
+    const inspector = getForm().querySelector(".hudEditorInspector") as HTMLDivElement | null;
+    if (!inspector) return;
+
+    if (isProgressBarElement(element)) {
+        inspector.innerHTML = `
+            <div class="hudEditorInspectorCard">
+                <div class="hudEditorInspectorTitle">${escapeHtml(element.label)}</div>
+                <div class="hudEditorInspectorBody">
+                    <label>사용</label><input data-field="enabled" type="checkbox" ${element.enabled ? "checked" : ""}>
+                    <label>ignored</label><input data-field="ignored" type="checkbox" ${element.ignored ? "checked" : ""}>
+                    <label>이름</label><input data-field="label" type="text" value="${escapeHtml(element.label)}">
+                    <label>데이터 채널</label>
+                    <select data-field="sourceChannel">
+                        ${["title", "subtitle", "actionbar"].map((channel) => `<option value="${channel}" ${element.sourceChannel === channel ? "selected" : ""}>${channel}</option>`).join("")}
+                    </select>
+                    <label>예시 문자열</label><input data-field="sampleText" type="text" value="${escapeHtml(element.sampleText)}">
+                    <label>접두사</label><input data-field="prefix" type="text" value="${escapeHtml(element.prefix)}">
+                    <label>바닐라 숨김</label><input data-field="hideVanilla" type="checkbox" ${element.hideVanilla ? "checked" : ""}>
+                    <label>앵커</label>
+                    <select data-field="anchor">
+                        ${["top_left", "top_middle", "top_right", "left_middle", "center", "right_middle", "bottom_left", "bottom_middle", "bottom_right"].map((anchor) => `<option value="${anchor}" ${element.anchor === anchor ? "selected" : ""}>${anchor}</option>`).join("")}
+                    </select>
+                    <label>X</label><input data-field="x" type="number" value="${element.x}">
+                    <label>Y</label><input data-field="y" type="number" value="${element.y}">
+                    <label>너비</label><input data-field="width" type="number" min="10" value="${element.width}">
+                    <label>높이</label><input data-field="height" type="number" min="4" value="${element.height}">
+                    <label>레이어</label><input data-field="layer" type="number" value="${element.layer}">
+                    <label>최대값 방식</label>
+                    <select data-field="maxMode">
+                        <option value="dynamic" ${element.maxMode === "dynamic" ? "selected" : ""}>동적</option>
+                        <option value="fixed" ${element.maxMode === "fixed" ? "selected" : ""}>고정</option>
+                    </select>
+                    <label>고정 최대값</label><input data-field="maxValue" type="number" min="1" value="${element.maxValue}" ${element.maxMode === "fixed" ? "" : "disabled"}>
+                    <label>채움 방향</label>
+                    <select data-field="clipDirection">
+                        ${["left", "right", "up", "down"].map((direction) => `<option value="${direction}" ${element.clipDirection === direction ? "selected" : ""}>${direction}</option>`).join("")}
+                    </select>
+                    <label>배경 텍스처</label><input data-field="backgroundTexture" type="text" value="${escapeHtml(element.backgroundTexture)}">
+                    <label>바 텍스처</label><input data-field="barTexture" type="text" value="${escapeHtml(element.barTexture)}">
+                    <label>트레일 텍스처</label><input data-field="trailTexture" type="text" value="${escapeHtml(element.trailTexture)}">
+                    <label>텍스처 타입</label>
+                    <select data-field="textureType">
+                        <option value="" ${element.textureType === "" ? "selected" : ""}>stretch</option>
+                        <option value="fixed" ${element.textureType === "fixed" ? "selected" : ""}>fixed</option>
+                    </select>
+                    <label>배경</label>
+                    <select data-field="background">
+                        <option value="vanilla" ${element.background === "vanilla" ? "selected" : ""}>바닐라</option>
+                        <option value="solid" ${element.background === "solid" ? "selected" : ""}>단색</option>
+                        <option value="none" ${element.background === "none" ? "selected" : ""}>없음</option>
+                    </select>
+                    <label>배경 alpha</label><input data-field="backgroundAlpha" type="number" min="0" max="1" step="0.05" value="${element.backgroundAlpha}">
+                    <label>배경 색상</label><input data-field="backgroundColor" type="color" value="${element.backgroundColor}" ${element.background === "solid" ? "" : "disabled"}>
+                    <label>채움 색상</label><input data-field="fillColor" type="color" value="${element.fillColor}">
+                    <label>bar alpha</label><input data-field="barAlpha" type="number" min="0" max="1" step="0.05" value="${element.barAlpha}">
+                    <label>trail alpha</label><input data-field="trailAlpha" type="number" min="0" max="1" step="0.05" value="${element.trailAlpha}">
+                    <label>trail 무시</label><input data-field="ignoreTrail" type="checkbox" ${element.ignoreTrail ? "checked" : ""}>
+                    <label>duration</label><input data-field="duration" type="number" min="0.05" step="0.05" value="${element.duration}">
+                    <label>trail delay</label><input data-field="trailDelay" type="number" min="0" step="0.05" value="${element.trailDelay}">
+                    <label>bar inset X</label><input data-field="barInsetX" type="number" min="0" value="${element.barInsetX}">
+                    <label>bar inset Y</label><input data-field="barInsetY" type="number" min="0" value="${element.barInsetY}">
+                    <label>텍스트 표시</label><input data-field="showText" type="checkbox" ${element.showText ? "checked" : ""}>
+                    <label>텍스트 색상</label><input data-field="textColor" type="color" value="${element.textColor}" ${element.showText ? "" : "disabled"}>
+                    <label>글자 크기</label>
+                    <select data-field="fontSize" ${element.showText ? "" : "disabled"}>
+                        ${["small", "normal", "large", "extra_large"].map((font) => `<option value="${font}" ${element.fontSize === font ? "selected" : ""}>${font}</option>`).join("")}
+                    </select>
+                    <label>그림자</label><input data-field="shadow" type="checkbox" ${element.shadow ? "checked" : ""} ${element.showText ? "" : "disabled"}>
+                    <div class="hudEditorSidebarActions">
+                        <button type="button" class="propertyInputButton hudEditorDeleteProgressBar">Progress Bar 삭제</button>
+                    </div>
+                </div>
+            </div>
+            <div class="hudEditorInspectorCard">
+                <div class="hudEditorInspectorTitle">Progress Bar 안내</div>
+                <div class="hudEditorDescription">
+                    <div>예시 포맷: <code>${escapeHtml(element.prefix)}35,50</code></div>
+                    <div>현재값은 항상 접두사 뒤 첫 숫자에서 읽습니다.</div>
+                    <div>최대값 방식이 동적이면 쉼표 뒤 두 번째 숫자를 최대값으로 사용합니다.</div>
+                    <div>같은 데이터 채널을 공유하는 progress bar를 여러 개 추가할 수 있습니다.</div>
+                </div>
+            </div>
+        `;
+
+        inspector.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input[data-field], select[data-field]").forEach((input) => {
+            const field = input.dataset.field as keyof HudProgressBar;
+            const onChange = () => {
+                const target = getProgressBarById(state.selectedId);
+                if (!target) return;
+                const record = target as Record<string, unknown>;
+                if (input instanceof HTMLInputElement && input.type === "checkbox") {
+                    record[field] = input.checked;
+                } else if (["x", "y", "width", "height", "layer", "maxValue", "barInsetX", "barInsetY"].includes(field)) {
+                    record[field] = Number.parseInt(input.value, 10) || 0;
+                } else if (field === "backgroundAlpha") {
+                    record[field] = clamp(Number.parseFloat(input.value) || 0, 0, 1);
+                } else if (["barAlpha", "trailAlpha", "duration", "trailDelay"].includes(field)) {
+                    record[field] = Math.max(0, Number.parseFloat(input.value) || 0);
+                } else {
+                    record[field] = input.value;
+                }
+                renderAll();
+            };
+            input.addEventListener("input", onChange);
+            input.addEventListener("change", onChange);
+        });
+
+        inspector.querySelector<HTMLButtonElement>(".hudEditorDeleteProgressBar")?.addEventListener("click", () => {
+            state.progressBars = state.progressBars.filter((bar) => bar.id !== element.id);
+            state.selectedId = "title";
+            renderAll();
+        });
+        return;
+    }
+
     const isTitleSlice = element.id === "title" && element.titleMode === "slice";
     const isSubtitleSlice = element.id === "subtitle" && element.subtitleMode === "slice";
     const sliceSlots = isTitleSlice || isSubtitleSlice ? ensureSliceSlots(element) : [];
-    const inspector = getForm().querySelector(".hudEditorInspector") as HTMLDivElement | null;
-    if (!inspector) return;
 
     inspector.innerHTML = `
         <div class="hudEditorInspectorCard">
@@ -1579,7 +2357,8 @@ function renderInspector(): void {
                 <div>\uC560\uB2C8\uBA54\uC774\uC158\uC740 <code>alpha</code> \uCCB4\uC774\uB2DD\uC73C\uB85C \uB0B4\uBCF4\uB0B4\uBA70, actionbar\uC5D0\uC11C\uB294 \uD31D\ud1a0\ub9ac \uD750\uB984\uC5D0 \uB9DE\uCD94\uAE30 \uC704\uD574 fade out \uD504\uB9AC\uC14B\uC774 \uC798 \uB9DE\uC2B5\uB2C8\uB2E4.</div>
                 ${element.id === "subtitle" && element.subtitleMode === "slice" ? `<div><code>pad(text, size)</code> \uD615\uC2DD\uC73C\uB85C \uAC01 \uC2AC\uB86F\uC744 \\t \uD328\uB529\uD55C \uB4A4 subtitle\uB85C \uC774\uC5B4\uBD99\uC5EC \uBCF4\uB0B4\uC57C \uD569\uB2C8\uB2E4.</div>` : ""}
                 <div><code>ignored: true</code>\uB97C \uCF1C\uBA74 \uB80C\uB354\uB9C1\uACFC \uBC14\uC778\uB529 \uD3C9\uAC00\uAC00 \uD568\uAED8 \uBE44\uD65C\uC131\uD654\uB429\uB2C8\uB2E4.</div>
-                <div>\uD504\uB85C\uADF8\uB808\uC2A4 \uBC14\uB294 title/subtitle\uC5D0\uC11C clip_ratio \uAE30\uBC18\uC73C\uB85C \uB0B4\uBCF4\uB0C5\uB2C8\uB2E4.</div>
+                <div>\uAE30\uBCF8 progress \uBAA8\uB4DC\uB294 title/subtitle \uB0B4\uBD80 clip_ratio \uCC44\uC6C0\uC73C\uB85C \uB0B4\uBCF4\uB0C5\uB2C8\uB2E4.</div>
+                <div>\uBCC4\uB3C4 Progress Bar\uB294 <code>bar:\uD604\uC7AC\uAC12,\uCD5C\uB300\uAC12</code> \uD615\uC2DD \uBB38\uC790\uC5F4\uC744 \uB370\uC774\uD130 \uCC44\uB110\uB85C \uC77D\uC5B4 \uC7AC\uC0AC\uC6A9 \uD15C\uD50C\uB9BF\uC73C\uB85C \uB0B4\uBCF4\uB0C5\uB2C8\uB2E4.</div>
             </div>
         </div>
     `;
@@ -1587,7 +2366,7 @@ function renderInspector(): void {
     inspector.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input[data-field], select[data-field]").forEach((input) => {
         const field = input.dataset.field as keyof HudElement;
         const onChange = () => {
-            const element = state.elements[state.selectedId];
+            const element = state.elements[state.selectedId as HudChannel];
             const target = element as Record<string, unknown>;
             const previousX = element.x;
             const previousY = element.y;
@@ -1647,7 +2426,7 @@ function renderInspector(): void {
         const field = input.dataset.slotField as keyof HudSliceSlot;
         const rawIndex = Number.parseInt(input.dataset.slotIndex || "0", 10) || 0;
         const onChange = () => {
-            const target = state.elements[state.selectedId];
+            const target = state.elements[state.selectedId as HudChannel];
             const slots = ensureSliceSlots(target);
             const slot = slots[rawIndex];
             if (!slot) {
@@ -1696,6 +2475,16 @@ function renderScriptHelper(): void {
         `);
     }
 
+    state.progressBars.filter((bar) => bar.enabled).forEach((bar) => {
+        sections.push(`
+            <div class="hudEditorSidebarTitle">${escapeHtml(bar.label)} Script Helper</div>
+            <textarea class="hudEditorOutput hudEditorScriptOutput" data-progress-script-id="${bar.id}" spellcheck="false">${escapeHtml(buildProgressBarScriptHelper(bar))}</textarea>
+            <div class="hudEditorSidebarActions">
+                <button type="button" class="propertyInputButton hudEditorCopyProgressScript" data-progress-script-id="${bar.id}">Script 복사</button>
+            </div>
+        `);
+    });
+
     if (sections.length === 0) {
         container.innerHTML = "";
         return;
@@ -1713,6 +2502,15 @@ function renderScriptHelper(): void {
     copySubtitleButton?.addEventListener("click", async () => {
         await navigator.clipboard.writeText(buildSubtitleSliceScriptHelper(subtitle));
         new Notification("Subtitle Script helper\uB97C \uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uD588\uC2B5\uB2C8\uB2E4.", 2200, "notif");
+    });
+
+    container.querySelectorAll<HTMLButtonElement>(".hudEditorCopyProgressScript").forEach((button) => {
+        button.addEventListener("click", async () => {
+            const bar = getProgressBarById(button.dataset.progressScriptId || "");
+            if (!bar) return;
+            await navigator.clipboard.writeText(buildProgressBarScriptHelper(bar));
+            new Notification("Progress Bar Script helper를 클립보드에 복사했습니다.", 2200, "notif");
+        });
     });
 }
 
@@ -1774,6 +2572,8 @@ function bindStaticActions(): void {
         state.selectedId = "title";
         state.autoFitPreview = true;
         state.previewZoom = 1;
+        state.progressBars = [];
+        state.nextProgressBarId = 1;
         state.elements.title = {
             ...state.elements.title,
             enabled: true,
@@ -1903,11 +2703,12 @@ function attachDragHandlers(): void {
     const modal = getModal();
     const finishDrag = () => {
         if (!state.drag) return;
-        const element = state.elements[state.drag.id];
+        const element = state.elements[state.drag.id as HudChannel] ?? getProgressBarById(state.drag.id);
+        if (!element) return;
         if (state.autoAnchorSnap) {
-            if (isSliceMode(element) && typeof state.drag.slotIndex === "number") {
+            if (!isProgressBarElement(element) && isSliceMode(element) && typeof state.drag.slotIndex === "number") {
                 snapSliceSlotAnchor(element, state.drag.slotIndex);
-            } else if (!isSliceMode(element)) {
+            } else {
                 snapElementAnchor(element);
             }
         }
@@ -1917,10 +2718,11 @@ function attachDragHandlers(): void {
 
     modal.onmousemove = (event: MouseEvent) => {
         if (!state.drag) return;
-        const element = state.elements[state.drag.id];
+        const element = state.elements[state.drag.id as HudChannel] ?? getProgressBarById(state.drag.id);
+        if (!element) return;
         const deltaX = Math.round(event.clientX - state.drag.startMouseX);
         const deltaY = Math.round(event.clientY - state.drag.startMouseY);
-        if (isSliceMode(element) && state.drag.startSliceSlots) {
+        if (!isProgressBarElement(element) && isSliceMode(element) && state.drag.startSliceSlots) {
             if (typeof state.drag.slotIndex !== "number") {
                 return;
             }
