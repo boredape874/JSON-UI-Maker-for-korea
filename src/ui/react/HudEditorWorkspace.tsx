@@ -66,28 +66,6 @@ const CLIP_DIRECTION_LABELS: Record<(typeof CLIP_DIRECTIONS)[number], string> = 
     down: "아래쪽",
 };
 
-function backgroundLabel(value: "vanilla" | "solid" | "none"): string {
-    switch (value) {
-        case "vanilla":
-            return "바닐라";
-        case "solid":
-            return "단색";
-        case "none":
-            return "없음";
-    }
-}
-
-function animationLabel(value: "none" | "fade_out" | "fade_hold_fade"): string {
-    switch (value) {
-        case "none":
-            return "없음";
-        case "fade_out":
-            return "페이드 아웃";
-        case "fade_hold_fade":
-            return "페이드 인/유지/아웃";
-    }
-}
-
 function isProgressBarElement(element: HudElement | HudProgressBar): element is HudProgressBar {
     return "sourceChannel" in element;
 }
@@ -154,31 +132,31 @@ function CommonInspector({ element }: { element: HudElement | HudProgressBar }) 
             <div className="hudEditorInspectorBody">
                 {fieldRow("활성화", <input type="checkbox" checked={element.enabled} onChange={onChange("enabled")} />)}
                 {fieldRow("무시", <input type="checkbox" checked={element.ignored} onChange={onChange("ignored")} />)}
-                {fieldRow("앵커", (
+                {fieldRow("앵커 (Anchor)", (
                     <select value={element.anchor} onChange={onChange("anchor")}>
-                        {ANCHORS.map((anchor) => <option key={anchor} value={anchor}>{ANCHOR_LABELS[anchor]}</option>)}
+                        {ANCHORS.map((anchor) => <option key={anchor} value={anchor}>{ANCHOR_LABELS[anchor]} ({anchor})</option>)}
                     </select>
                 ))}
                 {fieldRow("X", <input type="number" value={element.x} onChange={onChange("x")} />)}
                 {fieldRow("Y", <input type="number" value={element.y} onChange={onChange("y")} />)}
                 {fieldRow("너비", <input type="number" value={element.width} onChange={onChange("width")} />)}
                 {fieldRow("높이", <input type="number" value={element.height} onChange={onChange("height")} />)}
-                {fieldRow("레이어", <input type="number" value={element.layer} onChange={onChange("layer")} />)}
-                {fieldRow("폰트", (
+                {fieldRow("레이어 (Layer)", <input type="number" value={element.layer} onChange={onChange("layer")} />)}
+                {fieldRow("폰트 크기 (Font Size)", (
                     <select value={element.fontSize} onChange={onChange("fontSize")}>
-                        {FONT_SIZES.map((font) => <option key={font} value={font}>{FONT_SIZE_LABELS[font]}</option>)}
+                        {FONT_SIZES.map((font) => <option key={font} value={font}>{FONT_SIZE_LABELS[font]} ({font})</option>)}
                     </select>
                 ))}
                 {fieldRow("글자 색상", <input type="color" value={element.textColor} onChange={onChange("textColor")} />)}
                 {fieldRow("그림자", <input type="checkbox" checked={element.shadow} onChange={onChange("shadow")} />)}
-                {fieldRow("배경", (
+                {fieldRow("배경 (Background)", (
                     <select value={element.background} onChange={onChange("background")}>
-                        <option value="vanilla">{backgroundLabel("vanilla")}</option>
-                        <option value="solid">{backgroundLabel("solid")}</option>
-                        <option value="none">{backgroundLabel("none")}</option>
+                        <option value="vanilla">바닐라 (vanilla)</option>
+                        <option value="solid">단색 (solid)</option>
+                        <option value="none">없음 (none)</option>
                     </select>
                 ))}
-                {fieldRow("배경 알파", <input type="number" min="0" max="1" step="0.05" value={element.backgroundAlpha} onChange={onChange("backgroundAlpha")} />)}
+                {fieldRow("배경 알파 (Background Alpha)", <input type="number" min="0" max="1" step="0.05" value={element.backgroundAlpha} onChange={onChange("backgroundAlpha")} />)}
                 {fieldRow("배경 색상", <input type="color" value={element.backgroundColor} onChange={onChange("backgroundColor")} disabled={element.background !== "solid"} />)}
             </div>
         </div>
@@ -196,57 +174,57 @@ function ChannelInspector({ element }: { element: HudElement }) {
         <>
             <CommonInspector element={element} />
             <div className="hudEditorInspectorCard">
-                <div className="hudEditorInspectorTitle">채널 설정</div>
+                <div className="hudEditorInspectorTitle">채널 설정 (Channel Settings)</div>
                 <div className="hudEditorInspectorBody">
                     {fieldRow("샘플 텍스트", <input type="text" value={element.sampleText} onChange={onChange("sampleText")} />)}
-                    {fieldRow("접두사", <input type="text" value={element.prefix} onChange={onChange("prefix")} />)}
+                    {fieldRow("접두사 (Prefix)", <input type="text" value={element.prefix} onChange={onChange("prefix")} />)}
                     {fieldRow("접두사 제거", <input type="checkbox" checked={element.stripPrefix} onChange={onChange("stripPrefix")} />)}
                     {fieldRow("바닐라 숨김", <input type="checkbox" checked={element.hideVanilla} onChange={onChange("hideVanilla")} />)}
                     {element.id === "actionbar" ? fieldRow("보존 표시", <input type="checkbox" checked={element.preserve} onChange={onChange("preserve")} />) : null}
-                    {element.id !== "actionbar" ? fieldRow("표시 방식", (
+                    {element.id !== "actionbar" ? fieldRow("표시 방식 (Display Mode)", (
                         <select value={element.displayMode} onChange={onChange("displayMode")} disabled={sliceMode}>
-                            <option value="text">텍스트</option>
-                            <option value="progress">진행 바</option>
+                            <option value="text">텍스트 (text)</option>
+                            <option value="progress">진행 바 (progress)</option>
                         </select>
                     )) : null}
                     {element.id !== "actionbar" && element.displayMode === "progress" ? (
                         <>
                             {fieldRow("최대값", <input type="number" value={element.maxValue} onChange={onChange("maxValue")} disabled={sliceMode} />)}
                             {fieldRow("채우기 색상", <input type="color" value={element.fillColor} onChange={onChange("fillColor")} disabled={sliceMode} />)}
-                            {fieldRow("클립 방향", (
+                            {fieldRow("클립 방향 (Clip Direction)", (
                                 <select value={element.clipDirection} onChange={onChange("clipDirection")} disabled={sliceMode}>
-                                    {CLIP_DIRECTIONS.map((direction) => <option key={direction} value={direction}>{CLIP_DIRECTION_LABELS[direction]}</option>)}
+                                    {CLIP_DIRECTIONS.map((direction) => <option key={direction} value={direction}>{CLIP_DIRECTION_LABELS[direction]} ({direction})</option>)}
                                 </select>
                             ))}
                         </>
                     ) : null}
-                    {fieldRow("애니메이션", (
+                    {fieldRow("애니메이션 (Animation)", (
                         <select value={element.animationPreset} onChange={onChange("animationPreset")}>
-                            <option value="none">{animationLabel("none")}</option>
-                            <option value="fade_out">{animationLabel("fade_out")}</option>
-                            <option value="fade_hold_fade">{animationLabel("fade_hold_fade")}</option>
+                            <option value="none">없음 (none)</option>
+                            <option value="fade_out">페이드 아웃 (fade_out)</option>
+                            <option value="fade_hold_fade">페이드 인/유지/아웃 (fade_hold_fade)</option>
                         </select>
                     ))}
                     {fieldRow("시작 시간", <input type="number" min="0" step="0.05" value={element.animInDuration} onChange={onChange("animInDuration")} />)}
                     {fieldRow("유지 시간", <input type="number" min="0" step="0.05" value={element.animHoldDuration} onChange={onChange("animHoldDuration")} />)}
                     {fieldRow("종료 시간", <input type="number" min="0" step="0.05" value={element.animOutDuration} onChange={onChange("animOutDuration")} />)}
-                    {element.id === "title" ? fieldRow("타이틀 모드", (
+                    {element.id === "title" ? fieldRow("타이틀 모드 (Title Mode)", (
                         <select value={element.titleMode ?? "single"} onChange={onChange("titleMode")}>
-                            <option value="single">단일</option>
-                            <option value="slice">슬라이싱</option>
+                            <option value="single">단일 (single)</option>
+                            <option value="slice">슬라이싱 (slice)</option>
                         </select>
                     )) : null}
-                    {element.id === "subtitle" ? fieldRow("서브타이틀 모드", (
+                    {element.id === "subtitle" ? fieldRow("서브타이틀 모드 (Subtitle Mode)", (
                         <select value={element.subtitleMode ?? "single"} onChange={onChange("subtitleMode")}>
-                            <option value="single">단일</option>
-                            <option value="slice">슬라이싱</option>
+                            <option value="single">단일 (single)</option>
+                            <option value="slice">슬라이싱 (slice)</option>
                         </select>
                     )) : null}
                 </div>
             </div>
             {sliceMode ? (
                 <div className="hudEditorInspectorCard">
-                    <div className="hudEditorInspectorTitle">슬롯 설정</div>
+                    <div className="hudEditorInspectorTitle">슬롯 설정 (Slice Slots)</div>
                     <div className="hudEditorInspectorBody">
                         {fieldRow("슬롯 크기", <input type="number" value={element.sliceSlotSize ?? 20} onChange={onChange("sliceSlotSize")} />)}
                         {fieldRow("열 수", <input type="number" value={element.sliceColumns ?? 2} onChange={onChange("sliceColumns")} />)}
@@ -258,9 +236,9 @@ function ChannelInspector({ element }: { element: HudElement }) {
                         </div>
                         {slots.map((slot, index) => (
                             <div key={`${element.id}-${index}`}>
-                                {fieldRow(`슬롯 ${index + 1} 앵커`, (
+                                {fieldRow(`슬롯 ${index + 1} 앵커 (Anchor)`, (
                                     <select value={slot.anchor} onChange={(event) => updateHudEditorSliceSlot(index, "anchor", event.target.value as HudAnchor)}>
-                                        {ANCHORS.map((anchor) => <option key={anchor} value={anchor}>{ANCHOR_LABELS[anchor]}</option>)}
+                                        {ANCHORS.map((anchor) => <option key={anchor} value={anchor}>{ANCHOR_LABELS[anchor]} ({anchor})</option>)}
                                     </select>
                                 ))}
                                 {fieldRow(`슬롯 ${index + 1} X`, <input type="number" value={slot.x} onChange={(event) => updateHudEditorSliceSlot(index, "x", Number.parseInt(event.target.value, 10) || 0)} />)}
@@ -283,39 +261,48 @@ function ProgressInspector({ element }: { element: HudProgressBar }) {
         <>
             <CommonInspector element={element} />
             <div className="hudEditorInspectorCard">
-                <div className="hudEditorInspectorTitle">진행 바 설정</div>
+                <div className="hudEditorInspectorTitle">예제 구조 참고</div>
+                <div className="hudEditorInspectorBody">
+                    {fieldRow("입력 채널", <div>{element.sourceChannel} 문자열 채널을 데이터 버스로 사용</div>)}
+                    {fieldRow("파싱", <div><code>{element.prefix || "bar:"}</code> 접두사 제거 후 <code>#progress</code>, <code>#max_value</code> 계산</div>)}
+                    {fieldRow("계산", <div><code>#prev_value</code>, <code>#changed_value</code>, <code>#multiplier</code> 기반 비율 계산</div>)}
+                    {fieldRow("출력 파일", <div><code>hud_screen.json</code> + <code>animated_bar.json</code> + <code>_ui_defs.json</code></div>)}
+                </div>
+            </div>
+            <div className="hudEditorInspectorCard">
+                <div className="hudEditorInspectorTitle">진행 바 설정 (Progress Settings)</div>
                 <div className="hudEditorInspectorBody">
                     {fieldRow("이름", <input type="text" value={element.label} onChange={onChange("label")} />)}
-                    {fieldRow("소스 채널", (
+                    {fieldRow("소스 채널 (Source Channel)", (
                         <select value={element.sourceChannel} onChange={onChange("sourceChannel")}>
-                            <option value="title">타이틀</option>
-                            <option value="subtitle">서브타이틀</option>
-                            <option value="actionbar">액션바</option>
+                            <option value="title">타이틀 (title)</option>
+                            <option value="subtitle">서브타이틀 (subtitle)</option>
+                            <option value="actionbar">액션바 (actionbar)</option>
                         </select>
                     ))}
                     {fieldRow("샘플 텍스트", <input type="text" value={element.sampleText} onChange={onChange("sampleText")} />)}
-                    {fieldRow("접두사", <input type="text" value={element.prefix} onChange={onChange("prefix")} />)}
+                    {fieldRow("접두사 (Prefix)", <input type="text" value={element.prefix} onChange={onChange("prefix")} />)}
                     {fieldRow("바닐라 숨김", <input type="checkbox" checked={element.hideVanilla} onChange={onChange("hideVanilla")} />)}
-                    {fieldRow("최대값 모드", (
+                    {fieldRow("최대값 모드 (Max Mode)", (
                         <select value={element.maxMode} onChange={onChange("maxMode")}>
-                            <option value="fixed">고정</option>
-                            <option value="dynamic">동적</option>
+                            <option value="fixed">고정 (fixed)</option>
+                            <option value="dynamic">동적 (dynamic)</option>
                         </select>
                     ))}
                     {fieldRow("최대값", <input type="number" value={element.maxValue} onChange={onChange("maxValue")} />)}
                     {fieldRow("채우기 색상", <input type="color" value={element.fillColor} onChange={onChange("fillColor")} />)}
-                    {fieldRow("클립 방향", (
+                    {fieldRow("클립 방향 (Clip Direction)", (
                         <select value={element.clipDirection} onChange={onChange("clipDirection")}>
-                            {CLIP_DIRECTIONS.map((direction) => <option key={direction} value={direction}>{CLIP_DIRECTION_LABELS[direction]}</option>)}
+                            {CLIP_DIRECTIONS.map((direction) => <option key={direction} value={direction}>{CLIP_DIRECTION_LABELS[direction]} ({direction})</option>)}
                         </select>
                     ))}
                     {fieldRow("배경 텍스처", <input type="text" value={element.backgroundTexture} onChange={onChange("backgroundTexture")} />)}
                     {fieldRow("바 텍스처", <input type="text" value={element.barTexture} onChange={onChange("barTexture")} />)}
                     {fieldRow("트레일 텍스처", <input type="text" value={element.trailTexture} onChange={onChange("trailTexture")} />)}
-                    {fieldRow("텍스처 타입", (
+                    {fieldRow("텍스처 타입 (Texture Type)", (
                         <select value={element.textureType} onChange={onChange("textureType")}>
-                            <option value="">기본</option>
-                            <option value="fixed">고정</option>
+                            <option value="">기본 (default)</option>
+                            <option value="fixed">고정 (fixed)</option>
                         </select>
                     ))}
                     {fieldRow("바 알파", <input type="number" min="0" max="1" step="0.05" value={element.barAlpha} onChange={onChange("barAlpha")} />)}
