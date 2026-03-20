@@ -4,6 +4,15 @@ import { CreateFormModal } from "./ui/react/CreateFormModal.js";
 import { AuthModal } from "./ui/react/AuthModal.js";
 import { builderActions } from "./ui/react/builderActions.js";
 import { useAuthUiState } from "./ui/react/authUiBridge.js";
+import { PasteFormModal } from "./ui/react/PasteFormModal.js";
+import { UiWorkspaceModal } from "./ui/react/UiWorkspaceModal.js";
+import { SettingsModal } from "./ui/react/SettingsModal.js";
+import { HelpModal } from "./ui/react/HelpModal.js";
+import { AddButtonModal } from "./ui/react/AddButtonModal.js";
+import { openSettingsModal } from "./ui/react/modalBridge.js";
+import { TexturePresetsModal } from "./ui/react/TexturePresetsModal.js";
+import { UploadPresetModal } from "./ui/react/UploadPresetModal.js";
+import { PresetManagementModal } from "./ui/react/PresetManagementModal.js";
 
 const directoryPickerProps = {
     webkitdirectory: "",
@@ -111,7 +120,7 @@ export function App() {
 
                     <div className="navbar-divider"></div>
 
-                    <button className="modalSettingsBtn" id="modalSettingsBtn">
+                    <button className="modalSettingsBtn" id="modalSettingsBtn" onClick={() => openSettingsModal()}>
                         <span className="settings_label">Settings</span>
                         <img className="settings_img" src={icon("icons/settings_cog.webp")} alt="Settings" />
                     </button>
@@ -133,13 +142,17 @@ export function App() {
                 </div>
             </div>
 
-            <div id="modalSettings" className="modal"><div className="modal-content"><span id="modalSettingsClose" className="modalClose">&times;</span><h2 className="modalHeader">Settings</h2><div className="modalSettingsForm"></div></div></div>
-            <div id="modalAddButton" className="modal"><div className="modal-content"><span id="modalAddButtonClose" className="modalClose">&times;</span><h2 className="modalHeader">Add Button</h2><div className="modalAddButtonForm"></div></div></div>
+            <SettingsModal />
+            <AddButtonModal />
             <AuthModal />
             <CreateFormModal />
+            <PasteFormModal />
+            <UiWorkspaceModal />
+            <HelpModal />
+            <TexturePresetsModal />
+            <UploadPresetModal />
+            <PresetManagementModal />
             {SaveFormsModalComponent ? <SaveFormsModalComponent /> : null}
-            <div id="modalPasteForm" className="modal"><div className="modal-content" style={{ maxWidth: 860 }}><span id="modalPasteFormClose" className="modalClose">&times;</span><h2 className="modalHeader">Paste Form Code</h2><div className="modalPasteFormForm"></div></div></div>
-            <div id="modalUiWorkspace" className="modal"><div className="modal-content" style={{ maxWidth: 900 }}><span id="modalUiWorkspaceClose" className="modalClose">&times;</span><h2 className="modalHeader">Import UI Folder</h2><div className="modalUiWorkspaceForm"></div></div></div>
 
             <div id="hudEditorScreen" className="hudEditorScreen">
                 <div className="hudEditorScreenHeader">
@@ -150,39 +163,6 @@ export function App() {
             </div>
 
             <div id="modalGlyphEditor" className="modal"><div className="modal-content glyphEditorModalContent"><span id="modalGlyphEditorClose" className="modalClose">&times;</span><h2 className="modalHeader">Glyph Editor</h2><div className="modalGlyphEditorForm"></div></div></div>
-            <div id="modalLoadTexturePresets" className="modal"><div className="modal-content"><span id="modalLoadTexturePresetsClose" className="modalClose">&times;</span><h2 className="modalHeader">Load Texture Presets</h2><div className="modalLoadTexturePresetsForm"></div></div></div>
-
-            <div id="modalHelpMenu" className="modal">
-                <div className="modal-content" style={{ maxWidth: 640, maxHeight: "80vh", overflowY: "auto" }}>
-                    <span id="modalHelpMenuClose" className="modalClose">&times;</span>
-                    <h2 className="modalHeader">Help</h2>
-                    <div className="modalHelpMenuForm">
-                        <label style={{ fontWeight: 500, color: "rgb(255, 255, 255)" }}>Key Binds:</label><br /><br />
-                        <label className="modalOptionLabel">CTRL + c: <b>Copy</b><br />CTRL + v: <b>Paste</b><br />CTRL + x: <b>Cut</b><br />Tab: <b>Indent</b><br />Del: <b>Delete</b><br />Tab | Enter: <b>Autocomplete</b><br />Arrow Keys: <b>Move</b></label><br /><br /><br />
-                        <label style={{ fontWeight: 500, color: "rgb(255, 255, 255)", fontSize: 20 }}>Bindings Quick Guide</label><br /><br />
-                        <label className="modalOptionLabel">1. Use &quot;binding_name&quot; to receive a value such as &quot;#title_text&quot;.</label><br /><br />
-                        <label className="modalOptionLabel">2. Use &quot;binding_type&quot;: &quot;view&quot; when you want to control visibility or other view properties.</label><br /><br />
-                        <label className="modalOptionLabel">&quot;source_property_name&quot; is the condition or source expression, and &quot;target_property_name&quot; is the property to change.</label><br /><br />
-                        <label className="modalOptionLabel" style={{ color: "#9dd1ff" }}>Tips: Type # for source property suggestions, and type &quot; inside a key to see available binding keys.</label><br /><br />
-                        <label style={{ fontWeight: 500, color: "rgb(255, 255, 255)" }}>Example:</label><br /><br />
-                        <pre className="modalHelpCode">{`[
-  {
-    "binding_name": "#title_text"
-  },
-  {
-    "binding_type": "view",
-    "source_property_name": "(not (#title_text = ''))",
-    "target_property_name": "#visible"
-  }
-]`}</pre><br /><br />
-                        <label style={{ fontWeight: 500, color: "rgb(255, 255, 255)", fontSize: 20 }}>General Issues:</label><br /><br />
-                        <label style={{ fontWeight: 500, color: "rgb(255, 255, 255)" }}>Why arent my buttons working in-game?</label><br /><br />
-                        <label className="modalOptionLabel">You probably need to stack the button on top of a collection panel. If that doesnt fix it, check that all texture paths are correct.</label><br /><br />
-                        <label style={{ fontWeight: 500, color: "rgb(255, 255, 255)" }}>Why isnt the form uploader working?</label><br /><br />
-                        <label className="modalOptionLabel">The form uploader can only upload forms made by the website.</label>
-                    </div>
-                </div>
-            </div>
 
             <div id="modalChooseImage" className="modal">
                 <div className="modal-content chooseImageModalContent">

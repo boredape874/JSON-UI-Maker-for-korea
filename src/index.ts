@@ -31,7 +31,6 @@ import { pasteFormModal } from "./ui/modals/pasteFormModal.js";
 import { uiWorkspaceModal } from "./ui/modals/uiWorkspaceModal.js";
 import { hudEditorModal } from "./ui/modals/hudEditorModal.js";
 import { glyphEditorModal } from "./ui/modals/glyphEditorModal.js";
-import "./ui/modals/settings.js";
 import { authModal } from "./ui/modals/authModal.js";
 import { uploadPresetModal } from "./ui/modals/uploadPresetModal.js";
 import { presetManagementModal } from "./ui/modals/presetManagementModal.js";
