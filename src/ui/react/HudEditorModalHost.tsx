@@ -5,6 +5,7 @@ import { HudEditorWorkspace } from "./HudEditorWorkspace.js";
 
 export function HudEditorModalHost() {
     const [open, setOpen] = useState(false);
+    const [hostReady, setHostReady] = useState(false);
     const modalRef = useRef<HTMLDivElement | null>(null);
     const closeButtonRef = useRef<HTMLButtonElement | null>(null);
     const formRef = useRef<HTMLDivElement | null>(null);
@@ -25,7 +26,11 @@ export function HudEditorModalHost() {
         }
 
         registerHudEditorHost({ modal, closeButton, form });
-        return () => registerHudEditorHost(null);
+        setHostReady(true);
+        return () => {
+            setHostReady(false);
+            registerHudEditorHost(null);
+        };
     }, []);
 
     return (
@@ -43,7 +48,7 @@ export function HudEditorModalHost() {
                 </button>
             </div>
             <div ref={formRef} className="hudEditorScreenBody modalHudEditorForm">
-                <HudEditorWorkspace />
+                {hostReady ? <HudEditorWorkspace /> : null}
             </div>
         </div>
     );
