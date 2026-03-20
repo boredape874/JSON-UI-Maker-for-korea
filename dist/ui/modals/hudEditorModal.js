@@ -5,7 +5,7 @@ const state = {
     selectedId: "title",
     autoFitPreview: true,
     previewZoom: 1,
-    autoAnchorSnap: true,
+    autoAnchorSnap: false,
     showAnchorGuides: true,
     elements: {
         title: {
@@ -273,15 +273,15 @@ function buildProgressFill(sourceControlName, sourcePropertyName, element) {
     };
 }
 function buildTitleControl(element) {
-    const controls = [];
+    const bodyControls = [];
     const background = backgroundDefinition(element);
     if (background) {
-        controls.push({
+        bodyControls.push({
             title_background: background,
         });
     }
     if (element.displayMode === "progress") {
-        controls.push({
+        bodyControls.push({
             title_fill: {
                 type: "image",
                 texture: "textures/ui/white_background",
@@ -338,23 +338,25 @@ function buildTitleControl(element) {
         if (element.textColor !== "#ffffff") {
             label.color = hexToRgb(element.textColor);
         }
-        controls.push({
+        bodyControls.push({
             title_label: label,
         });
     }
     return withIgnored({
         type: "panel",
-        size: ["100%", "100%"],
+        size: [0, 0],
+        anchor_from: element.anchor,
+        anchor_to: element.anchor,
+        offset: [element.x, element.y],
+        layer: element.layer,
         controls: [
             {
-                title_positioned: {
+                title_body: {
                     type: "panel",
                     size: getAutoSizedTextContainer(element, 8),
                     anchor_from: element.anchor,
                     anchor_to: element.anchor,
-                    offset: [element.x, element.y],
-                    layer: element.layer,
-                    controls,
+                    controls: bodyControls,
                 },
             },
         ],
@@ -373,8 +375,8 @@ function buildTitleControl(element) {
     }, element.ignored);
 }
 function buildSubtitleControl(element) {
-    const controls = [];
-    controls.push({
+    const bodyControls = [];
+    const dataControl = {
         subtitle_data: {
             type: "panel",
             size: [0, 0],
@@ -393,20 +395,19 @@ function buildSubtitleControl(element) {
                 },
             ],
         },
-    });
-    const background = backgroundDefinition(element);
-    if (background) {
-        controls.push({
-            subtitle_background: background,
+    };
+    if (backgroundDefinition(element)) {
+        bodyControls.push({
+            subtitle_background: backgroundDefinition(element),
         });
     }
     if (element.displayMode === "progress") {
-        controls.push({
+        bodyControls.push({
             subtitle_fill: buildProgressFill("subtitle_data", "#source_text", element),
         });
     }
     else {
-        controls.push({
+        bodyControls.push({
             subtitle_label: {
                 type: "label",
                 text: "#text",
@@ -433,18 +434,20 @@ function buildSubtitleControl(element) {
     }
     return withIgnored({
         type: "panel",
-        size: ["100%", "100%"],
+        size: [0, 0],
+        anchor_from: element.anchor,
+        anchor_to: element.anchor,
+        offset: [element.x, element.y],
+        layer: element.layer,
         controls: [
-            controls[0],
+            dataControl,
             {
-                subtitle_positioned: {
+                subtitle_body: {
                     type: "panel",
                     size: getAutoSizedTextContainer(element, 8),
                     anchor_from: element.anchor,
                     anchor_to: element.anchor,
-                    offset: [element.x, element.y],
-                    layer: element.layer,
-                    controls: controls.slice(1),
+                    controls: bodyControls,
                 },
             },
         ],
@@ -607,7 +610,6 @@ function buildActionbarControl(element) {
         size: element.background === "none" ? [element.width, element.height] : ["100%c + 10px", "100%cm + 4px"],
         anchor_from: element.anchor,
         anchor_to: element.anchor,
-        offset: [element.x, element.y],
         controls: [
             {
                 actionbar_label: label,
@@ -626,12 +628,15 @@ function buildActionbarControl(element) {
     }
     return withIgnored({
         type: "panel",
-        size: ["100%", "100%"],
+        size: [0, 0],
+        anchor_from: element.anchor,
+        anchor_to: element.anchor,
+        offset: [element.x, element.y],
         $atext: "$actionbar_text",
         visible: element.prefix ? prefixMatchExpression("$atext", element.prefix) : "(not ($atext = ''))",
         controls: [
             {
-                actionbar_positioned: content,
+                actionbar_body: content,
             },
         ],
     }, element.ignored);
@@ -702,7 +707,6 @@ function buildPreservedActionbarDisplay(element) {
         size: element.background === "none" ? [element.width, element.height] : ["100%c + 10px", "100%cm + 4px"],
         anchor_from: element.anchor,
         anchor_to: element.anchor,
-        offset: [element.x, element.y],
         layer: element.layer,
         controls: controls.slice(1),
     };
@@ -715,11 +719,15 @@ function buildPreservedActionbarDisplay(element) {
     }
     return withIgnored({
         type: "panel",
-        size: ["100%", "100%"],
+        size: [0, 0],
+        anchor_from: element.anchor,
+        anchor_to: element.anchor,
+        offset: [element.x, element.y],
+        layer: element.layer,
         controls: [
             controls[0],
             {
-                preserved_actionbar_positioned: displayContent,
+                preserved_actionbar_body: displayContent,
             },
         ],
         bindings: [
@@ -788,7 +796,7 @@ function buildHudJson() {
     const json = {
         namespace: "hud",
     };
-    const wrapperControls = [];
+    const rootInsert = [];
     const title = state.elements.title;
     if (title.enabled) {
         if (title.titleMode === "slice") {
@@ -800,18 +808,15 @@ function buildHudJson() {
                 json.title_slot_template.alpha = `@hud.${titleAnimation.entryAnimation}`;
             }
             Object.assign(json, titleAnimation.definitions);
-            wrapperControls.push({ "title_data@hud.title_data": {} });
+            rootInsert.push({ "title_data@hud.title_data": {} });
             for (let index = 1; index <= slotCount; index++) {
                 const slotLayout = getSliceSlotLayout(title, index - 1);
-                wrapperControls.push({
+                rootInsert.push({
                     [`title_slot${index}@hud.title_slot_template`]: {
                         $slot_binding: `#text${index}`,
                         anchor_from: slotLayout.anchor,
                         anchor_to: slotLayout.anchor,
-                        offset: [
-                            slotLayout.x,
-                            slotLayout.y,
-                        ],
+                        offset: [slotLayout.x, slotLayout.y],
                     },
                 });
             }
@@ -823,7 +828,7 @@ function buildHudJson() {
                 json.title_control.alpha = `@hud.${titleAnimation.entryAnimation}`;
             }
             Object.assign(json, titleAnimation.definitions);
-            wrapperControls.push({ "title_ctrl@hud.title_control": {} });
+            rootInsert.push({ "title_ctrl@hud.title_control": {} });
         }
         if (title.hideVanilla) {
             json["hud_title_text/title_frame"] = {
@@ -849,18 +854,15 @@ function buildHudJson() {
                 json.subtitle_slot_template.alpha = `@hud.${subtitleAnimation.entryAnimation}`;
             }
             Object.assign(json, subtitleAnimation.definitions);
-            wrapperControls.push({ "subtitle_data@hud.subtitle_data": {} });
+            rootInsert.push({ "subtitle_data@hud.subtitle_data": {} });
             for (let index = 1; index <= slotCount; index++) {
                 const slotLayout = getSliceSlotLayout(subtitle, index - 1);
-                wrapperControls.push({
+                rootInsert.push({
                     [`sub_slot${index}@hud.subtitle_slot_template`]: {
                         $slot_binding: `#text${index}`,
                         anchor_from: slotLayout.anchor,
                         anchor_to: slotLayout.anchor,
-                        offset: [
-                            slotLayout.x,
-                            slotLayout.y,
-                        ],
+                        offset: [slotLayout.x, slotLayout.y],
                     },
                 });
             }
@@ -872,7 +874,7 @@ function buildHudJson() {
                 json.subtitle_control.alpha = `@hud.${subtitleAnimation.entryAnimation}`;
             }
             Object.assign(json, subtitleAnimation.definitions);
-            wrapperControls.push({ "subtitle_control@hud.subtitle_control": {} });
+            rootInsert.push({ "subtitle_control@hud.subtitle_control": {} });
         }
         if (subtitle.hideVanilla) {
             json["hud_title_text/subtitle_frame"] = subtitle.prefix
@@ -920,7 +922,7 @@ function buildHudJson() {
         };
         if (actionbar.preserve) {
             json.preserved_actionbar_display = buildPreservedActionbarDisplay(actionbar);
-            wrapperControls.unshift({ "preserved_actionbar@hud.preserved_actionbar_display": {} });
+            rootInsert.unshift({ "preserved_actionbar@hud.preserved_actionbar_display": {} });
         }
         if (actionbar.hideVanilla) {
             json["hud_actionbar_text"] = {
@@ -929,22 +931,13 @@ function buildHudJson() {
             };
         }
     }
-    if (wrapperControls.length > 0) {
-        json.hud_editor_root = {
-            type: "panel",
-            size: ["100%", "100%"],
-            controls: wrapperControls,
-        };
+    if (rootInsert.length > 0) {
         json.root_panel = {
             modifications: [
                 {
                     array_name: "controls",
                     operation: "insert_back",
-                    value: [
-                        {
-                            "hud_editor_root@hud.hud_editor_root": {},
-                        },
-                    ],
+                    value: rootInsert,
                 },
             ],
         };
