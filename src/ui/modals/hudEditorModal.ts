@@ -3,6 +3,7 @@
 import { assetUrl } from "../../lib/assetUrl.js";
 import { getPanelContainer } from "../../runtime/editorCanvasRuntime.js";
 import { closeHudEditorBridge, openHudEditorBridge, subscribeHudEditorModalBridge } from "../react/hudEditorModalBridge.js";
+import { createZipBlob, type ZipEntry } from "../../util/zip.js";
 
 type HudChannel = "title" | "subtitle" | "actionbar";
 type HudSourceChannel = HudChannel;
@@ -2144,6 +2145,38 @@ export function downloadHudEditorJsonFile(filename: string, content: string): vo
     link.click();
     URL.revokeObjectURL(url);
     new Notification(`${filename}을 다운로드했습니다.`, 2200, "notif");
+}
+
+export function downloadHudEditorPackageZip(hudJson: string, animatedBarJson: string, uiDefsJson: string, includeProgressFiles: boolean): void {
+    const encoder = new TextEncoder();
+    const entries: ZipEntry[] = [
+        {
+            name: "ui/hud_screen.json",
+            data: encoder.encode(hudJson),
+        },
+    ];
+
+    if (includeProgressFiles) {
+        entries.push(
+            {
+                name: "ui/animated_bar.json",
+                data: encoder.encode(animatedBarJson),
+            },
+            {
+                name: "ui/_ui_defs.json",
+                data: encoder.encode(uiDefsJson),
+            },
+        );
+    }
+
+    const blob = createZipBlob(entries);
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = includeProgressFiles ? "hud_with_progress_bar.zip" : "hud_screen_package.zip";
+    link.click();
+    URL.revokeObjectURL(url);
+    new Notification(includeProgressFiles ? "HUD + Progress Bar 패키지를 다운로드했습니다." : "HUD 패키지를 다운로드했습니다.", 2400, "notif");
 }
 
 export function resetHudEditorState(): void {

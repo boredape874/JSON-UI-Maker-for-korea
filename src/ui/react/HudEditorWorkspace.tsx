@@ -5,6 +5,7 @@ import {
     copyHudEditorText,
     deleteHudEditorProgressBar,
     downloadHudEditorJsonFile,
+    downloadHudEditorPackageZip,
     getHudEditorSnapshot,
     removeHudEditorSliceSlot,
     resetHudEditorState,
@@ -411,9 +412,27 @@ export function HudEditorWorkspace() {
                 <div className="hudEditorJsonCard">
                     <div className="hudEditorSidebarTitle">hud_screen.json</div>
                     <textarea className="hudEditorOutput" spellCheck={false} readOnly value={snapshot.hudJson}></textarea>
+                    {snapshot.hasEnabledProgressBars ? (
+                        <p className="hudEditorOutputHint">
+                            Progress Bar를 같이 쓸 때는 <code>hud_screen.json</code>만이 아니라 <code>animated_bar.json</code>,
+                            <code> _ui_defs.json</code>도 함께 배포해야 합니다.
+                        </p>
+                    ) : null}
                     <div className="hudEditorSidebarActions">
                         <button type="button" className="propertyInputButton" onClick={() => void copyHudEditorText(snapshot.hudJson, "hud_screen.json 복사됨")}>복사</button>
                         <button type="button" className="propertyInputButton" onClick={() => downloadHudEditorJsonFile("hud_screen.json", snapshot.hudJson)}>다운로드</button>
+                        <button
+                            type="button"
+                            className="propertyInputButton"
+                            onClick={() => downloadHudEditorPackageZip(
+                                snapshot.hudJson,
+                                snapshot.animatedBarJson,
+                                snapshot.uiDefsJson,
+                                snapshot.hasEnabledProgressBars,
+                            )}
+                        >
+                            패키지 ZIP
+                        </button>
                     </div>
                 </div>
                 {snapshot.hasEnabledProgressBars ? (

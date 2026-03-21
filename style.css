@@ -679,6 +679,17 @@ input[type="file"] {
     line-height: 1.5;
 }
 
+.hudEditorOutputHint {
+    margin: 0;
+    color: #d8deeb;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.hudEditorOutputHint code {
+    color: #f5f7ff;
+}
+
 .hudEditorInspectorBody {
     display: grid;
     grid-template-columns: 96px minmax(0, 1fr);
