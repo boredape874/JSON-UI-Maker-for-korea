@@ -116,8 +116,13 @@ function fieldRow(label: string, control: ReactNode) {
 }
 
 function previewTextStyle(item: HudEditorPreviewItem) {
+    const leftAligned = item.textAlign === "left";
     return {
         color: item.textColor,
+        textAlign: item.textAlign ?? "center",
+        width: leftAligned ? "100%" : undefined,
+        paddingLeft: leftAligned ? 12 : undefined,
+        paddingRight: leftAligned ? 12 : undefined,
         textShadow: item.shadow ? "0 2px 3px rgba(0,0,0,0.85)" : undefined,
     };
 }

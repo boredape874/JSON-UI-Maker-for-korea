@@ -10,6 +10,7 @@ type HudSourceChannel = HudChannel;
 type HudBackground = "vanilla" | "solid" | "none";
 export type HudFontSize = "small" | "normal" | "large" | "extra_large";
 type HudTextSliceMode = "single" | "slice";
+type HudTitleSliceLayout = "free" | "hud_cards";
 type HudDisplayMode = "text" | "progress";
 type HudClipDirection = "left" | "right" | "up" | "down";
 type HudAnimationPreset = "none" | "fade_out" | "fade_hold_fade";
@@ -62,6 +63,7 @@ export type HudElement = {
     animHoldDuration: number;
     animOutDuration: number;
     titleMode?: HudTextSliceMode;
+    titleSliceLayout?: HudTitleSliceLayout;
     subtitleMode?: HudTextSliceMode;
     sliceSlotCount?: number;
     sliceSlotSize?: number;
@@ -185,6 +187,7 @@ const state: HudEditorState = {
             animHoldDuration: 2,
             animOutDuration: 0.25,
             titleMode: "single",
+            titleSliceLayout: "free",
             sliceSlotCount: 1,
             sliceSlotSize: 20,
             sliceColumns: 2,
@@ -484,7 +487,53 @@ function prefixMatchExpression(source: string, prefix: string): string {
     return `(not ((${source} - ${quoteString(prefix)}) = ${source}))`;
 }
 
+function isTitleHudCardsLayout(element: HudElement): boolean {
+    return element.id === "title"
+        && element.titleMode === "slice"
+        && ((element.titleSliceLayout === "hud_cards") || ((element.sliceSlotCount ?? 1) >= 5));
+}
+
+function getTitleHudCardsSlotLayout(element: HudElement, rawIndex: number): HudSliceSlot {
+    const gapY = element.sliceGapY ?? 8;
+    const stackOffsetX = Math.round((element.width / 2) + 36);
+    const stackOffsetY = Math.round((element.height / 2) - 8);
+    const descriptionOffsetY = Math.round(element.height + gapY + 18);
+
+    if (rawIndex === 0) {
+        return {
+            anchor: element.anchor,
+            x: element.x,
+            y: element.y,
+        };
+    }
+
+    if (rawIndex >= 1 && rawIndex <= 3) {
+        return {
+            anchor: "top_right",
+            x: element.x + stackOffsetX,
+            y: element.y + stackOffsetY + ((rawIndex - 1) * (element.height + gapY)),
+        };
+    }
+
+    if (rawIndex === 4) {
+        return {
+            anchor: "top_middle",
+            x: element.x,
+            y: element.y + descriptionOffsetY,
+        };
+    }
+
+    return {
+        anchor: element.anchor,
+        x: element.x,
+        y: element.y + descriptionOffsetY + ((rawIndex - 4) * (element.height + gapY)),
+    };
+}
+
 function getDefaultSliceSlotLayout(element: HudElement, rawIndex: number): HudSliceSlot {
+    if (isTitleHudCardsLayout(element)) {
+        return getTitleHudCardsSlotLayout(element, rawIndex);
+    }
     const columns = clamp(element.sliceColumns ?? 2, 1, 4);
     const gapX = element.sliceGapX ?? 8;
     const gapY = element.sliceGapY ?? 8;
@@ -913,6 +962,93 @@ function buildSubtitleSlotTemplate(element: HudElement): Record<string, unknown>
 
 function buildTitleSlotTemplate(element: HudElement): Record<string, unknown> {
     return buildSliceSlotTemplate(element, "title_data", "title");
+}
+
+function buildTitleDescriptionSlotTemplate(element: HudElement): Record<string, unknown> {
+    const label: Record<string, unknown> = {
+        type: "label",
+        text: "#text",
+        size: ["default", "default"],
+        anchor_from: "left_middle",
+        anchor_to: "left_middle",
+        offset: [8, 0],
+        color: hexToRgb(element.textColor),
+        shadow: element.shadow,
+        layer: 2,
+        text_alignment: "left",
+        bindings: [
+            {
+                binding_type: "view",
+                source_control_name: "title_data",
+                source_property_name: "$slot_binding",
+                target_property_name: "#text",
+            },
+        ],
+    };
+
+    if (element.fontSize !== "extra_large") {
+        label.font_size = element.fontSize;
+    }
+
+    const template: Record<string, unknown> = withIgnored({
+        type: element.background === "none" ? "panel" : "image",
+        size: getAutoSizedTextContainer(element, 8),
+        layer: element.layer,
+        $slot_binding: "#text5",
+        controls: [
+            {
+                label,
+            },
+        ],
+        bindings: [
+            {
+                binding_type: "view",
+                source_control_name: "title_data",
+                source_property_name: "(not ($slot_binding = ''))",
+                target_property_name: "#visible",
+            },
+        ],
+    }, element.ignored);
+
+    if (element.background !== "none") {
+        template.texture = element.background === "vanilla" ? "textures/ui/hud_tip_text_background" : "textures/ui/white_background";
+        template.alpha = element.backgroundAlpha;
+        if (element.background === "solid") {
+            template.color = hexToRgb(element.backgroundColor);
+        }
+    }
+
+    return template;
+}
+
+function buildTitleCardStack(element: HudElement): Record<string, unknown> {
+    const gapY = Math.max(0, element.sliceGapY ?? 8);
+    const controls: Record<string, unknown>[] = [
+        { "title_stack_slot2@hud.title_slot_template": { $slot_binding: "#text2" } },
+    ];
+
+    if ((element.sliceSlotCount ?? 1) >= 3) {
+        controls.push({ title_stack_gap2: { type: "panel", size: [0, gapY] } });
+        controls.push({ "title_stack_slot3@hud.title_slot_template": { $slot_binding: "#text3" } });
+    }
+    if ((element.sliceSlotCount ?? 1) >= 4) {
+        controls.push({ title_stack_gap3: { type: "panel", size: [0, gapY] } });
+        controls.push({ "title_stack_slot4@hud.title_slot_template": { $slot_binding: "#text4" } });
+    }
+
+    return withIgnored({
+        type: "stack_panel",
+        orientation: "vertical",
+        size: [0, 0],
+        anchor_from: "$anchor",
+        anchor_to: "$anchor",
+        offset: ["$offset_x", "$offset_y"],
+        "$anchor": "top_right",
+        "$offset_x": 0,
+        "$offset_y": 0,
+        layer: element.layer,
+        controls,
+    }, element.ignored);
 }
 
 function buildActionbarControl(element: HudElement): Record<string, unknown> {
@@ -1579,23 +1715,79 @@ function buildHudJson(): string {
 
             json.title_data = buildTitleSliceData(title);
             json.title_slot_template = buildTitleSlotTemplate(title);
+            if (isTitleHudCardsLayout(title) && slotCount >= 5) {
+                json.title_slot5_template = buildTitleDescriptionSlotTemplate(title);
+            }
+            if (isTitleHudCardsLayout(title) && slotCount >= 2) {
+                json.title_stack_container = buildTitleCardStack(title);
+            }
             const titleAnimation = buildAnimationDefinitions("title_slot_template", title);
             if (titleAnimation.entryAnimation) {
                 (json.title_slot_template as Record<string, unknown>).alpha = `@hud.${titleAnimation.entryAnimation}`;
             }
+            if (isTitleHudCardsLayout(title) && slotCount >= 5 && titleAnimation.entryAnimation) {
+                (json.title_slot5_template as Record<string, unknown>).alpha = `@hud.${titleAnimation.entryAnimation}`;
+            }
             Object.assign(json, titleAnimation.definitions);
             rootInsert.push({ "title_data@hud.title_data": {} });
 
-            for (let index = 1; index <= slotCount; index++) {
-                const slotLayout = getSliceSlotLayout(title, index - 1);
+            if (isTitleHudCardsLayout(title)) {
+                const slot1Layout = getSliceSlotLayout(title, 0);
                 rootInsert.push({
-                    [`title_slot${index}@hud.title_slot_template`]: {
-                        $slot_binding: `#text${index}`,
-                        anchor_from: slotLayout.anchor,
-                        anchor_to: slotLayout.anchor,
-                        offset: [slotLayout.x, slotLayout.y],
+                    "title_slot1@hud.title_slot_template": {
+                        $slot_binding: "#text1",
+                        anchor_from: slot1Layout.anchor,
+                        anchor_to: slot1Layout.anchor,
+                        offset: [slot1Layout.x, slot1Layout.y],
                     },
                 });
+
+                if (slotCount >= 2) {
+                    const stackLayout = getSliceSlotLayout(title, 1);
+                    rootInsert.push({
+                        "title_stack@hud.title_stack_container": {
+                            $anchor: stackLayout.anchor,
+                            $offset_x: stackLayout.x,
+                            $offset_y: stackLayout.y,
+                        },
+                    });
+                }
+
+                if (slotCount >= 5) {
+                    const descriptionLayout = getSliceSlotLayout(title, 4);
+                    rootInsert.push({
+                        "title_slot5@hud.title_slot5_template": {
+                            $slot_binding: "#text5",
+                            anchor_from: descriptionLayout.anchor,
+                            anchor_to: descriptionLayout.anchor,
+                            offset: [descriptionLayout.x, descriptionLayout.y],
+                        },
+                    });
+                }
+
+                for (let index = 6; index <= slotCount; index++) {
+                    const slotLayout = getSliceSlotLayout(title, index - 1);
+                    rootInsert.push({
+                        [`title_slot${index}@hud.title_slot_template`]: {
+                            $slot_binding: `#text${index}`,
+                            anchor_from: slotLayout.anchor,
+                            anchor_to: slotLayout.anchor,
+                            offset: [slotLayout.x, slotLayout.y],
+                        },
+                    });
+                }
+            } else {
+                for (let index = 1; index <= slotCount; index++) {
+                    const slotLayout = getSliceSlotLayout(title, index - 1);
+                    rootInsert.push({
+                        [`title_slot${index}@hud.title_slot_template`]: {
+                            $slot_binding: `#text${index}`,
+                            anchor_from: slotLayout.anchor,
+                            anchor_to: slotLayout.anchor,
+                            offset: [slotLayout.x, slotLayout.y],
+                        },
+                    });
+                }
             }
         } else {
             json.title_control = buildTitleControl(title);
@@ -1809,6 +2001,7 @@ export type HudEditorPreviewItem = {
     backgroundColor: string;
     backgroundAlpha: number;
     text: string;
+    textAlign?: "left" | "center" | "right";
     textColor: string;
     shadow: boolean;
     fontSize: HudFontSize;
@@ -1900,6 +2093,7 @@ export function getHudEditorSnapshot(): HudEditorSnapshot {
                     backgroundColor: element.backgroundColor,
                     backgroundAlpha: element.backgroundAlpha,
                     text: slotTexts[rawIndex] || `슬롯 ${rawIndex + 1}`,
+                    textAlign: element.id === "title" && isTitleHudCardsLayout(element) && rawIndex === 4 ? "left" : "center",
                     textColor: element.textColor,
                     shadow: element.shadow,
                     fontSize: element.fontSize,
@@ -1940,6 +2134,7 @@ export function getHudEditorSnapshot(): HudEditorSnapshot {
                 : (element.displayMode === "progress" && element.id !== "actionbar"
                     ? `${progressValues.current} / ${progressValues.max}`
                     : previewElementText(element)),
+            textAlign: "center",
             textColor: element.textColor,
             shadow: element.shadow,
             fontSize: element.fontSize,
@@ -2215,6 +2410,7 @@ export function resetHudEditorState(): void {
         animHoldDuration: 2,
         animOutDuration: 0.25,
         titleMode: "single",
+        titleSliceLayout: "free",
         sliceSlotCount: 1,
         sliceSlotSize: 20,
         sliceColumns: 2,
@@ -2428,7 +2624,7 @@ function previewProgressBarValues(bar: HudProgressBar): { current: number; max: 
 
 function buildSubtitleSliceScriptHelper(element: HudElement): string {
     const slotSize = clamp(element.sliceSlotSize ?? 20, 1, 200);
-                const slotCount = clamp(element.sliceSlotCount ?? 1, 1, 30);
+    const slotCount = clamp(element.sliceSlotCount ?? 1, 1, 30);
     const args = Array.from({ length: slotCount }, (_, index) => `slot${index + 1}`).join(", ");
     const slotArray = Array.from({ length: slotCount }, (_, index) => `slot${index + 1}`).join(", ");
 
@@ -2439,8 +2635,10 @@ function buildSubtitleSliceScriptHelper(element: HudElement): string {
 
 function sendSubtitleSlots(player, ${args}) {
   const data = [${slotArray}].map((slot) => pad(slot, ${slotSize})).join("");
-  player.runCommand('titleraw @s title {"rawtext":[{"text":""}]}');
-  player.runCommand(\`titleraw @s subtitle {"rawtext":[{"text":"\${data}"}]}\`);
+  const clearPayload = JSON.stringify({ rawtext: [{ text: "" }] });
+  const subtitlePayload = JSON.stringify({ rawtext: [{ text: data }] });
+  player.runCommand(\`titleraw @s title \${clearPayload}\`);
+  player.runCommand(\`titleraw @s subtitle \${subtitlePayload}\`);
 }`;
 }
 
@@ -2458,7 +2656,8 @@ function buildTitleSliceScriptHelper(element: HudElement): string {
 
 function sendTitleSlots(player, ${args}) {
   const data = ${prefix} + [${slotArray}].map((slot) => pad(slot, ${slotSize})).join("");
-  player.runCommand(\`titleraw @s title {"rawtext":[{"text":"\${data}"}]}\`);
+  const payload = JSON.stringify({ rawtext: [{ text: data }] });
+  player.runCommand(\`titleraw @s title \${payload}\`);
 }`;
 }
 
@@ -2467,7 +2666,8 @@ function buildProgressBarScriptHelper(bar: HudProgressBar): string {
     const maxExpression = bar.maxMode === "dynamic" ? ",${maxValue}" : "";
     return `function send${bar.id.replace(/[^a-zA-Z0-9]/g, "")}Bar(player, currentValue${fixedTail}) {
   const value = ${quoteString(bar.prefix)} + currentValue${maxExpression};
-  player.runCommand(\`titleraw @s ${bar.sourceChannel} {"rawtext":[{"text":"\${value}"}]}\`);
+  const payload = JSON.stringify({ rawtext: [{ text: value }] });
+  player.runCommand(\`titleraw @s ${bar.sourceChannel} \${payload}\`);
 }`;
 }
 
