@@ -94,7 +94,10 @@ function parseFieldValue(element: HudElement | HudProgressBar, field: string, ev
         return target.value;
     }
 
-    if (["x", "y", "width", "height", "layer", "sliceSlotSize", "sliceColumns", "sliceGapX", "sliceGapY", "maxValue"].includes(field)) {
+    if ([
+        "x", "y", "width", "height", "layer", "sliceSlotSize", "sliceColumns", "sliceGapX", "sliceGapY", "maxValue",
+        "titleSlot1X", "titleSlot1Y", "titleStackX", "titleStackY", "titleStackSpacer", "titleSlot5X", "titleSlot5Y", "titleSlot5TextOffsetX", "titleSlot5TextOffsetY",
+    ].includes(field)) {
         return Number.parseInt(target.value, 10) || 0;
     }
     if (["animInDuration", "animHoldDuration", "animOutDuration"].includes(field)) {
@@ -164,6 +167,7 @@ function CommonInspector({ element }: { element: HudElement | HudProgressBar }) 
                 ))}
                 {fieldRow("배경 알파 (Background Alpha)", <input type="number" min="0" max="1" step="0.05" value={element.backgroundAlpha} onChange={onChange("backgroundAlpha")} />)}
                 {fieldRow("배경 색상", <input type="color" value={element.backgroundColor} onChange={onChange("backgroundColor")} disabled={element.background !== "solid"} />)}
+                {fieldRow("텍스처 경로 (Texture)", <input type="text" value={element.backgroundTexture} onChange={onChange("backgroundTexture")} disabled={element.background === "none" || element.background === "solid"} />)}
             </div>
         </div>
     );
@@ -226,12 +230,56 @@ function ChannelInspector({ element }: { element: HudElement }) {
                             <option value="slice">슬라이싱 (slice)</option>
                         </select>
                     )) : null}
+                    {element.id === "title" && element.titleMode === "slice" ? fieldRow("슬롯 레이아웃 (Title Slice Layout)", (
+                        <select value={element.titleSliceLayout ?? "free"} onChange={onChange("titleSliceLayout")}>
+                            <option value="free">자유 배치 (free)</option>
+                            <option value="hud_cards">카드 레이아웃 (hud_cards)</option>
+                        </select>
+                    )) : null}
                 </div>
             </div>
             {sliceMode ? (
                 <div className="hudEditorInspectorCard">
                     <div className="hudEditorInspectorTitle">슬롯 설정 (Slice Slots)</div>
                     <div className="hudEditorInspectorBody">
+                        {element.id === "title" && element.titleSliceLayout === "hud_cards" ? fieldRow("slot1 Anchor", (
+                            <select value={element.titleSlot1Anchor ?? "right_middle"} onChange={onChange("titleSlot1Anchor")}>
+                                {ANCHORS.map((anchor) => <option key={anchor} value={anchor}>{ANCHOR_LABELS[anchor]} ({anchor})</option>)}
+                            </select>
+                        )) : null}
+                        {element.id === "title" && element.titleSliceLayout === "hud_cards" ? fieldRow("slot1 X", <input type="number" value={element.titleSlot1X ?? 0} onChange={onChange("titleSlot1X")} />) : null}
+                        {element.id === "title" && element.titleSliceLayout === "hud_cards" ? fieldRow("slot1 Y", <input type="number" value={element.titleSlot1Y ?? -25} onChange={onChange("titleSlot1Y")} />) : null}
+                        {element.id === "title" && element.titleSliceLayout === "hud_cards" ? fieldRow("stack Anchor", (
+                            <select value={element.titleStackAnchor ?? "top_right"} onChange={onChange("titleStackAnchor")}>
+                                {ANCHORS.map((anchor) => <option key={anchor} value={anchor}>{ANCHOR_LABELS[anchor]} ({anchor})</option>)}
+                            </select>
+                        )) : null}
+                        {element.id === "title" && element.titleSliceLayout === "hud_cards" ? fieldRow("stack X", <input type="number" value={element.titleStackX ?? -5} onChange={onChange("titleStackX")} />) : null}
+                        {element.id === "title" && element.titleSliceLayout === "hud_cards" ? fieldRow("stack Y", <input type="number" value={element.titleStackY ?? 5} onChange={onChange("titleStackY")} />) : null}
+                        {element.id === "title" && element.titleSliceLayout === "hud_cards" ? fieldRow("stack 방향", (
+                            <select value={element.titleStackOrientation ?? "horizontal"} onChange={onChange("titleStackOrientation")}>
+                                <option value="horizontal">가로 (horizontal)</option>
+                                <option value="vertical">세로 (vertical)</option>
+                            </select>
+                        )) : null}
+                        {element.id === "title" && element.titleSliceLayout === "hud_cards" ? fieldRow("stack 역순", <input type="checkbox" checked={element.titleStackReverse ?? true} onChange={onChange("titleStackReverse")} />) : null}
+                        {element.id === "title" && element.titleSliceLayout === "hud_cards" ? fieldRow("stack 간격", <input type="number" value={element.titleStackSpacer ?? 6} onChange={onChange("titleStackSpacer")} />) : null}
+                        {element.id === "title" && element.titleSliceLayout === "hud_cards" ? fieldRow("slot5 Anchor", (
+                            <select value={element.titleSlot5Anchor ?? "bottom_middle"} onChange={onChange("titleSlot5Anchor")}>
+                                {ANCHORS.map((anchor) => <option key={anchor} value={anchor}>{ANCHOR_LABELS[anchor]} ({anchor})</option>)}
+                            </select>
+                        )) : null}
+                        {element.id === "title" && element.titleSliceLayout === "hud_cards" ? fieldRow("slot5 X", <input type="number" value={element.titleSlot5X ?? 10} onChange={onChange("titleSlot5X")} />) : null}
+                        {element.id === "title" && element.titleSliceLayout === "hud_cards" ? fieldRow("slot5 Y", <input type="number" value={element.titleSlot5Y ?? -50} onChange={onChange("titleSlot5Y")} />) : null}
+                        {element.id === "title" && element.titleSliceLayout === "hud_cards" ? fieldRow("slot5 정렬", (
+                            <select value={element.titleSlot5TextAlign ?? "left"} onChange={onChange("titleSlot5TextAlign")}>
+                                <option value="left">왼쪽 (left)</option>
+                                <option value="center">가운데 (center)</option>
+                                <option value="right">오른쪽 (right)</option>
+                            </select>
+                        )) : null}
+                        {element.id === "title" && element.titleSliceLayout === "hud_cards" ? fieldRow("slot5 텍스트 X", <input type="number" value={element.titleSlot5TextOffsetX ?? 5} onChange={onChange("titleSlot5TextOffsetX")} />) : null}
+                        {element.id === "title" && element.titleSliceLayout === "hud_cards" ? fieldRow("slot5 텍스트 Y", <input type="number" value={element.titleSlot5TextOffsetY ?? 0} onChange={onChange("titleSlot5TextOffsetY")} />) : null}
                         {fieldRow("슬롯 크기", <input type="number" value={element.sliceSlotSize ?? 20} onChange={onChange("sliceSlotSize")} />)}
                         {fieldRow("열 수", <input type="number" value={element.sliceColumns ?? 2} onChange={onChange("sliceColumns")} />)}
                         {fieldRow("가로 간격", <input type="number" value={element.sliceGapX ?? 8} onChange={onChange("sliceGapX")} />)}
