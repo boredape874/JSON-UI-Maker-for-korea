@@ -5,116 +5,364 @@ type ChestTemplate = {
     id: string;
     name: string;
     description: string;
+    width: number;
+    height: number;
 };
 
-type ChestComponent = {
-    id: string;
+type ChestComponentType =
+    | "container_item"
+    | "container_item_picture"
+    | "progress_bar"
+    | "toggle_item"
+    | "disabled_slot"
+    | "container_type"
+    | "image"
+    | "label";
+
+type ChestComponentPreset = {
+    id: ChestComponentType;
     name: string;
     description: string;
+    defaultWidth: number;
+    defaultHeight: number;
+    defaultText?: string;
+};
+
+type ChestEditorNode = {
+    id: string;
+    type: ChestComponentType;
+    name: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    text: string;
+    texture: string;
+    collectionIndex: number;
+    color: string;
 };
 
 const CHEST_TEMPLATES: ChestTemplate[] = [
-    { id: "vanilla_chest", name: "Vanilla Chest", description: "기본 상자 레이아웃 시작점" },
-    { id: "cooking_pot", name: "Cooking Pot", description: "조리형 UI 프리셋" },
-    { id: "crafting_ui", name: "Crafting UI", description: "제작 UI 프리셋" },
-    { id: "altar", name: "Altar", description: "의식/강화형 UI 프리셋" },
+    { id: "vanilla_chest", name: "Vanilla Chest", description: "기본 상자형 배치 시작점", width: 960, height: 540 },
+    { id: "cooking_pot", name: "Cooking Pot", description: "조리 슬롯과 진행 바 위주 레이아웃", width: 960, height: 540 },
+    { id: "crafting_ui", name: "Crafting UI", description: "제작 UI 기반 레이아웃", width: 960, height: 540 },
+    { id: "altar", name: "Altar", description: "의식/강화형 커스텀 레이아웃", width: 960, height: 540 },
 ];
 
-const CHEST_COMPONENTS: ChestComponent[] = [
-    { id: "container_item", name: "Container Item", description: "기본 아이템 슬롯" },
-    { id: "container_item_picture", name: "Container Item + Picture", description: "아이콘 포함 슬롯" },
-    { id: "progress_bar", name: "Progress Bar", description: "clip 기반 진행 바" },
-    { id: "toggle_item", name: "On/Off Item", description: "토글형 요소" },
-    { id: "disabled_slot", name: "Uninteractable Slot", description: "비활성 슬롯" },
-    { id: "container_type", name: "Container Type", description: "컨테이너 타입 표시" },
-    { id: "image", name: "Image", description: "장식 이미지" },
-    { id: "label", name: "Label", description: "텍스트 라벨" },
+const CHEST_COMPONENTS: ChestComponentPreset[] = [
+    { id: "container_item", name: "Container Item", description: "기본 슬롯", defaultWidth: 48, defaultHeight: 48, defaultText: "slot" },
+    { id: "container_item_picture", name: "Container Item + Picture", description: "이미지 포함 슬롯", defaultWidth: 56, defaultHeight: 56, defaultText: "icon_slot" },
+    { id: "progress_bar", name: "Progress Bar", description: "clip 기반 진행 바", defaultWidth: 180, defaultHeight: 18, defaultText: "progress" },
+    { id: "toggle_item", name: "On/Off Item", description: "토글형 항목", defaultWidth: 120, defaultHeight: 32, defaultText: "toggle" },
+    { id: "disabled_slot", name: "Uninteractable Slot", description: "비활성 슬롯", defaultWidth: 48, defaultHeight: 48, defaultText: "disabled" },
+    { id: "container_type", name: "Container Type", description: "컨테이너 타입 표시", defaultWidth: 160, defaultHeight: 30, defaultText: "container_type" },
+    { id: "image", name: "Image", description: "장식 이미지", defaultWidth: 96, defaultHeight: 96, defaultText: "image" },
+    { id: "label", name: "Label", description: "텍스트 라벨", defaultWidth: 180, defaultHeight: 28, defaultText: "label" },
 ];
+
+const GRID_SIZE = 8;
+
+function clamp(value: number, min: number, max: number): number {
+    return Math.min(Math.max(value, min), max);
+}
+
+function snap(value: number): number {
+    return Math.round(value / GRID_SIZE) * GRID_SIZE;
+}
+
+function createNode(preset: ChestComponentPreset, index: number): ChestEditorNode {
+    return {
+        id: `${preset.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        type: preset.id,
+        name: `${preset.name} ${index + 1}`,
+        x: 48 + (index % 4) * 56,
+        y: 64 + Math.floor(index / 4) * 56,
+        width: preset.defaultWidth,
+        height: preset.defaultHeight,
+        text: preset.defaultText ?? preset.name,
+        texture: "",
+        collectionIndex: index,
+        color: "#ffffff",
+    };
+}
+
+function previewNodeStyle(node: ChestEditorNode): React.CSSProperties {
+    if (node.type === "progress_bar") {
+        return {
+            background: "linear-gradient(90deg, rgba(64,150,255,0.9) 0%, rgba(64,150,255,0.9) 62%, rgba(255,255,255,0.14) 62%, rgba(255,255,255,0.14) 100%)",
+            border: "1px solid rgba(255,255,255,0.18)",
+        };
+    }
+    if (node.type === "label" || node.type === "container_type") {
+        return {
+            background: "rgba(10,14,22,0.45)",
+            border: "1px dashed rgba(255,255,255,0.2)",
+            color: node.color,
+        };
+    }
+    if (node.type === "image") {
+        return {
+            background: "linear-gradient(135deg, rgba(255,208,92,0.22), rgba(255,255,255,0.08))",
+            border: "1px solid rgba(255,255,255,0.16)",
+        };
+    }
+    return {
+        background: "linear-gradient(180deg, rgba(93,104,131,0.92), rgba(42,49,67,0.98))",
+        border: "1px solid rgba(255,255,255,0.12)",
+    };
+}
 
 export function ChestUiEditorModal() {
     const [open, setOpen] = useState(false);
-    const [selectedTemplate, setSelectedTemplate] = useState(CHEST_TEMPLATES[0]?.id ?? "");
-    const [selectedComponent, setSelectedComponent] = useState(CHEST_COMPONENTS[0]?.id ?? "");
+    const [selectedTemplateId, setSelectedTemplateId] = useState(CHEST_TEMPLATES[0]?.id ?? "");
+    const [selectedTool, setSelectedTool] = useState<ChestComponentType>(CHEST_COMPONENTS[0]?.id ?? "container_item");
+    const [nodes, setNodes] = useState<ChestEditorNode[]>([]);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [draggingId, setDraggingId] = useState<string | null>(null);
+    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
     useEffect(() => subscribeModalBridge((event) => {
         if (event.type === "open-chest-ui-editor") setOpen(true);
-        if (event.type === "close-chest-ui-editor") setOpen(false);
+        if (event.type === "close-chest-ui-editor") {
+            setOpen(false);
+            setDraggingId(null);
+        }
     }), []);
 
-    const template = useMemo(
-        () => CHEST_TEMPLATES.find((entry) => entry.id === selectedTemplate) ?? CHEST_TEMPLATES[0],
-        [selectedTemplate],
+    const selectedTemplate = useMemo(
+        () => CHEST_TEMPLATES.find((entry) => entry.id === selectedTemplateId) ?? CHEST_TEMPLATES[0],
+        [selectedTemplateId],
     );
-    const component = useMemo(
-        () => CHEST_COMPONENTS.find((entry) => entry.id === selectedComponent) ?? CHEST_COMPONENTS[0],
-        [selectedComponent],
+    const selectedPreset = useMemo(
+        () => CHEST_COMPONENTS.find((entry) => entry.id === selectedTool) ?? CHEST_COMPONENTS[0],
+        [selectedTool],
+    );
+    const selectedNode = useMemo(
+        () => nodes.find((entry) => entry.id === selectedId) ?? null,
+        [nodes, selectedId],
     );
 
+    useEffect(() => {
+        if (!draggingId || !open) return;
+
+        const handleMouseMove = (event: MouseEvent) => {
+            const canvas = document.getElementById("chestUiEditorCanvasInner");
+            if (!canvas) return;
+            const rect = canvas.getBoundingClientRect();
+            const node = nodes.find((entry) => entry.id === draggingId);
+            if (!node) return;
+
+            const nextX = snap(clamp(event.clientX - rect.left - dragOffset.x, 0, selectedTemplate.width - node.width));
+            const nextY = snap(clamp(event.clientY - rect.top - dragOffset.y, 0, selectedTemplate.height - node.height));
+
+            setNodes((prev) => prev.map((entry) => entry.id === draggingId ? { ...entry, x: nextX, y: nextY } : entry));
+        };
+
+        const handleMouseUp = () => setDraggingId(null);
+
+        window.addEventListener("mousemove", handleMouseMove);
+        window.addEventListener("mouseup", handleMouseUp);
+        return () => {
+            window.removeEventListener("mousemove", handleMouseMove);
+            window.removeEventListener("mouseup", handleMouseUp);
+        };
+    }, [draggingId, dragOffset.x, dragOffset.y, nodes, open, selectedTemplate.height, selectedTemplate.width]);
+
+    const addNode = () => {
+        const next = createNode(selectedPreset, nodes.length);
+        setNodes((prev) => [...prev, next]);
+        setSelectedId(next.id);
+    };
+
+    const removeSelected = () => {
+        if (!selectedId) return;
+        setNodes((prev) => prev.filter((entry) => entry.id !== selectedId));
+        setSelectedId(null);
+    };
+
+    const updateSelectedNode = (patch: Partial<ChestEditorNode>) => {
+        if (!selectedId) return;
+        setNodes((prev) => prev.map((entry) => entry.id === selectedId ? { ...entry, ...patch } : entry));
+    };
+
+    const exportJson = useMemo(() => JSON.stringify({
+        namespace: "chest_ui_editor",
+        template: selectedTemplate.id,
+        canvas: {
+            width: selectedTemplate.width,
+            height: selectedTemplate.height,
+            grid: GRID_SIZE,
+        },
+        controls: nodes.map((node) => ({
+            id: node.id,
+            type: node.type,
+            name: node.name,
+            offset: [node.x, node.y],
+            size: [node.width, node.height],
+            text: node.text,
+            texture: node.texture,
+            collection_index: node.collectionIndex,
+            color: node.color,
+        })),
+    }, null, 2), [nodes, selectedTemplate.id, selectedTemplate.width, selectedTemplate.height]);
+
     return (
-        <div
-            id="modalChestUiEditor"
-            className="modal"
-            style={{ display: open ? "block" : "none" }}
-            onClick={(event) => {
-                if (event.target === event.currentTarget) closeChestUiEditorModalBridge();
-            }}
-        >
-            <div className="modal-content chestUiEditorModalContent">
-                <span className="modalClose" style={{ cursor: "pointer" }} onClick={() => closeChestUiEditorModalBridge()}>&times;</span>
-                <h2 className="modalHeader">Chest UI Editor</h2>
-                <div className="chestUiEditorLayout">
-                    <div className="chestUiEditorPanel">
-                        <div className="chestUiEditorSectionTitle">Templates</div>
-                        <select className="modalOptionInput" value={selectedTemplate} onChange={(event) => setSelectedTemplate(event.target.value)}>
+        <div id="chestUiEditorScreen" className="chestUiEditorScreen" style={{ display: open ? "flex" : "none" }}>
+            <div className="chestUiEditorScreenHeader">
+                <div className="chestUiEditorScreenTitle">Chest UI Editor</div>
+                <div className="chestUiEditorScreenActions">
+                    <button type="button" className="propertyInputButton" onClick={addNode}>요소 추가</button>
+                    <button type="button" className="propertyInputButton" onClick={removeSelected} disabled={!selectedId}>선택 삭제</button>
+                    <button type="button" className="propertyInputButton chestUiEditorScreenClose" onClick={() => closeChestUiEditorModalBridge()}>닫기</button>
+                </div>
+            </div>
+
+            <div className="chestUiEditorScreenBody">
+                <div className="chestUiEditorSidebar">
+                    <div className="chestUiEditorCard">
+                        <div className="chestUiEditorSectionTitle">템플릿</div>
+                        <select className="modalOptionInput" value={selectedTemplateId} onChange={(event) => setSelectedTemplateId(event.target.value)}>
                             {CHEST_TEMPLATES.map((entry) => (
                                 <option key={entry.id} value={entry.id}>{entry.name}</option>
                             ))}
                         </select>
-                        <div className="chestUiEditorHint">{template?.description}</div>
+                        <div className="chestUiEditorHint">{selectedTemplate.description}</div>
+                    </div>
 
-                        <div className="chestUiEditorSectionTitle">Components</div>
+                    <div className="chestUiEditorCard">
+                        <div className="chestUiEditorSectionTitle">도구 목록</div>
                         <div className="chestUiEditorList">
                             {CHEST_COMPONENTS.map((entry) => (
                                 <button
                                     key={entry.id}
                                     type="button"
-                                    className={`hudEditorChannelButton${entry.id === selectedComponent ? " hudEditorChannelButtonActive" : ""}`}
-                                    onClick={() => setSelectedComponent(entry.id)}
+                                    className={`hudEditorChannelButton${entry.id === selectedTool ? " hudEditorChannelButtonActive" : ""}`}
+                                    onClick={() => setSelectedTool(entry.id)}
                                 >
                                     {entry.name}
                                 </button>
                             ))}
                         </div>
+                        <div className="chestUiEditorHint">{selectedPreset.description}</div>
                     </div>
 
-                    <div className="chestUiEditorCanvasPanel">
-                        <div className="chestUiEditorSectionTitle">Preview</div>
-                        <div className="chestUiEditorCanvas">
-                            <div className="chestUiEditorCanvasFrame">
-                                <div className="chestUiEditorCanvasGrid"></div>
-                                <div className="chestUiEditorCanvasLabel">{template?.name}</div>
+                    <div className="chestUiEditorCard">
+                        <div className="chestUiEditorSectionTitle">배치된 요소</div>
+                        <div className="chestUiEditorList">
+                            {nodes.map((node) => (
+                                <button
+                                    key={node.id}
+                                    type="button"
+                                    className={`hudEditorChannelButton${node.id === selectedId ? " hudEditorChannelButtonActive" : ""}`}
+                                    onClick={() => setSelectedId(node.id)}
+                                >
+                                    {node.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="chestUiEditorCenter">
+                    <div className="chestUiEditorCanvasWrap">
+                        <div
+                            id="chestUiEditorCanvasInner"
+                            className="chestUiEditorCanvasInner"
+                            style={{ width: selectedTemplate.width, height: selectedTemplate.height }}
+                            onMouseDown={(event) => {
+                                if (event.target === event.currentTarget) {
+                                    setSelectedId(null);
+                                }
+                            }}
+                        >
+                            <div className="chestUiEditorCanvasGrid"></div>
+                            <div className="chestUiEditorCanvasLabel">{selectedTemplate.name}</div>
+                            {nodes.map((node) => (
+                                <div
+                                    key={node.id}
+                                    className={`chestUiEditorNode${node.id === selectedId ? " chestUiEditorNodeSelected" : ""}`}
+                                    style={{
+                                        left: node.x,
+                                        top: node.y,
+                                        width: node.width,
+                                        height: node.height,
+                                        ...previewNodeStyle(node),
+                                    }}
+                                    onMouseDown={(event) => {
+                                        const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
+                                        setSelectedId(node.id);
+                                        setDraggingId(node.id);
+                                        setDragOffset({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+                                        event.stopPropagation();
+                                    }}
+                                >
+                                    <span className="chestUiEditorNodeLabel">{node.text || node.name}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="chestUiEditorJsonCard">
+                        <div className="chestUiEditorSectionTitle">JSON 미리보기</div>
+                        <textarea className="hudEditorOutput" spellCheck={false} readOnly value={exportJson}></textarea>
+                    </div>
+                </div>
+
+                <div className="chestUiEditorInspector">
+                    <div className="chestUiEditorCard">
+                        <div className="chestUiEditorSectionTitle">인스펙터</div>
+                        {selectedNode ? (
+                            <div className="chestUiEditorInspectorBody">
+                                <label>이름</label>
+                                <input value={selectedNode.name} onChange={(event) => updateSelectedNode({ name: event.target.value })} />
+
+                                <label>X</label>
+                                <input
+                                    type="number"
+                                    value={selectedNode.x}
+                                    onChange={(event) => updateSelectedNode({ x: snap(clamp(Number.parseInt(event.target.value, 10) || 0, 0, selectedTemplate.width - selectedNode.width)) })}
+                                />
+
+                                <label>Y</label>
+                                <input
+                                    type="number"
+                                    value={selectedNode.y}
+                                    onChange={(event) => updateSelectedNode({ y: snap(clamp(Number.parseInt(event.target.value, 10) || 0, 0, selectedTemplate.height - selectedNode.height)) })}
+                                />
+
+                                <label>너비</label>
+                                <input
+                                    type="number"
+                                    value={selectedNode.width}
+                                    onChange={(event) => updateSelectedNode({ width: Math.max(8, Number.parseInt(event.target.value, 10) || 8) })}
+                                />
+
+                                <label>높이</label>
+                                <input
+                                    type="number"
+                                    value={selectedNode.height}
+                                    onChange={(event) => updateSelectedNode({ height: Math.max(8, Number.parseInt(event.target.value, 10) || 8) })}
+                                />
+
+                                <label>텍스트</label>
+                                <input value={selectedNode.text} onChange={(event) => updateSelectedNode({ text: event.target.value })} />
+
+                                <label>텍스처 경로</label>
+                                <input value={selectedNode.texture} onChange={(event) => updateSelectedNode({ texture: event.target.value })} />
+
+                                <label>Collection Index</label>
+                                <input
+                                    type="number"
+                                    value={selectedNode.collectionIndex}
+                                    onChange={(event) => updateSelectedNode({ collectionIndex: Number.parseInt(event.target.value, 10) || 0 })}
+                                />
+
+                                <label>색상</label>
+                                <input type="color" value={selectedNode.color} onChange={(event) => updateSelectedNode({ color: event.target.value })} />
                             </div>
-                        </div>
-                        <div className="chestUiEditorHint">
-                            별도 도구 골격까지 먼저 추가한 상태입니다. 다음 단계에서 슬롯 배치, collection index, 이미지/라벨/진행 바 인스펙터와 Chest JSON export를 붙이면 됩니다.
-                        </div>
-                    </div>
-
-                    <div className="chestUiEditorPanel">
-                        <div className="chestUiEditorSectionTitle">Inspector</div>
-                        <div className="chestUiEditorMetaCard">
-                            <div className="chestUiEditorMetaLabel">선택 요소</div>
-                            <div className="chestUiEditorMetaValue">{component?.name}</div>
-                            <div className="chestUiEditorMetaLabel">설명</div>
-                            <div className="chestUiEditorMetaValue">{component?.description}</div>
-                        </div>
-                        <div className="chestUiEditorSectionTitle">Planned</div>
-                        <ul className="chestUiEditorTodo">
-                            <li>그리드 스냅 배치</li>
-                            <li>슬롯/이미지/라벨/진행 바 속성 편집</li>
-                            <li>Chest JSON export</li>
-                            <li>템플릿 프리셋 저장</li>
-                        </ul>
+                        ) : (
+                            <div className="chestUiEditorHint">캔버스에서 요소를 선택하거나 왼쪽 도구로 새 요소를 추가하면 여기서 속성을 수정할 수 있습니다.</div>
+                        )}
                     </div>
                 </div>
             </div>
