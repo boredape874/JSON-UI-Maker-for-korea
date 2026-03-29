@@ -1,14 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { closeChestUiEditorModalBridge, subscribeModalBridge } from "./modalBridge.js";
 
-type ChestTemplate = {
-    id: string;
-    name: string;
-    description: string;
-    width: number;
-    height: number;
-};
-
 type ChestComponentType =
     | "container_item"
     | "container_item_picture"
@@ -18,6 +10,21 @@ type ChestComponentType =
     | "container_type"
     | "image"
     | "label";
+
+type ChestTemplate = {
+    id: string;
+    name: string;
+    description: string;
+    width: number;
+    height: number;
+    previewSkin: "chest" | "stone" | "altar";
+    gridColumns?: number;
+    gridRows?: number;
+    slotSize?: number;
+    slotGap?: number;
+    gridLeft?: number;
+    gridTop?: number;
+};
 
 type ChestComponentPreset = {
     id: ChestComponentType;
@@ -42,16 +49,58 @@ type ChestEditorNode = {
     color: string;
 };
 
+const GRID_SIZE = 8;
+
 const CHEST_TEMPLATES: ChestTemplate[] = [
-    { id: "vanilla_chest", name: "Vanilla Chest", description: "기본 상자형 배치 시작점", width: 960, height: 540 },
-    { id: "cooking_pot", name: "Cooking Pot", description: "조리 슬롯과 진행 바 위주 레이아웃", width: 960, height: 540 },
-    { id: "crafting_ui", name: "Crafting UI", description: "제작 UI 기반 레이아웃", width: 960, height: 540 },
-    { id: "altar", name: "Altar", description: "의식/강화형 커스텀 레이아웃", width: 960, height: 540 },
+    {
+        id: "small_chest",
+        name: "Small Chest 9x3",
+        description: "MCBVanillaResourcePack의 chest_screen.json 기준 9x3 grid 구조",
+        width: 960,
+        height: 540,
+        previewSkin: "chest",
+        gridColumns: 9,
+        gridRows: 3,
+        slotSize: 48,
+        slotGap: 6,
+        gridLeft: 204,
+        gridTop: 170,
+    },
+    {
+        id: "large_chest",
+        name: "Large Chest 9x6",
+        description: "MCBVanillaResourcePack의 chest_screen.json 기준 9x6 grid 구조",
+        width: 960,
+        height: 600,
+        previewSkin: "chest",
+        gridColumns: 9,
+        gridRows: 6,
+        slotSize: 48,
+        slotGap: 6,
+        gridLeft: 204,
+        gridTop: 128,
+    },
+    {
+        id: "cooking_pot",
+        name: "Cooking Pot",
+        description: "조리 슬롯과 진행 바 위주 레이아웃",
+        width: 960,
+        height: 540,
+        previewSkin: "stone",
+    },
+    {
+        id: "altar",
+        name: "Altar",
+        description: "의식/강화형 커스텀 레이아웃",
+        width: 960,
+        height: 540,
+        previewSkin: "altar",
+    },
 ];
 
 const CHEST_COMPONENTS: ChestComponentPreset[] = [
     { id: "container_item", name: "Container Item", description: "기본 슬롯", defaultWidth: 48, defaultHeight: 48, defaultText: "slot" },
-    { id: "container_item_picture", name: "Container Item + Picture", description: "이미지 포함 슬롯", defaultWidth: 56, defaultHeight: 56, defaultText: "icon_slot" },
+    { id: "container_item_picture", name: "Container Item + Picture", description: "아이콘 포함 슬롯", defaultWidth: 56, defaultHeight: 56, defaultText: "icon_slot" },
     { id: "progress_bar", name: "Progress Bar", description: "clip 기반 진행 바", defaultWidth: 180, defaultHeight: 18, defaultText: "progress" },
     { id: "toggle_item", name: "On/Off Item", description: "토글형 항목", defaultWidth: 120, defaultHeight: 32, defaultText: "toggle" },
     { id: "disabled_slot", name: "Uninteractable Slot", description: "비활성 슬롯", defaultWidth: 48, defaultHeight: 48, defaultText: "disabled" },
@@ -59,8 +108,6 @@ const CHEST_COMPONENTS: ChestComponentPreset[] = [
     { id: "image", name: "Image", description: "장식 이미지", defaultWidth: 96, defaultHeight: 96, defaultText: "image" },
     { id: "label", name: "Label", description: "텍스트 라벨", defaultWidth: 180, defaultHeight: 28, defaultText: "label" },
 ];
-
-const GRID_SIZE = 8;
 
 function clamp(value: number, min: number, max: number): number {
     return Math.min(Math.max(value, min), max);
@@ -86,10 +133,42 @@ function createNode(preset: ChestComponentPreset, index: number): ChestEditorNod
     };
 }
 
+function createGridNodes(template: ChestTemplate): ChestEditorNode[] {
+    if (!template.gridColumns || !template.gridRows || !template.slotSize) {
+        return [];
+    }
+
+    const gap = template.slotGap ?? 0;
+    const left = template.gridLeft ?? 0;
+    const top = template.gridTop ?? 0;
+    const total = template.gridColumns * template.gridRows;
+    const nodes: ChestEditorNode[] = [];
+
+    for (let index = 0; index < total; index++) {
+        const column = index % template.gridColumns;
+        const row = Math.floor(index / template.gridColumns);
+        nodes.push({
+            id: `grid_slot_${template.id}_${index}`,
+            type: "container_item",
+            name: `Container Item ${index}`,
+            x: left + column * (template.slotSize + gap),
+            y: top + row * (template.slotSize + gap),
+            width: template.slotSize,
+            height: template.slotSize,
+            text: "",
+            texture: "",
+            collectionIndex: index,
+            color: "#ffffff",
+        });
+    }
+
+    return nodes;
+}
+
 function previewNodeStyle(node: ChestEditorNode): React.CSSProperties {
     if (node.type === "progress_bar") {
         return {
-            background: "linear-gradient(90deg, rgba(64,150,255,0.9) 0%, rgba(64,150,255,0.9) 62%, rgba(255,255,255,0.14) 62%, rgba(255,255,255,0.14) 100%)",
+            background: "linear-gradient(90deg, rgba(82,186,255,0.95) 0%, rgba(82,186,255,0.95) 62%, rgba(255,255,255,0.14) 62%, rgba(255,255,255,0.14) 100%)",
             border: "1px solid rgba(255,255,255,0.18)",
         };
     }
@@ -106,8 +185,14 @@ function previewNodeStyle(node: ChestEditorNode): React.CSSProperties {
             border: "1px solid rgba(255,255,255,0.16)",
         };
     }
+    if (node.type === "disabled_slot") {
+        return {
+            background: "linear-gradient(180deg, rgba(66,66,66,0.92), rgba(32,32,32,0.98))",
+            border: "1px solid rgba(255,255,255,0.08)",
+        };
+    }
     return {
-        background: "linear-gradient(180deg, rgba(93,104,131,0.92), rgba(42,49,67,0.98))",
+        background: "linear-gradient(180deg, rgba(141,116,76,0.96), rgba(79,59,34,0.98))",
         border: "1px solid rgba(255,255,255,0.12)",
     };
 }
@@ -120,6 +205,7 @@ export function ChestUiEditorModal() {
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [draggingId, setDraggingId] = useState<string | null>(null);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    const [backgroundTexturePath, setBackgroundTexturePath] = useState("textures/ui/White");
 
     useEffect(() => subscribeModalBridge((event) => {
         if (event.type === "open-chest-ui-editor") setOpen(true);
@@ -174,6 +260,17 @@ export function ChestUiEditorModal() {
         setSelectedId(next.id);
     };
 
+    const generateTemplateGrid = () => {
+        const nextNodes = createGridNodes(selectedTemplate);
+        setNodes(nextNodes);
+        setSelectedId(nextNodes[0]?.id ?? null);
+    };
+
+    const clearCanvas = () => {
+        setNodes([]);
+        setSelectedId(null);
+    };
+
     const removeSelected = () => {
         if (!selectedId) return;
         setNodes((prev) => prev.filter((entry) => entry.id !== selectedId));
@@ -185,26 +282,42 @@ export function ChestUiEditorModal() {
         setNodes((prev) => prev.map((entry) => entry.id === selectedId ? { ...entry, ...patch } : entry));
     };
 
-    const exportJson = useMemo(() => JSON.stringify({
-        namespace: "chest_ui_editor",
-        template: selectedTemplate.id,
-        canvas: {
-            width: selectedTemplate.width,
-            height: selectedTemplate.height,
-            grid: GRID_SIZE,
-        },
-        controls: nodes.map((node) => ({
-            id: node.id,
-            type: node.type,
-            name: node.name,
-            offset: [node.x, node.y],
-            size: [node.width, node.height],
-            text: node.text,
-            texture: node.texture,
-            collection_index: node.collectionIndex,
-            color: node.color,
-        })),
-    }, null, 2), [nodes, selectedTemplate.id, selectedTemplate.width, selectedTemplate.height]);
+    const exportJson = useMemo(() => {
+        const chestGrid = selectedTemplate.gridColumns && selectedTemplate.gridRows ? {
+            type: "grid",
+            collection_name: "container_items",
+            grid_item_template: "common.container_item",
+            grid_dimensions: [selectedTemplate.gridColumns, selectedTemplate.gridRows],
+            maximum_grid_items: selectedTemplate.gridColumns * selectedTemplate.gridRows,
+            size: [
+                (selectedTemplate.gridColumns * 18),
+                (selectedTemplate.gridRows * 18),
+            ],
+        } : null;
+
+        return JSON.stringify({
+            namespace: "chest",
+            source_reference: "MCBVanillaResourcePack/ui/chest_screen.json",
+            screen: {
+                template: selectedTemplate.id,
+                background_texture_hint: backgroundTexturePath,
+                controls: [
+                    ...(chestGrid ? [{ chest_grid: chestGrid }] : []),
+                    ...nodes.map((node) => ({
+                        id: node.id,
+                        type: node.type,
+                        name: node.name,
+                        offset: [node.x, node.y],
+                        size: [node.width, node.height],
+                        text: node.text,
+                        texture: node.texture,
+                        collection_index: node.collectionIndex,
+                        color: node.color,
+                    })),
+                ],
+            },
+        }, null, 2);
+    }, [backgroundTexturePath, nodes, selectedTemplate]);
 
     return (
         <div id="chestUiEditorScreen" className="chestUiEditorScreen" style={{ display: open ? "flex" : "none" }}>
@@ -212,6 +325,8 @@ export function ChestUiEditorModal() {
                 <div className="chestUiEditorScreenTitle">Chest UI Editor</div>
                 <div className="chestUiEditorScreenActions">
                     <button type="button" className="propertyInputButton" onClick={addNode}>요소 추가</button>
+                    <button type="button" className="propertyInputButton" onClick={generateTemplateGrid} disabled={!selectedTemplate.gridColumns}>그리드 슬롯 생성</button>
+                    <button type="button" className="propertyInputButton" onClick={clearCanvas}>전체 초기화</button>
                     <button type="button" className="propertyInputButton" onClick={removeSelected} disabled={!selectedId}>선택 삭제</button>
                     <button type="button" className="propertyInputButton chestUiEditorScreenClose" onClick={() => closeChestUiEditorModalBridge()}>닫기</button>
                 </div>
@@ -227,6 +342,19 @@ export function ChestUiEditorModal() {
                             ))}
                         </select>
                         <div className="chestUiEditorHint">{selectedTemplate.description}</div>
+                        {selectedTemplate.gridColumns ? (
+                            <div className="chestUiEditorHint">
+                                grid_dimensions: [{selectedTemplate.gridColumns}, {selectedTemplate.gridRows}] / collection_name: container_items / grid_item_template: common.container_item
+                            </div>
+                        ) : null}
+                    </div>
+
+                    <div className="chestUiEditorCard">
+                        <div className="chestUiEditorSectionTitle">배경 참고 경로</div>
+                        <input value={backgroundTexturePath} onChange={(event) => setBackgroundTexturePath(event.target.value)} />
+                        <div className="chestUiEditorHint">
+                            참고 기준: inventory_screen.json의 textures/ui/White, TabTopBackLeftMost 계열
+                        </div>
                     </div>
 
                     <div className="chestUiEditorCard">
@@ -267,7 +395,7 @@ export function ChestUiEditorModal() {
                     <div className="chestUiEditorCanvasWrap">
                         <div
                             id="chestUiEditorCanvasInner"
-                            className="chestUiEditorCanvasInner"
+                            className={`chestUiEditorCanvasInner chestUiEditorCanvasSkin-${selectedTemplate.previewSkin}`}
                             style={{ width: selectedTemplate.width, height: selectedTemplate.height }}
                             onMouseDown={(event) => {
                                 if (event.target === event.currentTarget) {
@@ -275,6 +403,8 @@ export function ChestUiEditorModal() {
                                 }
                             }}
                         >
+                            <div className="chestUiEditorCanvasTopBar"></div>
+                            <div className="chestUiEditorCanvasPanelInset"></div>
                             <div className="chestUiEditorCanvasGrid"></div>
                             <div className="chestUiEditorCanvasLabel">{selectedTemplate.name}</div>
                             {nodes.map((node) => (
