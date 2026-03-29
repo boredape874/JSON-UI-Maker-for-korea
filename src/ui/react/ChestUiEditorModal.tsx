@@ -18,6 +18,9 @@ type ChestTemplate = {
     width: number;
     height: number;
     previewSkin: "chest" | "stone" | "altar";
+    previewBackgroundTexturePath: string;
+    previewBackgroundImageUrl?: string;
+    previewSlotImageUrl?: string;
     gridColumns?: number;
     gridRows?: number;
     slotSize?: number;
@@ -59,6 +62,9 @@ const CHEST_TEMPLATES: ChestTemplate[] = [
         width: 960,
         height: 540,
         previewSkin: "chest",
+        previewBackgroundTexturePath: "textures/ui/inventory_desktop",
+        previewBackgroundImageUrl: "https://raw.githubusercontent.com/ZtechNetwork/MCBVanillaResourcePack/master/textures/ui/inventory_desktop.png",
+        previewSlotImageUrl: "https://raw.githubusercontent.com/ZtechNetwork/MCBVanillaResourcePack/master/textures/ui/highlight_slot.png",
         gridColumns: 9,
         gridRows: 3,
         slotSize: 48,
@@ -73,6 +79,9 @@ const CHEST_TEMPLATES: ChestTemplate[] = [
         width: 960,
         height: 600,
         previewSkin: "chest",
+        previewBackgroundTexturePath: "textures/ui/inventory_desktop",
+        previewBackgroundImageUrl: "https://raw.githubusercontent.com/ZtechNetwork/MCBVanillaResourcePack/master/textures/ui/inventory_desktop.png",
+        previewSlotImageUrl: "https://raw.githubusercontent.com/ZtechNetwork/MCBVanillaResourcePack/master/textures/ui/highlight_slot.png",
         gridColumns: 9,
         gridRows: 6,
         slotSize: 48,
@@ -87,6 +96,9 @@ const CHEST_TEMPLATES: ChestTemplate[] = [
         width: 960,
         height: 540,
         previewSkin: "stone",
+        previewBackgroundTexturePath: "textures/ui/background_panel",
+        previewBackgroundImageUrl: "https://raw.githubusercontent.com/ZtechNetwork/MCBVanillaResourcePack/master/textures/ui/background_panel.png",
+        previewSlotImageUrl: "https://raw.githubusercontent.com/ZtechNetwork/MCBVanillaResourcePack/master/textures/ui/control_white.png",
     },
     {
         id: "altar",
@@ -95,6 +107,9 @@ const CHEST_TEMPLATES: ChestTemplate[] = [
         width: 960,
         height: 540,
         previewSkin: "altar",
+        previewBackgroundTexturePath: "textures/ui/background_panel",
+        previewBackgroundImageUrl: "https://raw.githubusercontent.com/ZtechNetwork/MCBVanillaResourcePack/master/textures/ui/background_panel.png",
+        previewSlotImageUrl: "https://raw.githubusercontent.com/ZtechNetwork/MCBVanillaResourcePack/master/textures/ui/focus_border_white.png",
     },
 ];
 
@@ -197,6 +212,20 @@ function previewNodeStyle(node: ChestEditorNode): React.CSSProperties {
     };
 }
 
+function previewNodeTextureStyle(node: ChestEditorNode, template: ChestTemplate): React.CSSProperties {
+    const textureUrl = node.texture || template.previewSlotImageUrl;
+    if (!textureUrl || (node.type !== "container_item" && node.type !== "container_item_picture" && node.type !== "disabled_slot")) {
+        return {};
+    }
+
+    return {
+        backgroundImage: `url("${textureUrl}")`,
+        backgroundSize: "100% 100%",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center",
+    };
+}
+
 export function ChestUiEditorModal() {
     const [open, setOpen] = useState(false);
     const [selectedTemplateId, setSelectedTemplateId] = useState(CHEST_TEMPLATES[0]?.id ?? "");
@@ -205,7 +234,7 @@ export function ChestUiEditorModal() {
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [draggingId, setDraggingId] = useState<string | null>(null);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-    const [backgroundTexturePath, setBackgroundTexturePath] = useState("textures/ui/White");
+    const [backgroundTexturePath, setBackgroundTexturePath] = useState(CHEST_TEMPLATES[0]?.previewBackgroundTexturePath ?? "textures/ui/inventory_desktop");
 
     useEffect(() => subscribeModalBridge((event) => {
         if (event.type === "open-chest-ui-editor") setOpen(true);
@@ -227,6 +256,10 @@ export function ChestUiEditorModal() {
         () => nodes.find((entry) => entry.id === selectedId) ?? null,
         [nodes, selectedId],
     );
+
+    useEffect(() => {
+        setBackgroundTexturePath(selectedTemplate.previewBackgroundTexturePath);
+    }, [selectedTemplate.previewBackgroundTexturePath]);
 
     useEffect(() => {
         if (!draggingId || !open) return;
@@ -355,6 +388,11 @@ export function ChestUiEditorModal() {
                         <div className="chestUiEditorHint">
                             참고 기준: inventory_screen.json의 textures/ui/White, TabTopBackLeftMost 계열
                         </div>
+                        {selectedTemplate.previewBackgroundImageUrl ? (
+                            <div className="chestUiEditorHint">
+                                프리뷰 이미지: {selectedTemplate.previewBackgroundTexturePath}
+                            </div>
+                        ) : null}
                     </div>
 
                     <div className="chestUiEditorCard">
@@ -403,6 +441,13 @@ export function ChestUiEditorModal() {
                                 }
                             }}
                         >
+                            {selectedTemplate.previewBackgroundImageUrl ? (
+                                <img
+                                    className="chestUiEditorCanvasBgImage"
+                                    src={selectedTemplate.previewBackgroundImageUrl}
+                                    alt={selectedTemplate.name}
+                                />
+                            ) : null}
                             <div className="chestUiEditorCanvasTopBar"></div>
                             <div className="chestUiEditorCanvasPanelInset"></div>
                             <div className="chestUiEditorCanvasGrid"></div>
@@ -417,6 +462,7 @@ export function ChestUiEditorModal() {
                                         width: node.width,
                                         height: node.height,
                                         ...previewNodeStyle(node),
+                                        ...previewNodeTextureStyle(node, selectedTemplate),
                                     }}
                                     onMouseDown={(event) => {
                                         const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
