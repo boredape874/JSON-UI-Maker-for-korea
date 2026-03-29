@@ -16,9 +16,15 @@ export function ChestUiEditorModal() {
     return (
         <div id="chestUiEditorScreen" className="chestUiEditorScreen" style={{ display: open ? "flex" : "none" }}>
             <div className="chestUiEditorScreenHeader">
-                <div className="chestUiEditorScreenTitle">Chest UI Editor</div>
+                <div className="chestUiEditorScreenTitle">Chest UI Editor (New Beta)</div>
                 <div className="chestUiEditorScreenActions">
-                    <button type="button" className="propertyInputButton" onClick={() => setReloadKey((value) => value + 1)}>새로고침</button>
+                    <button
+                        type="button"
+                        className="propertyInputButton"
+                        onClick={() => setReloadKey((value) => value + 1)}
+                    >
+                        새로고침
+                    </button>
                     <a
                         className="propertyInputButton chestUiEditorExternalLink"
                         href={iframeSrc}
@@ -27,7 +33,13 @@ export function ChestUiEditorModal() {
                     >
                         새 탭 열기
                     </a>
-                    <button type="button" className="propertyInputButton chestUiEditorScreenClose" onClick={() => closeChestUiEditorModalBridge()}>닫기</button>
+                    <button
+                        type="button"
+                        className="propertyInputButton chestUiEditorScreenClose"
+                        onClick={() => closeChestUiEditorModalBridge()}
+                    >
+                        닫기
+                    </button>
                 </div>
             </div>
 
@@ -36,7 +48,7 @@ export function ChestUiEditorModal() {
                     key={reloadKey}
                     className="chestUiEditorIframe"
                     src={iframeSrc}
-                    title="Chest UI Editor"
+                    title="Chest UI Editor (New Beta)"
                 />
             </div>
         </div>
