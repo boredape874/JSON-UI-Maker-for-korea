@@ -1,13 +1,16 @@
 ﻿import { ChangeEvent, ReactNode, useEffect, useState } from "react";
 import {
+    addHudEditorTitleGroup,
     addHudEditorProgressBar,
     addHudEditorSliceSlot,
     copyHudEditorText,
     deleteHudEditorProgressBar,
     downloadHudEditorJsonFile,
     downloadHudEditorPackageZip,
+    getHudEditorTitleGroups,
     getHudEditorSnapshot,
     removeHudEditorSliceSlot,
+    removeHudEditorTitleGroup,
     resetHudEditorState,
     selectHudEditorItem,
     setHudEditorAutoFitPreview,
@@ -16,6 +19,7 @@ import {
     subscribeHudEditorStore,
     toggleHudEditorAutoAnchorSnap,
     toggleHudEditorGuides,
+    updateHudEditorTitleGroup,
     updateHudEditorSliceSlot,
     updateSelectedHudEditorField,
     type HudAnchor,
@@ -23,6 +27,7 @@ import {
     type HudElement,
     type HudFontSize,
     type HudProgressBar,
+    type HudTitleSliceGroup,
 } from "../modals/hudEditorModal.js";
 
 const PREVIEW_WIDTH = 1500;
@@ -77,7 +82,7 @@ function isSliceChannel(element: HudElement | HudProgressBar): element is HudEle
             || (element.id === "subtitle" && element.subtitleMode === "slice"));
 }
 
-function parseFieldValue(element: HudElement | HudProgressBar, field: string, event: ChangeEvent<HTMLInputElement | HTMLSelectElement>): string | number | boolean {
+function parseFieldValue(element: HudElement | HudProgressBar, field: string, event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>): string | number | boolean {
     const target = event.target;
     if (target instanceof HTMLInputElement && target.type === "checkbox") {
         return target.checked;
@@ -107,6 +112,15 @@ function parseFieldValue(element: HudElement | HudProgressBar, field: string, ev
         return Math.min(Math.max(Number.parseFloat(target.value) || 0, 0), 1);
     }
     return target.value;
+}
+
+function GroupFieldRow(label: string, control: ReactNode) {
+    return (
+        <>
+            <label>{label}</label>
+            {control}
+        </>
+    );
 }
 
 function fieldRow(label: string, control: ReactNode) {
@@ -182,6 +196,7 @@ function ChannelInspector({ element }: { element: HudElement }) {
     const useTitleSlot1Template = element.id === "title" && ((element.titleUseSlot1Template ?? false) || element.titleSliceLayout === "hud_cards");
     const useTitleMiddleStack = element.id === "title" && ((element.titleUseStackForMiddleSlots ?? false) || element.titleSliceLayout === "hud_cards");
     const useTitleSlot5Template = element.id === "title" && ((element.titleUseSlot5Template ?? false) || element.titleSliceLayout === "hud_cards");
+    const titleGroups = element.id === "title" ? getHudEditorTitleGroups() : [];
 
     return (
         <>
@@ -243,9 +258,22 @@ function ChannelInspector({ element }: { element: HudElement }) {
                     {element.id === "title" && element.titleMode === "slice" ? fieldRow("slot2~4 Stack Panel", <input type="checkbox" checked={element.titleUseStackForMiddleSlots ?? false} onChange={onChange("titleUseStackForMiddleSlots")} />) : null}
                     {element.id === "title" && element.titleMode === "slice" ? fieldRow("slot5 Template", <input type="checkbox" checked={element.titleUseSlot5Template ?? false} onChange={onChange("titleUseSlot5Template")} />) : null}
                     {element.id === "title" && element.titleMode === "slice" ? fieldRow("고급 그룹 커스텀", <input type="checkbox" checked={element.titleCustomGroupsEnabled ?? false} onChange={onChange("titleCustomGroupsEnabled")} />) : null}
-                    {element.id === "title" && element.titleMode === "slice" && (element.titleCustomGroupsEnabled ?? false) ? fieldRow("그룹 JSON", <textarea value={element.titleCustomGroupsText ?? ""} onChange={onChange("titleCustomGroupsText")} rows={10} placeholder={`[\n  {\"id\":\"left_bar\",\"start\":1,\"end\":3,\"mode\":\"stack\",\"anchor\":\"top_right\",\"x\":-5,\"y\":5,\"orientation\":\"horizontal\",\"reverse\":true,\"spacer\":6},\n  {\"id\":\"info_line\",\"start\":5,\"end\":5,\"mode\":\"description\",\"anchor\":\"bottom_middle\",\"x\":10,\"y\":-50,\"textAlign\":\"left\",\"textOffsetX\":5,\"textOffsetY\":0},\n  {\"id\":\"money\",\"start\":11,\"end\":11,\"mode\":\"single_template\",\"anchor\":\"right_middle\",\"x\":0,\"y\":-25}\n]`} />) : null}
                 </div>
             </div>
+            {element.id === "title" && element.titleMode === "slice" && (element.titleCustomGroupsEnabled ?? false) ? (
+                <div className="hudEditorInspectorCard">
+                    <div className="hudEditorInspectorTitle">타이틀 그룹 (Custom Groups)</div>
+                    <div className="hudEditorInspectorBody">
+                        <div>범위별로 `single`, `single_template`, `stack`, `description`을 지정합니다.</div>
+                        <div className="hudEditorSidebarActions">
+                            <button type="button" className="propertyInputButton" onClick={() => addHudEditorTitleGroup()}>그룹 추가</button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+            {element.id === "title" && element.titleMode === "slice" && (element.titleCustomGroupsEnabled ?? false)
+                ? titleGroups.map((group) => <TitleGroupEditor key={group.id} group={group} />)
+                : null}
             {sliceMode ? (
                 <div className="hudEditorInspectorCard">
                     <div className="hudEditorInspectorTitle">슬롯 설정 (Slice Slots)</div>
@@ -311,6 +339,62 @@ function ChannelInspector({ element }: { element: HudElement }) {
                 </div>
             ) : null}
         </>
+    );
+}
+
+function TitleGroupEditor({ group }: { group: HudTitleSliceGroup }) {
+    const onChange = (field: keyof HudTitleSliceGroup) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const target = event.target;
+        const value = target instanceof HTMLInputElement && target.type === "checkbox"
+            ? target.checked
+            : target.value;
+        updateHudEditorTitleGroup(group.id, field, value);
+    };
+
+    return (
+        <div className="hudEditorInspectorCard">
+            <div className="hudEditorInspectorTitle">{group.id}</div>
+            <div className="hudEditorInspectorBody">
+                {GroupFieldRow("ID", <input type="text" value={group.id} onChange={onChange("id")} />)}
+                {GroupFieldRow("시작 슬롯", <input type="number" min={1} max={100} value={group.start} onChange={onChange("start")} />)}
+                {GroupFieldRow("끝 슬롯", <input type="number" min={group.start} max={100} value={group.end} onChange={onChange("end")} />)}
+                {GroupFieldRow("모드", (
+                    <select value={group.mode} onChange={onChange("mode")}>
+                        <option value="single">single</option>
+                        <option value="single_template">single_template</option>
+                        <option value="stack">stack</option>
+                        <option value="description">description</option>
+                    </select>
+                ))}
+                {GroupFieldRow("앵커 (Anchor)", (
+                    <select value={group.anchor} onChange={onChange("anchor")}>
+                        {ANCHORS.map((anchor) => <option key={anchor} value={anchor}>{ANCHOR_LABELS[anchor]} ({anchor})</option>)}
+                    </select>
+                ))}
+                {GroupFieldRow("X", <input type="number" value={group.x} onChange={onChange("x")} />)}
+                {GroupFieldRow("Y", <input type="number" value={group.y} onChange={onChange("y")} />)}
+                {group.mode === "stack" ? GroupFieldRow("방향", (
+                    <select value={group.orientation} onChange={onChange("orientation")}>
+                        <option value="horizontal">horizontal</option>
+                        <option value="vertical">vertical</option>
+                    </select>
+                )) : null}
+                {group.mode === "stack" ? GroupFieldRow("역순", <input type="checkbox" checked={group.reverse} onChange={onChange("reverse")} />) : null}
+                {group.mode === "stack" ? GroupFieldRow("간격", <input type="number" min={0} value={group.spacer} onChange={onChange("spacer")} />) : null}
+                {group.mode === "description" ? GroupFieldRow("정렬", (
+                    <select value={group.textAlign} onChange={onChange("textAlign")}>
+                        <option value="left">left</option>
+                        <option value="center">center</option>
+                        <option value="right">right</option>
+                    </select>
+                )) : null}
+                {group.mode === "description" ? GroupFieldRow("텍스트 X", <input type="number" value={group.textOffsetX} onChange={onChange("textOffsetX")} />) : null}
+                {group.mode === "description" ? GroupFieldRow("텍스트 Y", <input type="number" value={group.textOffsetY} onChange={onChange("textOffsetY")} />) : null}
+                <div className="hudEditorSidebarActions">
+                    <button type="button" className="propertyInputButton" onClick={() => removeHudEditorTitleGroup(group.id)}>그룹 삭제</button>
+                </div>
+            </div>
+        </div>
     );
 }
 

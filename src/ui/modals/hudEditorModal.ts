@@ -24,7 +24,7 @@ type HudSliceSlot = {
     x: number;
     y: number;
 };
-type HudTitleSliceGroup = {
+export type HudTitleSliceGroup = {
     id: string;
     start: number;
     end: number;
@@ -624,6 +624,28 @@ function getTitleCustomGroups(element: HudElement): HudTitleSliceGroup[] {
 function findTitleCustomGroupForSlot(element: HudElement, rawIndex: number): HudTitleSliceGroup | null {
     const slotNumber = rawIndex + 1;
     return getTitleCustomGroups(element).find((group) => slotNumber >= group.start && slotNumber <= group.end) ?? null;
+}
+
+function setTitleCustomGroups(element: HudElement, groups: HudTitleSliceGroup[]): void {
+    element.titleCustomGroupsText = JSON.stringify(groups, null, 2);
+}
+
+function createDefaultTitleGroup(index: number): HudTitleSliceGroup {
+    return {
+        id: `group_${index}`,
+        start: 1,
+        end: 1,
+        mode: "single",
+        anchor: "center",
+        x: 0,
+        y: 0,
+        orientation: "horizontal",
+        reverse: true,
+        spacer: 6,
+        textAlign: "left",
+        textOffsetX: 5,
+        textOffsetY: 0,
+    };
 }
 
 function usesTitleSlot1Template(element: HudElement): boolean {
@@ -2624,6 +2646,58 @@ export function deleteHudEditorProgressBar(id: string): void {
 
 export function updateSelectedHudEditorField(field: string, value: string | number | boolean): void {
     setSelectedElementValue(field, value);
+    notifyHudEditorStore();
+}
+
+export function getHudEditorTitleGroups(): HudTitleSliceGroup[] {
+    return getTitleCustomGroups(state.elements.title);
+}
+
+export function addHudEditorTitleGroup(): void {
+    const title = state.elements.title;
+    const groups = getTitleCustomGroups(title);
+    groups.push(createDefaultTitleGroup(groups.length + 1));
+    title.titleCustomGroupsEnabled = true;
+    setTitleCustomGroups(title, groups);
+    notifyHudEditorStore();
+}
+
+export function updateHudEditorTitleGroup(groupId: string, field: keyof HudTitleSliceGroup, value: string | number | boolean): void {
+    const title = state.elements.title;
+    const groups = getTitleCustomGroups(title);
+    const group = groups.find((entry) => entry.id === groupId);
+    if (!group) {
+        return;
+    }
+
+    if (field === "id") {
+        group.id = sanitizeTitleGroupId(String(value));
+    } else if (field === "start" || field === "end" || field === "x" || field === "y" || field === "spacer" || field === "textOffsetX" || field === "textOffsetY") {
+        (group as Record<string, unknown>)[field] = Number.parseInt(String(value), 10) || 0;
+    } else if (field === "reverse") {
+        group.reverse = Boolean(value);
+    } else if (field === "anchor" && HUD_ANCHORS.includes(value as HudAnchor)) {
+        group.anchor = value as HudAnchor;
+    } else if (field === "orientation" && (value === "horizontal" || value === "vertical")) {
+        group.orientation = value;
+    } else if (field === "mode" && (value === "single" || value === "single_template" || value === "stack" || value === "description")) {
+        group.mode = value;
+    } else if (field === "textAlign" && (value === "left" || value === "center" || value === "right")) {
+        group.textAlign = value;
+    }
+
+    group.start = clamp(group.start, 1, MAX_SLICE_SLOTS);
+    group.end = clamp(group.end, group.start, MAX_SLICE_SLOTS);
+    group.spacer = Math.max(0, group.spacer);
+
+    setTitleCustomGroups(title, groups);
+    notifyHudEditorStore();
+}
+
+export function removeHudEditorTitleGroup(groupId: string): void {
+    const title = state.elements.title;
+    const groups = getTitleCustomGroups(title).filter((entry) => entry.id !== groupId);
+    setTitleCustomGroups(title, groups);
     notifyHudEditorStore();
 }
 
