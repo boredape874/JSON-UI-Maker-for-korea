@@ -6,6 +6,7 @@ type BuilderApi = {
     importUiWorkspace?: () => void;
     openPasteFormModal?: () => void;
     openHudEditorModal?: () => void;
+    openChestUiEditorModal?: () => void;
     openGlyphEditorModal?: () => void;
     openAuthModal?: (signup?: boolean) => void;
     logout?: () => void;
@@ -60,6 +61,7 @@ export const builderActions = {
     importUiWorkspace: () => call("importUiWorkspace"),
     openPasteFormModal: () => call("openPasteFormModal"),
     openHudEditorModal: () => call("openHudEditorModal"),
+    openChestUiEditorModal: () => call("openChestUiEditorModal"),
     openGlyphEditorModal: () => call("openGlyphEditorModal"),
     openAuthModal: (signup = false) => call("openAuthModal", signup),
     logout: () => call("logout"),

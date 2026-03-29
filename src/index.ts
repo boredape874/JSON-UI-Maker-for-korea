@@ -35,6 +35,7 @@ import { authModal } from "./ui/modals/authModal.js";
 import { uploadPresetModal } from "./ui/modals/uploadPresetModal.js";
 import { presetManagementModal } from "./ui/modals/presetManagementModal.js";
 import { setAuthUiState } from "./ui/react/authUiBridge.js";
+import { openChestUiEditorModalBridge } from "./ui/react/modalBridge.js";
 import { authManager } from "./auth.js";
 import { presetManager } from "./presetManager.js";
 import { loadSqlJs } from "./database.js";
@@ -558,6 +559,10 @@ export class Builder {
         await hudEditorModal();
     }
 
+    public static openChestUiEditorModal(): void {
+        openChestUiEditorModalBridge();
+    }
+
     public static formatBindingsArea(): void {
         BindingsArea.format();
     }
@@ -1022,6 +1027,7 @@ const builderApi = {
     importUiWorkspace: () => Builder.importUiWorkspace(),
     openPasteFormModal: () => Builder.openPasteFormModal(),
     openHudEditorModal: () => Builder.openHudEditorModal(),
+    openChestUiEditorModal: () => Builder.openChestUiEditorModal(),
     openGlyphEditorModal: () => Builder.openGlyphEditorModal(),
     openAuthModal: (signup: boolean = false) => Builder.openAuthModal(signup),
     logout: () => Builder.logout(),

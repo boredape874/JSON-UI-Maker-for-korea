@@ -235,6 +235,132 @@ input[type="file"] {
     overflow: auto;
 }
 
+.chestUiEditorModalContent {
+    max-width: 1240px;
+    max-height: 88vh;
+    overflow: auto;
+}
+
+.chestUiEditorLayout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr) 280px;
+    gap: 16px;
+    align-items: start;
+    color: white;
+}
+
+.chestUiEditorPanel,
+.chestUiEditorCanvasPanel {
+    background: rgba(18, 24, 36, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 14px;
+    min-height: 560px;
+}
+
+.chestUiEditorPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.chestUiEditorCanvasPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.chestUiEditorSectionTitle {
+    font-size: 14px;
+    font-weight: 700;
+    color: #f0f5ff;
+}
+
+.chestUiEditorList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chestUiEditorHint {
+    font-size: 12px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.chestUiEditorCanvas {
+    flex: 1;
+    min-height: 480px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background:
+        linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px),
+        radial-gradient(circle at top, rgba(63, 114, 255, 0.18), transparent 55%),
+        #0b101a;
+    background-size: 32px 32px, 32px 32px, 100% 100%, 100% 100%;
+    overflow: hidden;
+}
+
+.chestUiEditorCanvasFrame {
+    width: min(680px, 100%);
+    aspect-ratio: 16 / 9;
+    position: relative;
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(68, 80, 111, 0.9), rgba(25, 31, 46, 0.96));
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 18px 48px rgba(0, 0, 0, 0.45);
+}
+
+.chestUiEditorCanvasGrid {
+    position: absolute;
+    inset: 22px;
+    border-radius: 12px;
+    background:
+        linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size: calc(100% / 9) calc(100% / 6);
+}
+
+.chestUiEditorCanvasLabel {
+    position: absolute;
+    left: 22px;
+    top: 18px;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 700;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.chestUiEditorMetaCard {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 8px 12px;
+    padding: 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.chestUiEditorMetaLabel {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+}
+
+.chestUiEditorMetaValue {
+    color: #fff;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.chestUiEditorTodo {
+    margin: 0;
+    padding-left: 18px;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
 .glyphEditorLayout {
     display: flex;
     gap: 20px;

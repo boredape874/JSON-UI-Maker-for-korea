@@ -16,6 +16,7 @@ import { PresetManagementModal } from "./ui/react/PresetManagementModal.js";
 import { HudEditorModalHost } from "./ui/react/HudEditorModalHost.js";
 import { GlyphEditorModal } from "./ui/react/GlyphEditorModal.js";
 import { ChooseImageModalShell } from "./ui/react/ChooseImageModalShell.js";
+import { ChestUiEditorModal } from "./ui/react/ChestUiEditorModal.js";
 
 const directoryPickerProps = {
     webkitdirectory: "",
@@ -104,6 +105,7 @@ export function App() {
 
                             <button type="button" className="propertyInputButton" onClick={() => builderActions.openPasteFormModal()}>Paste Form Code</button>
                             <button type="button" className="propertyInputButton" onClick={() => builderActions.openHudEditorModal()}>HUD Editor</button>
+                            <button type="button" className="propertyInputButton" onClick={() => builderActions.openChestUiEditorModal()}>Chest UI Editor</button>
                             <button type="button" className="propertyInputButton" onClick={() => builderActions.openGlyphEditorModal()}>Glyph Editor</button>
                         </div>
                     </div>
@@ -156,6 +158,7 @@ export function App() {
             <UploadPresetModal />
             <PresetManagementModal />
             <GlyphEditorModal />
+            <ChestUiEditorModal />
             {SaveFormsModalComponent ? <SaveFormsModalComponent /> : null}
 
             <HudEditorModalHost />

@@ -44,6 +44,8 @@ type ModalBridgeEvent =
     | { type: "open-ui-workspace"; resolve: (value: UiWorkspaceSelection | undefined) => void; workspace: UiWorkspaceModalData }
     | { type: "open-add-button"; resolve: (value: AddButtonOptions) => void }
     | { type: "open-choose-image"; resolve: (value: ChooseImageResult) => void; reject: (reason?: unknown) => void }
+    | { type: "open-chest-ui-editor" }
+    | { type: "close-chest-ui-editor" }
     | { type: "open-glyph-editor" }
     | { type: "close-glyph-editor" }
     | { type: "open-help" }
@@ -100,6 +102,14 @@ export function openChooseImageModal(): Promise<ChooseImageResult> {
     return new Promise((resolve, reject) => {
         emitModalBridge({ type: "open-choose-image", resolve, reject });
     });
+}
+
+export function openChestUiEditorModalBridge(): void {
+    emitModalBridge({ type: "open-chest-ui-editor" });
+}
+
+export function closeChestUiEditorModalBridge(): void {
+    emitModalBridge({ type: "close-chest-ui-editor" });
 }
 
 export function openHelpModal(): void {
