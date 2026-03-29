@@ -18,6 +18,7 @@ const copyTargets = [
     { from: "icons", to: "icons" },
     { from: "presets", to: "presets" },
     { from: "background.png", to: "background.png" },
+    { from: "vendor/chest-ui-editor", to: "chest-ui-editor" },
 ];
 
 for (const target of copyTargets) {
