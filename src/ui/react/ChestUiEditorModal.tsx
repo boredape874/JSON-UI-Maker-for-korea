@@ -340,7 +340,11 @@ export function ChestUiEditorModal() {
     }
 
     return (
-        <div id="chestUiEditorScreen" className="chestUiEditorScreen chestUiEditorScreen--builder">
+        <div
+            id="chestUiEditorScreen"
+            className="chestUiEditorScreen chestUiEditorScreen--builder"
+            style={{ display: open ? "flex" : "none" }}
+        >
             <div className="chestUiEditorScreenHeader">
                 <div className="chestUiEditorScreenTitle">Chest UI Editor (New Beta)</div>
                 <div className="chestUiEditorScreenActions">
