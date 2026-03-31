@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { assetUrl } from "../../lib/assetUrl.js";
 import { closeChestUiEditorModalBridge, subscribeModalBridge } from "./modalBridge.js";
 
@@ -33,7 +33,21 @@ type ChestStructureState = {
     blocks: BuilderBlock[];
 };
 
-const STRUCTURE_STORAGE_KEY = "json_ui_maker:chest_structure_builder:v1";
+type PreviewBlock = {
+    id: string;
+    label: string;
+    type: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+};
+
+const STRUCTURE_STORAGE_KEY = "json_ui_maker:chest_structure_builder:v2";
+const PREVIEW_WIDTH = 176;
+const SMALL_TOP_HEIGHT = 66;
+const LARGE_TOP_HEIGHT = 120;
+const BOTTOM_HEIGHT = 92;
 
 function createId(prefix: string) {
     return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
@@ -41,7 +55,7 @@ function createId(prefix: string) {
 
 function createDefaultState(): ChestStructureState {
     return {
-        fileName: "custom_chest_panel.json",
+        fileName: "custom_panel.json",
         namespace: "custom_chest",
         panelName: "custom_panel",
         includeBottomInventory: true,
@@ -59,11 +73,27 @@ function createDefaultState(): ChestStructureState {
         blocks: [
             {
                 id: createId("block"),
-                name: "root_panel",
-                mode: "ref",
-                reference: "custom_chest.custom_panel_root",
-                controlType: "panel",
-                overridesText: "{\n  \"offset\": [0, 0]\n}"
+                name: "recipe_back_image",
+                mode: "inline",
+                reference: "",
+                controlType: "image",
+                overridesText: "{\n  \"size\": [175, 150],\n  \"offset\": [-106, 0],\n  \"texture\": \"textures/gui/recipe/cooking_recipe\"\n}"
+            },
+            {
+                id: createId("block"),
+                name: "recipe_scrolling_panel",
+                mode: "inline",
+                reference: "",
+                controlType: "scrolling_panel",
+                overridesText: "{\n  \"size\": [160, 146],\n  \"offset\": [-106, 0],\n  \"$scroll_view_port_size\": [150, 146],\n  \"$scrolling_content\": \"custom_chest.recipe_grid_panel\"\n}"
+            },
+            {
+                id: createId("block"),
+                name: "cooking_grid",
+                mode: "inline",
+                reference: "",
+                controlType: "grid",
+                overridesText: "{\n  \"size\": [196, 18],\n  \"offset\": [12, 12],\n  \"grid_dimensions\": [11, 1],\n  \"collection_name\": \"container_items\"\n}"
             }
         ]
     };
@@ -72,9 +102,7 @@ function createDefaultState(): ChestStructureState {
 function loadStructureState(): ChestStructureState {
     try {
         const raw = localStorage.getItem(STRUCTURE_STORAGE_KEY);
-        if (!raw) {
-            return createDefaultState();
-        }
+        if (!raw) return createDefaultState();
         const parsed = JSON.parse(raw) as ChestStructureState;
         if (!parsed || !Array.isArray(parsed.routes) || !Array.isArray(parsed.blocks)) {
             return createDefaultState();
@@ -90,22 +118,33 @@ function saveStructureState(state: ChestStructureState) {
 }
 
 function parseObject(text: string): Record<string, unknown> {
-    if (!text.trim()) {
-        return {};
-    }
+    if (!text.trim()) return {};
     const parsed = JSON.parse(text) as unknown;
     if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") {
-        throw new Error("객체 JSON만 입력해야 합니다.");
+        throw new Error("Overrides JSON은 객체여야 합니다.");
     }
     return parsed as Record<string, unknown>;
+}
+
+function stringifyObject(value: Record<string, unknown>) {
+    return JSON.stringify(value, null, 2);
+}
+
+function reorderItems<T extends { id: string }>(items: T[], draggedId: string, targetId: string) {
+    if (draggedId === targetId) return items;
+    const sourceIndex = items.findIndex((item) => item.id === draggedId);
+    const targetIndex = items.findIndex((item) => item.id === targetId);
+    if (sourceIndex < 0 || targetIndex < 0) return items;
+    const next = [...items];
+    const [moved] = next.splice(sourceIndex, 1);
+    next.splice(targetIndex, 0, moved);
+    return next;
 }
 
 function buildBlockControl(block: BuilderBlock) {
     const overrides = parseObject(block.overridesText);
     if (block.mode === "ref") {
-        return {
-            [`${block.name}@${block.reference}`]: overrides
-        };
+        return { [`${block.name}@${block.reference}`]: overrides };
     }
     return {
         [block.name]: {
@@ -116,52 +155,36 @@ function buildBlockControl(block: BuilderBlock) {
 }
 
 function buildCustomPanelFile(state: ChestStructureState) {
-    const panelControls = state.blocks.map(buildBlockControl);
+    const controls = state.blocks.map(buildBlockControl);
 
     if (state.includeBottomInventory) {
-        panelControls.push({
-            "inventory_panel_bottom_half_with_label@common.inventory_panel_bottom_half_with_label": {}
-        });
+        controls.push({ "inventory_panel_bottom_half_with_label@common.inventory_panel_bottom_half_with_label": {} });
     }
     if (state.includeHotbar) {
-        panelControls.push({
-            "hotbar_grid@common.hotbar_grid_template": {}
-        });
+        controls.push({ "hotbar_grid@common.hotbar_grid_template": {} });
     }
     if (state.includeTakeProgress) {
-        panelControls.push({
-            "inventory_take_progress_icon_button@common.inventory_take_progress_icon_button": {}
-        });
+        controls.push({ "inventory_take_progress_icon_button@common.inventory_take_progress_icon_button": {} });
     }
     if (state.includeFlyingItemRenderer) {
-        panelControls.push({
-            "flying_item_renderer@common.flying_item_renderer": {
-                layer: 15
-            }
-        });
+        controls.push({ "flying_item_renderer@common.flying_item_renderer": { layer: 15 } });
     }
 
     return {
         namespace: state.namespace,
         [state.panelName]: {
             type: "panel",
-            controls: panelControls
+            controls
         }
     };
 }
 
 function buildChestScreenFile(state: ChestStructureState) {
-    const largeRoutes = state.routes.filter((route) => route.screen === "large" && route.title.trim());
-    const smallRoutes = state.routes.filter((route) => route.screen === "small" && route.title.trim());
+    const buildPanel = (screen: ChestScreenType) => {
+        const routes = state.routes.filter((route) => route.screen === screen && route.title.trim());
+        if (!routes.length) return undefined;
 
-    const buildPanel = (screen: ChestScreenType, routes: RouteRule[]) => {
-        if (!routes.length) {
-            return undefined;
-        }
-        const ignoredExpression = routes.length
-            ? `(${routes.map((route) => `($container_ui_title = '${route.title.replace(/'/g, "\\'")}')`).join(" or ")})`
-            : "false";
-
+        const ignoredExpression = `(${routes.map((route) => `($container_ui_title = '${route.title.replace(/'/g, "\\'")}')`).join(" or ")})`;
         const controls: Record<string, unknown>[] = [
             {
                 "default_root_panel@common.root_panel": {
@@ -186,8 +209,8 @@ function buildChestScreenFile(state: ChestStructureState) {
     };
 
     const output: Record<string, unknown> = { namespace: "chest" };
-    const largePanel = buildPanel("large", largeRoutes);
-    const smallPanel = buildPanel("small", smallRoutes);
+    const largePanel = buildPanel("large");
+    const smallPanel = buildPanel("small");
     if (largePanel) output.large_chest_panel = largePanel;
     if (smallPanel) output.small_chest_panel = smallPanel;
     return output;
@@ -202,12 +225,42 @@ function buildUiDefsFile(state: ChestStructureState) {
     };
 }
 
+function getPreviewBlocks(blocks: BuilderBlock[]): PreviewBlock[] {
+    return blocks.map((block) => {
+        const overrides = parseObject(block.overridesText);
+        const offset = Array.isArray(overrides.offset) ? overrides.offset : [0, 0];
+        const size = Array.isArray(overrides.size) ? overrides.size : [80, 24];
+        return {
+            id: block.id,
+            label: block.name,
+            type: block.mode === "ref" ? block.reference || "reference" : block.controlType || "panel",
+            x: Number(offset[0] ?? 0),
+            y: Number(offset[1] ?? 0),
+            width: Math.max(40, Number(size[0] ?? 80)),
+            height: Math.max(18, Number(size[1] ?? 24))
+        };
+    });
+}
+
+function updateBlockOffset(block: BuilderBlock, x: number, y: number): BuilderBlock {
+    const overrides = parseObject(block.overridesText);
+    overrides.offset = [Math.round(x), Math.round(y)];
+    return {
+        ...block,
+        overridesText: stringifyObject(overrides)
+    };
+}
+
 export function ChestUiEditorModal() {
     const [open, setOpen] = useState(false);
     const [reloadKey, setReloadKey] = useState(0);
     const [builderOpen, setBuilderOpen] = useState(true);
     const [state, setState] = useState<ChestStructureState>(() => loadStructureState());
-    const [error, setError] = useState<string>("");
+    const [error, setError] = useState("");
+    const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
+    const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
+    const previewRef = useRef<HTMLDivElement | null>(null);
+    const dragOffsetRef = useRef({ x: 0, y: 0 });
 
     useEffect(() => subscribeModalBridge((event) => {
         if (event.type === "open-chest-ui-editor") setOpen(true);
@@ -220,13 +273,52 @@ export function ChestUiEditorModal() {
             buildCustomPanelFile(state);
             buildChestScreenFile(state);
             buildUiDefsFile(state);
+            getPreviewBlocks(state.blocks);
             setError("");
         } catch (buildError) {
-            setError(buildError instanceof Error ? buildError.message : "구조 빌더 JSON을 확인하세요.");
+            setError(buildError instanceof Error ? buildError.message : "구조 JSON을 확인하세요.");
         }
     }, [state]);
 
+    useEffect(() => {
+        const handleMove = (event: MouseEvent) => {
+            if (!draggingBlockId || !previewRef.current) return;
+            const rect = previewRef.current.getBoundingClientRect();
+            const nextX = event.clientX - rect.left - dragOffsetRef.current.x;
+            const nextY = event.clientY - rect.top - dragOffsetRef.current.y;
+
+            setState((current) => ({
+                ...current,
+                blocks: current.blocks.map((block) => block.id === draggingBlockId ? updateBlockOffset(block, nextX, nextY) : block)
+            }));
+        };
+
+        const handleUp = () => {
+            setDraggingBlockId(null);
+        };
+
+        window.addEventListener("mousemove", handleMove);
+        window.addEventListener("mouseup", handleUp);
+        return () => {
+            window.removeEventListener("mousemove", handleMove);
+            window.removeEventListener("mouseup", handleUp);
+        };
+    }, [draggingBlockId]);
+
     const iframeSrc = useMemo(() => assetUrl(`chest-ui-editor/index.html?v=${reloadKey}`), [reloadKey]);
+    const previewBlocks = useMemo(() => {
+        try {
+            return getPreviewBlocks(state.blocks);
+        } catch {
+            return [];
+        }
+    }, [state.blocks]);
+    const previewHeight = Math.max(
+        state.routes.some((route) => route.screen === "large") ? LARGE_TOP_HEIGHT : SMALL_TOP_HEIGHT,
+        ...previewBlocks.map((block) => block.y + block.height + 12),
+        SMALL_TOP_HEIGHT
+    );
+    const previewPanelHeight = previewHeight + (state.includeBottomInventory ? BOTTOM_HEIGHT + 12 : 0) + 24;
     const uiDefsJson = useMemo(() => JSON.stringify(buildUiDefsFile(state), null, 2), [state]);
     const chestScreenJson = useMemo(() => {
         try {
@@ -243,10 +335,12 @@ export function ChestUiEditorModal() {
         }
     }, [state]);
 
-    const modalClassName = `chestUiEditorScreen chestUiEditorScreen--builder${open ? " is-open" : ""}`;
+    if (!open) {
+        return null;
+    }
 
     return (
-        <div id="chestUiEditorScreen" className={modalClassName} style={{ display: open ? "flex" : "none" }}>
+        <div id="chestUiEditorScreen" className="chestUiEditorScreen chestUiEditorScreen--builder">
             <div className="chestUiEditorScreenHeader">
                 <div className="chestUiEditorScreenTitle">Chest UI Editor (New Beta)</div>
                 <div className="chestUiEditorScreenActions">
@@ -267,12 +361,7 @@ export function ChestUiEditorModal() {
 
             <div className="chestUiEditorBuilderLayout">
                 <div className="chestUiEditorEmbeddedBody">
-                    <iframe
-                        key={reloadKey}
-                        className="chestUiEditorIframe"
-                        src={iframeSrc}
-                        title="Chest UI Editor (New Beta)"
-                    />
+                    <iframe key={reloadKey} className="chestUiEditorIframe" src={iframeSrc} title="Chest UI Editor (New Beta)" />
                 </div>
 
                 {builderOpen ? (
@@ -280,9 +369,55 @@ export function ChestUiEditorModal() {
                         <section className="chestUiStructureSection">
                             <h3>구조 빌더</h3>
                             <p className="chestUiStructureHint">
-                                여기서는 `chest_screen.json`, 별도 커스텀 패널 파일, `_ui_defs.json`을 같이 조립합니다.
+                                오른쪽에서 `router`, `common 하단부`, `custom panel block`을 조합합니다.
+                                블록은 아래 미리보기에서 직접 드래그해 위치를 바꿀 수 있습니다.
                             </p>
                             {error ? <div className="chestUiStructureError">{error}</div> : null}
+                        </section>
+
+                        <section className="chestUiStructureSection">
+                            <h3>실시간 구조 미리보기</h3>
+                            <div ref={previewRef} className="chestUiStructurePreviewArea">
+                                <div className="chestUiStructurePreviewPanel" style={{ height: previewPanelHeight }}>
+                                    <div className="chestUiStructurePreviewTop" style={{ height: previewHeight }}>
+                                        {previewBlocks.map((block) => (
+                                            <div
+                                                key={block.id}
+                                                className={`chestUiStructurePreviewBlock ${draggingBlockId === block.id ? "is-dragging" : ""}`}
+                                                style={{ left: block.x, top: block.y, width: block.width, height: block.height }}
+                                                onMouseDown={(event) => {
+                                                    const rect = (event.currentTarget as HTMLDivElement).getBoundingClientRect();
+                                                    dragOffsetRef.current = {
+                                                        x: event.clientX - rect.left,
+                                                        y: event.clientY - rect.top
+                                                    };
+                                                    setDraggingBlockId(block.id);
+                                                }}
+                                            >
+                                                <strong>{block.label}</strong>
+                                                <span>{block.type}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {state.includeBottomInventory ? (
+                                        <div className="chestUiStructurePreviewBottom">
+                                            <div className="chestUiStructurePreviewBottomLabel">common.inventory_panel_bottom_half_with_label</div>
+                                            <div className="chestUiStructurePreviewInventoryGrid">
+                                                {Array.from({ length: 27 }).map((_, index) => (
+                                                    <div key={index} className="chestUiStructurePreviewCell" />
+                                                ))}
+                                            </div>
+                                            {state.includeHotbar ? (
+                                                <div className="chestUiStructurePreviewHotbar">
+                                                    {Array.from({ length: 9 }).map((_, index) => (
+                                                        <div key={index} className="chestUiStructurePreviewCell" />
+                                                    ))}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    ) : null}
+                                </div>
+                            </div>
                         </section>
 
                         <section className="chestUiStructureSection">
@@ -309,12 +444,7 @@ export function ChestUiEditorModal() {
                                     className="propertyInputButton"
                                     onClick={() => setState((current) => ({
                                         ...current,
-                                        routes: [...current.routes, {
-                                            id: createId("route"),
-                                            screen: "large",
-                                            title: "",
-                                            targetRef: `${current.namespace}.${current.panelName}`
-                                        }]
+                                        routes: [...current.routes, { id: createId("route"), screen: "large", title: "", targetRef: `${current.namespace}.${current.panelName}` }]
                                     }))}
                                 >
                                     규칙 추가
@@ -358,10 +488,7 @@ export function ChestUiEditorModal() {
                                     <button
                                         type="button"
                                         className="propertyInputButton"
-                                        onClick={() => setState((current) => ({
-                                            ...current,
-                                            routes: current.routes.filter((item) => item.id !== route.id)
-                                        }))}
+                                        onClick={() => setState((current) => ({ ...current, routes: current.routes.filter((item) => item.id !== route.id) }))}
                                     >
                                         삭제
                                     </button>
@@ -380,10 +507,10 @@ export function ChestUiEditorModal() {
                                         blocks: [...current.blocks, {
                                             id: createId("block"),
                                             name: `block_${current.blocks.length + 1}`,
-                                            mode: "ref",
-                                            reference: `${current.namespace}.control_name`,
+                                            mode: "inline",
+                                            reference: "",
                                             controlType: "panel",
-                                            overridesText: "{\n  \"offset\": [0, 0]\n}"
+                                            overridesText: "{\n  \"size\": [80, 24],\n  \"offset\": [0, 0]\n}"
                                         }]
                                     }))}
                                 >
@@ -391,7 +518,18 @@ export function ChestUiEditorModal() {
                                 </button>
                             </div>
                             {state.blocks.map((block) => (
-                                <div key={block.id} className="chestUiStructureCard">
+                                <div
+                                    key={block.id}
+                                    className="chestUiStructureCard"
+                                    draggable
+                                    onDragStart={() => setDraggingCardId(block.id)}
+                                    onDragOver={(event) => event.preventDefault()}
+                                    onDrop={() => {
+                                        if (!draggingCardId) return;
+                                        setState((current) => ({ ...current, blocks: reorderItems(current.blocks, draggingCardId, block.id) }));
+                                        setDraggingCardId(null);
+                                    }}
+                                >
                                     <label className="chestUiStructureField">
                                         <span>이름</span>
                                         <input
@@ -451,10 +589,7 @@ export function ChestUiEditorModal() {
                                     <button
                                         type="button"
                                         className="propertyInputButton"
-                                        onClick={() => setState((current) => ({
-                                            ...current,
-                                            blocks: current.blocks.filter((item) => item.id !== block.id)
-                                        }))}
+                                        onClick={() => setState((current) => ({ ...current, blocks: current.blocks.filter((item) => item.id !== block.id) }))}
                                     >
                                         삭제
                                     </button>
@@ -472,18 +607,9 @@ export function ChestUiEditorModal() {
 
                         <section className="chestUiStructureSection">
                             <h3>출력</h3>
-                            <label className="chestUiStructureField">
-                                <span>_ui_defs.json</span>
-                                <textarea readOnly value={uiDefsJson} />
-                            </label>
-                            <label className="chestUiStructureField">
-                                <span>chest_screen.json</span>
-                                <textarea readOnly value={chestScreenJson} />
-                            </label>
-                            <label className="chestUiStructureField">
-                                <span>{state.fileName}</span>
-                                <textarea readOnly value={customPanelJson} />
-                            </label>
+                            <label className="chestUiStructureField"><span>_ui_defs.json</span><textarea readOnly value={uiDefsJson} /></label>
+                            <label className="chestUiStructureField"><span>chest_screen.json</span><textarea readOnly value={chestScreenJson} /></label>
+                            <label className="chestUiStructureField"><span>{state.fileName}</span><textarea readOnly value={customPanelJson} /></label>
                         </section>
                     </aside>
                 ) : null}
