@@ -27,12 +27,31 @@ function icon(path: string): string {
     return assetUrl(path);
 }
 
+type WorkspaceTabId = "visual" | "hud" | "chest" | "glyph";
+type InspectorTabId = "properties" | "script" | "bindings";
+
+const workspaceTabs: Array<{ id: WorkspaceTabId; label: string; description: string }> = [
+    { id: "visual", label: "Visual UI", description: "기본 JSON UI 캔버스" },
+    { id: "hud", label: "HUD", description: "HUD/title/progress bar editor" },
+    { id: "chest", label: "Chest", description: "Chest screen builder" },
+    { id: "glyph", label: "Glyph", description: "Glyph/texture utility" },
+];
+
 export function App() {
     const auth = useAuthUiState();
     const [legacyReady, setLegacyReady] = useState(false);
+    const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<WorkspaceTabId>("visual");
+    const [activeInspectorTab, setActiveInspectorTab] = useState<InspectorTabId>("properties");
     const [ExplorerPanelComponent, setExplorerPanelComponent] = useState<ComponentType | null>(null);
     const [PropertiesPanelComponent, setPropertiesPanelComponent] = useState<ComponentType | null>(null);
     const [SaveFormsModalComponent, setSaveFormsModalComponent] = useState<ComponentType | null>(null);
+
+    const openWorkspaceTool = (tab: WorkspaceTabId) => {
+        setActiveWorkspaceTab(tab);
+        if (tab === "hud") builderActions.openHudEditorModal();
+        if (tab === "chest") builderActions.openChestUiEditorModal();
+        if (tab === "glyph") builderActions.openGlyphEditorModal();
+    };
 
     useEffect(() => {
         const markReady = () => setLegacyReady(true);
@@ -187,6 +206,24 @@ export function App() {
 
                     <div className="bridgeDivider"></div>
 
+                    <div className="bridgeToolShelf">
+                        <div className="bridgeSectionTitle">Tools</div>
+                        <button type="button" className="bridgeToolButton" onClick={() => openWorkspaceTool("hud")}>
+                            <span>HUD Editor</span>
+                            <small>title / actionbar / progress bar</small>
+                        </button>
+                        <button type="button" className="bridgeToolButton" onClick={() => openWorkspaceTool("chest")}>
+                            <span>Chest UI Editor</span>
+                            <small>container screen / inventory layout</small>
+                        </button>
+                        <button type="button" className="bridgeToolButton" onClick={() => openWorkspaceTool("glyph")}>
+                            <span>Glyph Editor</span>
+                            <small>font glyph / texture helper</small>
+                        </button>
+                    </div>
+
+                    <div className="bridgeDivider"></div>
+
                     <div className="utilElements">
                         <div className="bridgeSectionTitle">Actions</div>
                         <button className="utilElement" type="button" onClick={() => builderActions.reset()}>Reset <img style={{ width: 17, top: 3, position: "relative", filter: "drop-shadow(0px 0px 5px #000000)" }} src={icon("icons/reset.webp")} alt="Reset" /></button>
@@ -201,15 +238,36 @@ export function App() {
 
                 <div className="canvasViewport bridgeEditorPane">
                     <div className="bridgeWorkspaceTabs">
-                        <button type="button" className="bridgeWorkspaceTab bridgeWorkspaceTabActive">Visual UI</button>
-                        <button type="button" className="bridgeWorkspaceTab" onClick={() => builderActions.openHudEditorModal()}>HUD</button>
-                        <button type="button" className="bridgeWorkspaceTab" onClick={() => builderActions.openChestUiEditorModal()}>Chest</button>
-                        <button type="button" className="bridgeWorkspaceTab" onClick={() => builderActions.openGlyphEditorModal()}>Glyph</button>
+                        {workspaceTabs.map((tab) => (
+                            <button
+                                key={tab.id}
+                                type="button"
+                                className={`bridgeWorkspaceTab${activeWorkspaceTab === tab.id ? " bridgeWorkspaceTabActive" : ""}`}
+                                title={tab.description}
+                                onClick={() => openWorkspaceTool(tab.id)}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="bridgeEditorHeader">
+                        <div>
+                            <div className="bridgeEditorTitle">{workspaceTabs.find((tab) => tab.id === activeWorkspaceTab)?.label ?? "Visual UI"}</div>
+                            <div className="bridgeEditorMeta">{workspaceTabs.find((tab) => tab.id === activeWorkspaceTab)?.description ?? "기본 JSON UI 캔버스"}</div>
+                        </div>
+                        <div className="bridgeEditorActions">
+                            <button type="button" onClick={() => builderActions.openSaveFormsModal()}>Export</button>
+                            <button type="button" onClick={() => builderActions.openHelpMenu()}>Help</button>
+                        </div>
                     </div>
                     <div className="main_window_outline">
                         <div className="main_window" id="main_window">
                             <img title="Background" src={icon("background.png")} width="100%" height="100%" className="bg_image" id="bg_image" alt="Background" />
                         </div>
+                    </div>
+                    <div className="bridgeOutputBar">
+                        <span>Output</span>
+                        <span>Legacy JSON UI canvas retained. Tool tabs currently launch their existing full editor hosts.</span>
                     </div>
                 </div>
 
@@ -217,6 +275,34 @@ export function App() {
                     <div className="bridgePaneHeader">
                         <span>Inspector</span>
                         <span className="bridgePaneMeta">Properties / Script</span>
+                    </div>
+                    <div className="bridgeInspectorTabs" aria-label="Inspector tabs">
+                        <button
+                            type="button"
+                            className={`bridgeInspectorTab${activeInspectorTab === "properties" ? " bridgeInspectorTabActive" : ""}`}
+                            onClick={() => setActiveInspectorTab("properties")}
+                        >
+                            Properties
+                        </button>
+                        <button
+                            type="button"
+                            className={`bridgeInspectorTab${activeInspectorTab === "script" ? " bridgeInspectorTabActive" : ""}`}
+                            onClick={() => setActiveInspectorTab("script")}
+                        >
+                            Script
+                        </button>
+                        <button
+                            type="button"
+                            className={`bridgeInspectorTab${activeInspectorTab === "bindings" ? " bridgeInspectorTabActive" : ""}`}
+                            onClick={() => setActiveInspectorTab("bindings")}
+                        >
+                            Bindings
+                        </button>
+                    </div>
+                    <div className="bridgeInspectorTabHint">
+                        {activeInspectorTab === "properties" ? "선택한 JSON UI control 속성을 편집합니다." : null}
+                        {activeInspectorTab === "script" ? "Form generator용 JS/TS helper를 복사합니다." : null}
+                        {activeInspectorTab === "bindings" ? "고급 bindings JSON을 직접 편집합니다." : null}
                     </div>
                     {PropertiesPanelComponent ? <PropertiesPanelComponent /> : <div id="properties" className="properties"></div>}
                     <div className="bridgeDivider"></div>

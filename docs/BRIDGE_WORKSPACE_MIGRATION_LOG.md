@@ -58,3 +58,33 @@
 3. HUD/Chest/Glyph/9Slice를 탭으로 열기
 4. Inspector에 `Properties / Export / Errors / PMMP Helper` 탭 추가
 5. Addon Project 모델과 `.mcaddon` export 연결
+
+## 2차 구현 범위
+
+- workspace tab을 단순 버튼에서 React state 기반 모델로 변경
+- 왼쪽 Explorer 안에 Tool Shelf를 추가해서 HUD/Chest/Glyph를 도구 목록처럼 열 수 있게 정리
+- 중앙 Editor에 현재 workspace tab 이름/설명/Export/Help 액션 헤더 추가
+- 중앙 Editor 하단에 Output bar 추가
+- 오른쪽 Inspector에 `Properties / Script / Bindings` 탭 UI 추가
+
+## 2차 구현 결과
+
+- `App.tsx`
+  - `WorkspaceTabId`, `InspectorTabId`, `workspaceTabs` 모델 추가
+  - `activeWorkspaceTab`, `activeInspectorTab` 상태 추가
+  - `openWorkspaceTool()`로 도구 tab 선택과 기존 modal host 실행을 연결
+  - Explorer에 `bridgeToolShelf` 추가
+  - Editor tab 버튼을 `workspaceTabs.map()` 기반으로 변경
+  - Editor header와 output bar 추가
+  - Inspector tab 버튼과 현재 탭 설명 추가
+- `style.css`
+  - `bridgeToolShelf`, `bridgeToolButton` 스타일 추가
+  - `bridgeEditorHeader`, `bridgeEditorTitle`, `bridgeEditorMeta`, `bridgeEditorActions` 스타일 추가
+  - `bridgeOutputBar` 스타일 추가
+  - `bridgeInspectorTabs`, `bridgeInspectorTab`, `bridgeInspectorTabHint` 스타일 추가
+
+## 2차 구현에서 의도적으로 유지한 것
+
+- 기존 `main_window`, `explorer`, `properties`, `bindings` DOM id는 계속 유지
+- HUD/Chest/Glyph 내부는 아직 workspace 내부 mount로 바꾸지 않고 기존 modal/fullscreen host를 호출
+- Inspector tab은 지금 단계에서 DOM을 숨기지 않는다. 기존 script/bindings 초기화 코드가 DOM id를 직접 참조할 가능성이 있기 때문이다.

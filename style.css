@@ -2700,6 +2700,34 @@ input[type="file"] {
     text-transform: uppercase;
 }
 
+.bridgeToolShelf {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bridgeToolButton {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    width: 100%;
+    padding: 9px 10px;
+    text-align: left;
+}
+
+.bridgeToolButton span {
+    color: var(--bridge-text);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.bridgeToolButton small {
+    color: var(--bridge-muted);
+    font-size: 11px;
+    line-height: 1.35;
+}
+
 .bridgeDivider {
     width: 100%;
     height: 1px;
@@ -2717,6 +2745,37 @@ input[type="file"] {
     padding-bottom: 8px;
 }
 
+.bridgeEditorHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--bridge-border);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.bridgeEditorTitle {
+    color: var(--bridge-text);
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.bridgeEditorMeta {
+    margin-top: 3px;
+    color: var(--bridge-muted);
+    font-size: 12px;
+}
+
+.bridgeEditorActions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 .bridgeWorkspaceTab {
     padding: 7px 12px;
     border-radius: 8px 8px 0 0;
@@ -2727,6 +2786,53 @@ input[type="file"] {
     border-color: var(--bridge-border-strong);
     background: #263449;
     color: #ffffff;
+}
+
+.bridgeOutputBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-top: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--bridge-border);
+    border-radius: 8px;
+    background: rgba(8, 11, 16, 0.78);
+    color: var(--bridge-muted);
+    font-size: 12px;
+}
+
+.bridgeOutputBar span:first-child {
+    color: var(--bridge-text);
+    font-weight: 800;
+}
+
+.bridgeInspectorTabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--bridge-border);
+}
+
+.bridgeInspectorTab {
+    flex: 1 1 0;
+    padding: 7px 8px;
+    font-size: 12px;
+}
+
+.bridgeInspectorTabActive {
+    border-color: var(--bridge-border-strong);
+    background: #263449;
+    color: #ffffff;
+}
+
+.bridgeInspectorTabHint {
+    min-height: 18px;
+    margin-bottom: 10px;
+    color: var(--bridge-muted);
+    font-size: 12px;
+    line-height: 1.4;
 }
 
 .bridgeWorkspace .main_window_outline {
