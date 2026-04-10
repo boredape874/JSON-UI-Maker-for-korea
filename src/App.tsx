@@ -63,10 +63,14 @@ export function App() {
 
     return (
         <>
-            <div className="top-navbar">
+            <div className="top-navbar bridgeCommandBar">
                 <div className="navbar-left">
+                    <div className="bridgeBrand">
+                        <div className="bridgeBrandTitle">JSON UI Maker</div>
+                        <div className="bridgeBrandSub">MCBE Add-On Workspace</div>
+                    </div>
                     <div className="toolMenu">
-                        <div className="toolMenuSummary">도구 목록</div>
+                        <div className="toolMenuSummary">Tools</div>
                         <div className="importers toolMenuPanel">
                             <label className="ui_textures_importer">
                                 <input
@@ -111,7 +115,7 @@ export function App() {
                     </div>
                 </div>
 
-                <div className="navbar-center">
+                <div className="navbar-center bridgeCommandCenter">
             <div id="authStatus" className="auth-status-inline">
                 <span id="authUserDisplay">{auth.signedIn && auth.username ? `Signed in as: ${auth.username}` : "Not signed in"}</span>
                 {!auth.signedIn ? <button id="authSignInBtn" onClick={() => builderActions.openAuthModal(false)}>Sign In</button> : null}
@@ -165,10 +169,14 @@ export function App() {
 
             <ChooseImageModalShell />
 
-            <div className="main">
-                <div className="buttons">
+            <div className="main bridgeWorkspace">
+                <div className="buttons bridgeExplorerPane">
+                    <div className="bridgePaneHeader">
+                        <span>Explorer</span>
+                        <span className="bridgePaneMeta">RP / UI</span>
+                    </div>
                     <div className="addElements">
-                        Elements:
+                        <div className="bridgeSectionTitle">Elements</div>
                         <button type="button" onClick={() => builderActions.addPanel()}>Add panel</button>
                         <button type="button" onClick={() => builderActions.openAddImageMenu()}>Add image</button>
                         <button type="button" onClick={() => builderActions.addButton()}>Add button</button>
@@ -177,20 +185,27 @@ export function App() {
                         <button type="button" onClick={() => builderActions.addScrollingPanel()}>Add Scrolling Panel</button>
                     </div>
 
-                    <div className="breaker"></div>
+                    <div className="bridgeDivider"></div>
 
                     <div className="utilElements">
+                        <div className="bridgeSectionTitle">Actions</div>
                         <button className="utilElement" type="button" onClick={() => builderActions.reset()}>Reset <img style={{ width: 17, top: 3, position: "relative", filter: "drop-shadow(0px 0px 5px #000000)" }} src={icon("icons/reset.webp")} alt="Reset" /></button>
                         <button className="utilElement" type="button" onClick={() => builderActions.deleteSelected()}>Delete Selected <img style={{ width: 20, top: 3, position: "relative", filter: "drop-shadow(0px 0px 5px #000000)" }} src={icon("icons/bin.webp")} alt="Delete" /></button>
                         <button className="utilElement saveFormsLauncher" type="button" onClick={() => builderActions.openSaveFormsModal()}>Save Forms <img style={{ width: 20, top: 3, position: "relative", filter: "drop-shadow(0px 0px 5px #000000)" }} src={icon("icons/download.webp")} alt="Save" /></button>
                     </div>
 
-                    <div className="breaker"></div>
+                    <div className="bridgeDivider"></div>
 
                     {ExplorerPanelComponent ? <ExplorerPanelComponent /> : <div id="explorer" className="explorer"></div>}
                 </div>
 
-                <div className="canvasViewport">
+                <div className="canvasViewport bridgeEditorPane">
+                    <div className="bridgeWorkspaceTabs">
+                        <button type="button" className="bridgeWorkspaceTab bridgeWorkspaceTabActive">Visual UI</button>
+                        <button type="button" className="bridgeWorkspaceTab" onClick={() => builderActions.openHudEditorModal()}>HUD</button>
+                        <button type="button" className="bridgeWorkspaceTab" onClick={() => builderActions.openChestUiEditorModal()}>Chest</button>
+                        <button type="button" className="bridgeWorkspaceTab" onClick={() => builderActions.openGlyphEditorModal()}>Glyph</button>
+                    </div>
                     <div className="main_window_outline">
                         <div className="main_window" id="main_window">
                             <img title="Background" src={icon("background.png")} width="100%" height="100%" className="bg_image" id="bg_image" alt="Background" />
@@ -198,7 +213,13 @@ export function App() {
                     </div>
                 </div>
 
-                <div className="scripter">
+                <div className="scripter bridgeInspectorPane">
+                    <div className="bridgePaneHeader">
+                        <span>Inspector</span>
+                        <span className="bridgePaneMeta">Properties / Script</span>
+                    </div>
+                    {PropertiesPanelComponent ? <PropertiesPanelComponent /> : <div id="properties" className="properties"></div>}
+                    <div className="bridgeDivider"></div>
                     <div className="scripter_title_label">Script</div>
                     <div style={{ color: "rgb(139, 139, 139)" }}>For Fixed Collection Index Forms Only</div>
                     <div className="scripter_buttons">
@@ -219,7 +240,6 @@ export function App() {
                 </div>
             </div>
 
-            {PropertiesPanelComponent ? <PropertiesPanelComponent /> : <div id="properties" className="properties"></div>}
             <div id="notif-container"></div>
             <div id="mainWarningMessage"></div>
         </>

@@ -2537,3 +2537,241 @@ input[type="file"] {
 .presetManagementContent {
     color: white;
 }
+
+/* ===== Bridge-style workspace shell ===== */
+:root {
+    --bridge-bg: #0e1117;
+    --bridge-panel: #151a23;
+    --bridge-panel-2: #111620;
+    --bridge-border: rgba(255, 255, 255, 0.09);
+    --bridge-border-strong: rgba(126, 169, 255, 0.26);
+    --bridge-text: #e7edf7;
+    --bridge-muted: #8993a5;
+    --bridge-accent: #67a4ff;
+}
+
+.bridgeCommandBar {
+    min-height: 52px;
+    padding: 0 14px;
+    box-sizing: border-box;
+    background: linear-gradient(180deg, #151b26 0%, #10151f 100%);
+    border-bottom: 1px solid var(--bridge-border);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+}
+
+.bridgeBrand {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 190px;
+    margin-right: 12px;
+    color: var(--bridge-text);
+}
+
+.bridgeBrandTitle {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+
+.bridgeBrandSub {
+    margin-top: 2px;
+    color: var(--bridge-muted);
+    font-size: 11px;
+}
+
+.bridgeCommandCenter {
+    gap: 8px;
+}
+
+.bridgeCommandBar button,
+.bridgeCommandBar .propertyInputButton,
+.bridgeCommandBar .navbar-preset-btn,
+.bridgeCommandBar .modalSettingsBtn,
+.bridgeWorkspace button,
+.bridgeWorkspace .utilElement {
+    background: #1c2431;
+    border: 1px solid var(--bridge-border);
+    outline: none;
+    color: var(--bridge-text);
+    border-radius: 6px;
+    box-shadow: none;
+}
+
+.bridgeCommandBar button:hover,
+.bridgeCommandBar .propertyInputButton:hover,
+.bridgeCommandBar .navbar-preset-btn:hover,
+.bridgeCommandBar .modalSettingsBtn:hover,
+.bridgeWorkspace button:hover,
+.bridgeWorkspace .utilElement:hover {
+    outline: none;
+    border-color: var(--bridge-border-strong);
+    background: #222c3c;
+    transform: none;
+    box-shadow: 0 0 0 1px rgba(103, 164, 255, 0.14);
+}
+
+.bridgeCommandBar .toolMenuSummary {
+    background: #1c2431;
+    border: 1px solid var(--bridge-border);
+    border-radius: 6px;
+    color: var(--bridge-text);
+}
+
+.bridgeWorkspace {
+    width: 100%;
+    min-height: calc(100vh - 58px);
+    margin: 0;
+    padding: 10px;
+    gap: 10px;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: 280px minmax(520px, 1fr) 360px;
+    align-items: stretch;
+    background:
+        radial-gradient(circle at top left, rgba(103, 164, 255, 0.1), transparent 28%),
+        var(--bridge-bg);
+}
+
+.bridgeExplorerPane,
+.bridgeEditorPane,
+.bridgeInspectorPane {
+    margin: 0;
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid var(--bridge-border);
+    border-radius: 10px;
+    background: rgba(21, 26, 35, 0.94);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.bridgeExplorerPane {
+    width: auto;
+    max-width: none;
+    height: auto;
+    padding: 10px;
+    overflow: auto;
+}
+
+.bridgeEditorPane {
+    width: auto;
+    max-width: none;
+    min-height: 0;
+    overflow: auto;
+    padding: 10px;
+}
+
+.bridgeInspectorPane {
+    width: auto;
+    max-width: none;
+    height: auto;
+    min-height: 0;
+    padding: 10px;
+    overflow: auto;
+}
+
+.bridgePaneHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--bridge-text);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+}
+
+.bridgePaneMeta {
+    color: var(--bridge-muted);
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.bridgeSectionTitle {
+    color: var(--bridge-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.9px;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+.bridgeDivider {
+    width: 100%;
+    height: 1px;
+    flex: 0 0 auto;
+    margin: 12px 0;
+    background: var(--bridge-border);
+}
+
+.bridgeWorkspaceTabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--bridge-border);
+    padding-bottom: 8px;
+}
+
+.bridgeWorkspaceTab {
+    padding: 7px 12px;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+}
+
+.bridgeWorkspaceTabActive {
+    border-color: var(--bridge-border-strong);
+    background: #263449;
+    color: #ffffff;
+}
+
+.bridgeWorkspace .main_window_outline {
+    width: min(100%, 1506px);
+    height: auto;
+    aspect-ratio: 1506 / 849.375;
+    margin: 0 auto;
+    border-radius: 10px;
+    background: #263449;
+}
+
+.bridgeWorkspace .main_window {
+    width: calc(100% - 6px);
+    height: calc(100% - 6px);
+}
+
+.bridgeWorkspace .explorer,
+.bridgeWorkspace .properties {
+    max-width: none;
+    width: calc(100% - 10px);
+}
+
+.bridgeInspectorPane .properties {
+    position: relative;
+    margin: 0 0 10px;
+    max-height: 42vh;
+    overflow: auto;
+}
+
+@media (max-width: 1280px) {
+    .bridgeWorkspace {
+        grid-template-columns: 240px minmax(420px, 1fr);
+    }
+
+    .bridgeInspectorPane {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 900px) {
+    .bridgeWorkspace {
+        grid-template-columns: 1fr;
+    }
+
+    .bridgeBrand {
+        display: none;
+    }
+}
