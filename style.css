@@ -2700,6 +2700,64 @@ input[type="file"] {
     text-transform: uppercase;
 }
 
+.bridgeProjectPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bridgeProjectCard {
+    padding: 10px;
+    border: 1px solid var(--bridge-border);
+    border-radius: 10px;
+    background:
+        linear-gradient(135deg, rgba(103, 164, 255, 0.12), transparent 54%),
+        rgba(255, 255, 255, 0.035);
+}
+
+.bridgeProjectName {
+    color: var(--bridge-text);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.bridgeProjectMeta {
+    margin-top: 4px;
+    color: var(--bridge-muted);
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.bridgeProjectActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+}
+
+.bridgeProjectAction {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    box-sizing: border-box;
+    padding: 7px 9px;
+    border: 1px solid var(--bridge-border);
+    border-radius: 7px;
+    background: #1c2431;
+    color: var(--bridge-text);
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+}
+
+.bridgeProjectAction:hover {
+    border-color: var(--bridge-border-strong);
+    background: #222c3c;
+    box-shadow: 0 0 0 1px rgba(103, 164, 255, 0.14);
+}
+
 .bridgeToolShelf {
     display: flex;
     flex-direction: column;

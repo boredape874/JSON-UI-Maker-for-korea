@@ -18,6 +18,7 @@ import { GlyphEditorModal } from "./ui/react/GlyphEditorModal.js";
 import { ChooseImageModalShell } from "./ui/react/ChooseImageModalShell.js";
 import { ChestUiEditorModal } from "./ui/react/ChestUiEditorModal.js";
 import { InspectorTabId, WorkspaceTabId, inspectorTabs, workspaceTools } from "./ui/react/workspaceRegistry.js";
+import { WorkspaceProjectPanel } from "./ui/react/WorkspaceProjectPanel.js";
 
 const directoryPickerProps = {
     webkitdirectory: "",
@@ -187,6 +188,10 @@ export function App() {
                         <span>Explorer</span>
                         <span className="bridgePaneMeta">RP / UI</span>
                     </div>
+                    <WorkspaceProjectPanel />
+
+                    <div className="bridgeDivider"></div>
+
                     <div className="addElements">
                         <div className="bridgeSectionTitle">Elements</div>
                         <button type="button" onClick={() => builderActions.addPanel()}>Add panel</button>

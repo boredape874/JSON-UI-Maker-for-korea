@@ -113,3 +113,25 @@
 
 - 아직 `HUD`, `Chest`, `Glyph`는 workspace 내부 패널로 직접 mount하지 않는다.
 - 현재 단계에서는 bridge식 shell의 확장 구조를 먼저 안정화한다.
+
+## 4차 구현 범위
+
+- Explorer 상단에 MCBE 프로젝트/팩 작업용 Project 패널 추가
+- 기존 navbar의 숨김 file input을 재사용해서 Project 패널에서도 UI 폴더/텍스처/Form JSON import를 실행
+- Paste JSON도 Project 패널에서 바로 실행 가능하게 연결
+
+## 4차 구현 결과
+
+- `src/ui/react/WorkspaceProjectPanel.tsx`
+  - `Resource Pack UI` 프로젝트 카드 추가
+  - `Import UI Folder`, `Import Textures`, `Upload Form JSON`, `Paste JSON` 액션 추가
+  - 기존 `ui_workspace_importer`, `ui_textures_importer`, `form_importer` input id를 `label htmlFor`로 재사용
+- `src/App.tsx`
+  - Explorer 영역 상단에 `WorkspaceProjectPanel` 추가
+- `style.css`
+  - `bridgeProjectPanel`, `bridgeProjectCard`, `bridgeProjectActions`, `bridgeProjectAction` 스타일 추가
+
+## 4차 구현에서 의도적으로 유지한 것
+
+- 아직 실제 `.mcaddon` 프로젝트 모델은 만들지 않는다.
+- 현재 Project 패널은 기존 JSON UI Maker import/export 기능을 bridge식 workspace 위치로 재배치하는 역할이다.
