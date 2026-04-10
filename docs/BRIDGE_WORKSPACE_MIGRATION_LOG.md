@@ -88,3 +88,28 @@
 - 기존 `main_window`, `explorer`, `properties`, `bindings` DOM id는 계속 유지
 - HUD/Chest/Glyph 내부는 아직 workspace 내부 mount로 바꾸지 않고 기존 modal/fullscreen host를 호출
 - Inspector tab은 지금 단계에서 DOM을 숨기지 않는다. 기존 script/bindings 초기화 코드가 DOM id를 직접 참조할 가능성이 있기 때문이다.
+
+## 3차 구현 범위
+
+- workspace tab/tool 정의를 `App.tsx` 내부 하드코딩에서 별도 registry 파일로 분리
+- 각 workspace tool에 category/status 메타데이터 추가
+- 중앙 Editor header에서 현재 tool의 category와 상태를 표시
+- Inspector tab 정의도 registry로 분리해서 이후 `Export`, `Errors`, `PMMP Helper` 같은 탭을 늘릴 수 있게 준비
+
+## 3차 구현 결과
+
+- `src/ui/react/workspaceRegistry.ts`
+  - `WorkspaceTabId`, `InspectorTabId`, `WorkspaceToolStatus`, `WorkspaceToolDefinition` 타입 추가
+  - `workspaceTools` 정의 추가
+  - `inspectorTabs` 정의 추가
+- `src/App.tsx`
+  - workspace/inspector 타입과 탭 정의를 registry에서 import
+  - Tool Shelf와 workspace tab을 registry 기반으로 렌더링
+  - 현재 tool category/status를 Editor header에 표시
+- `style.css`
+  - `bridgeToolStatus-*` badge 스타일 추가
+
+## 3차 구현에서 의도적으로 유지한 것
+
+- 아직 `HUD`, `Chest`, `Glyph`는 workspace 내부 패널로 직접 mount하지 않는다.
+- 현재 단계에서는 bridge식 shell의 확장 구조를 먼저 안정화한다.

@@ -2771,9 +2771,42 @@ input[type="file"] {
 
 .bridgeEditorActions {
     display: flex;
+    align-items: center;
     gap: 8px;
     flex-wrap: wrap;
     justify-content: flex-end;
+}
+
+.bridgeToolStatus {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    padding: 0 9px;
+    border-radius: 999px;
+    border: 1px solid var(--bridge-border);
+    color: var(--bridge-muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.bridgeToolStatus-ready {
+    border-color: rgba(82, 217, 137, 0.35);
+    color: #8df0b5;
+    background: rgba(82, 217, 137, 0.1);
+}
+
+.bridgeToolStatus-hosted {
+    border-color: rgba(103, 164, 255, 0.38);
+    color: #9fc4ff;
+    background: rgba(103, 164, 255, 0.11);
+}
+
+.bridgeToolStatus-planned {
+    border-color: rgba(255, 198, 105, 0.35);
+    color: #ffd18d;
+    background: rgba(255, 198, 105, 0.1);
 }
 
 .bridgeWorkspaceTab {

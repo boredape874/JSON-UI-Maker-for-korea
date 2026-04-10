@@ -17,6 +17,7 @@ import { HudEditorModalHost } from "./ui/react/HudEditorModalHost.js";
 import { GlyphEditorModal } from "./ui/react/GlyphEditorModal.js";
 import { ChooseImageModalShell } from "./ui/react/ChooseImageModalShell.js";
 import { ChestUiEditorModal } from "./ui/react/ChestUiEditorModal.js";
+import { InspectorTabId, WorkspaceTabId, inspectorTabs, workspaceTools } from "./ui/react/workspaceRegistry.js";
 
 const directoryPickerProps = {
     webkitdirectory: "",
@@ -27,16 +28,6 @@ function icon(path: string): string {
     return assetUrl(path);
 }
 
-type WorkspaceTabId = "visual" | "hud" | "chest" | "glyph";
-type InspectorTabId = "properties" | "script" | "bindings";
-
-const workspaceTabs: Array<{ id: WorkspaceTabId; label: string; description: string }> = [
-    { id: "visual", label: "Visual UI", description: "기본 JSON UI 캔버스" },
-    { id: "hud", label: "HUD", description: "HUD/title/progress bar editor" },
-    { id: "chest", label: "Chest", description: "Chest screen builder" },
-    { id: "glyph", label: "Glyph", description: "Glyph/texture utility" },
-];
-
 export function App() {
     const auth = useAuthUiState();
     const [legacyReady, setLegacyReady] = useState(false);
@@ -45,6 +36,8 @@ export function App() {
     const [ExplorerPanelComponent, setExplorerPanelComponent] = useState<ComponentType | null>(null);
     const [PropertiesPanelComponent, setPropertiesPanelComponent] = useState<ComponentType | null>(null);
     const [SaveFormsModalComponent, setSaveFormsModalComponent] = useState<ComponentType | null>(null);
+    const activeWorkspaceTool = workspaceTools.find((tool) => tool.id === activeWorkspaceTab) ?? workspaceTools[0];
+    const activeInspectorTool = inspectorTabs.find((tab) => tab.id === activeInspectorTab) ?? inspectorTabs[0];
 
     const openWorkspaceTool = (tab: WorkspaceTabId) => {
         setActiveWorkspaceTab(tab);
@@ -208,18 +201,12 @@ export function App() {
 
                     <div className="bridgeToolShelf">
                         <div className="bridgeSectionTitle">Tools</div>
-                        <button type="button" className="bridgeToolButton" onClick={() => openWorkspaceTool("hud")}>
-                            <span>HUD Editor</span>
-                            <small>title / actionbar / progress bar</small>
-                        </button>
-                        <button type="button" className="bridgeToolButton" onClick={() => openWorkspaceTool("chest")}>
-                            <span>Chest UI Editor</span>
-                            <small>container screen / inventory layout</small>
-                        </button>
-                        <button type="button" className="bridgeToolButton" onClick={() => openWorkspaceTool("glyph")}>
-                            <span>Glyph Editor</span>
-                            <small>font glyph / texture helper</small>
-                        </button>
+                        {workspaceTools.filter((tool) => tool.id !== "visual").map((tool) => (
+                            <button key={tool.id} type="button" className="bridgeToolButton" onClick={() => openWorkspaceTool(tool.id)}>
+                                <span>{tool.label}</span>
+                                <small>{tool.description}</small>
+                            </button>
+                        ))}
                     </div>
 
                     <div className="bridgeDivider"></div>
@@ -238,7 +225,7 @@ export function App() {
 
                 <div className="canvasViewport bridgeEditorPane">
                     <div className="bridgeWorkspaceTabs">
-                        {workspaceTabs.map((tab) => (
+                        {workspaceTools.map((tab) => (
                             <button
                                 key={tab.id}
                                 type="button"
@@ -252,10 +239,11 @@ export function App() {
                     </div>
                     <div className="bridgeEditorHeader">
                         <div>
-                            <div className="bridgeEditorTitle">{workspaceTabs.find((tab) => tab.id === activeWorkspaceTab)?.label ?? "Visual UI"}</div>
-                            <div className="bridgeEditorMeta">{workspaceTabs.find((tab) => tab.id === activeWorkspaceTab)?.description ?? "기본 JSON UI 캔버스"}</div>
+                            <div className="bridgeEditorTitle">{activeWorkspaceTool.label}</div>
+                            <div className="bridgeEditorMeta">{activeWorkspaceTool.category} / {activeWorkspaceTool.description}</div>
                         </div>
                         <div className="bridgeEditorActions">
+                            <span className={`bridgeToolStatus bridgeToolStatus-${activeWorkspaceTool.status}`}>{activeWorkspaceTool.status}</span>
                             <button type="button" onClick={() => builderActions.openSaveFormsModal()}>Export</button>
                             <button type="button" onClick={() => builderActions.openHelpMenu()}>Help</button>
                         </div>
@@ -277,32 +265,19 @@ export function App() {
                         <span className="bridgePaneMeta">Properties / Script</span>
                     </div>
                     <div className="bridgeInspectorTabs" aria-label="Inspector tabs">
-                        <button
-                            type="button"
-                            className={`bridgeInspectorTab${activeInspectorTab === "properties" ? " bridgeInspectorTabActive" : ""}`}
-                            onClick={() => setActiveInspectorTab("properties")}
-                        >
-                            Properties
-                        </button>
-                        <button
-                            type="button"
-                            className={`bridgeInspectorTab${activeInspectorTab === "script" ? " bridgeInspectorTabActive" : ""}`}
-                            onClick={() => setActiveInspectorTab("script")}
-                        >
-                            Script
-                        </button>
-                        <button
-                            type="button"
-                            className={`bridgeInspectorTab${activeInspectorTab === "bindings" ? " bridgeInspectorTabActive" : ""}`}
-                            onClick={() => setActiveInspectorTab("bindings")}
-                        >
-                            Bindings
-                        </button>
+                        {inspectorTabs.map((tab) => (
+                            <button
+                                key={tab.id}
+                                type="button"
+                                className={`bridgeInspectorTab${activeInspectorTab === tab.id ? " bridgeInspectorTabActive" : ""}`}
+                                onClick={() => setActiveInspectorTab(tab.id)}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
                     </div>
                     <div className="bridgeInspectorTabHint">
-                        {activeInspectorTab === "properties" ? "선택한 JSON UI control 속성을 편집합니다." : null}
-                        {activeInspectorTab === "script" ? "Form generator용 JS/TS helper를 복사합니다." : null}
-                        {activeInspectorTab === "bindings" ? "고급 bindings JSON을 직접 편집합니다." : null}
+                        {activeInspectorTool.description}
                     </div>
                     {PropertiesPanelComponent ? <PropertiesPanelComponent /> : <div id="properties" className="properties"></div>}
                     <div className="bridgeDivider"></div>
